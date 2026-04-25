@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>КРЕСТ</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Загрузка...</span>
+</div>
+
+<!-- Login form (hidden until needed) -->
+<div id="loginView" style="display:none">
+  <div class="login-wrap">
+    <div class="login-logo">
+      <div class="cross">✝️</div>
+      <h2>КРЕСТ</h2>
+      <p>Платформа ученичества</p>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="emailInput" placeholder="your@email.com" autocomplete="email" />
+    </div>
+    <div class="form-group">
+      <label>Пароль</label>
+      <input type="password" id="passwordInput" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn" id="loginBtn" onclick="doLogin()">Войти</button>
+    <p id="loginError" style="color:#FF3B30;font-size:13px;margin-top:10px;display:none;text-align:center"></p>
+  </div>
+</div>
+
+<!-- Dashboard (hidden until loaded) -->
+<div id="dashView" style="display:none">
+  <div class="page-header">
+    <h1>✝️ КРЕСТ</h1>
+    <p id="studentName"></p>
+  </div>
+
+  <div class="section">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>Прогресс курса</span>
+        <span id="progressText">0 / 6</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="section-title">Блоки курса</div>
+    <div id="blocksList"></div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+async function init() {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (!session) {
+    showLoading(false);
+    document.getElementById('loginView').style.display = 'block';
+    // Set up Telegram back button behavior
+    if (tg?.BackButton) tg.BackButton.hide();
+    return;
+  }
+  await loadDashboard(session.user);
+}
+
+async function doLogin() {
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  btn.disabled = true;
+  btn.textContent = 'Входим...';
+  err.style.display = 'none';
+
+  const email = document.getElementById('emailInput').value.trim();
+  const password = document.getElementById('passwordInput').value;
+
+  const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    err.textContent = t.loginError;
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = t.login;
+    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+    return;
+  }
+  document.getElementById('loginView').style.display = 'none';
+  showLoading(true);
+  await loadDashboard(data.user);
+}
+
+async function loadDashboard(user) {
+  const { data: profile, error: pe } = await _supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (pe || !profile) {
+    showLoading(false);
+    toast('Ошибка загрузки профиля', 'error');
+    return;
+  }
+
+  const { data: blocks } = await _supabase
+    .from('blocks')
+    .select('id, order_num, title_ru')
+    .order('order_num');
+
+  const { data: progresses } = await _supabase
+    .from('student_progress')
+    .select('block_id, admin_approved')
+    .eq('user_id', user.id)
+    .is('lesson_id', null);
+
+  const progressMap = {};
+  (progresses || []).forEach(p => { progressMap[p.block_id] = p.admin_approved; });
+
+  const unlocked = profile.blocks_unlocked || 1;
+  const approvedCount = Object.values(progressMap).filter(Boolean).length;
+
+  document.getElementById('studentName').textContent = profile.full_name || user.email;
+  document.getElementById('progressText').textContent = `${approvedCount} / 6`;
+  document.getElementById('progressFill').style.width = `${Math.round(approvedCount / 6 * 100)}%`;
+
+  const list = document.getElementById('blocksList');
+  list.innerHTML = '';
+
+  (blocks || []).forEach(block => {
+    const ord = block.order_num;
+    const isApproved = progressMap[block.id] === true;
+    const isPending = progressMap[block.id] === false;
+    const isAvailable = !isPending && !isApproved && ord <= unlocked;
+    const isLocked = ord > unlocked && !isPending && !isApproved;
+
+    let statusClass = 'locked';
+    let statusText = t.locked;
+    if (isApproved) { statusClass = 'approved'; statusText = t.approved; }
+    else if (isPending) { statusClass = 'pending'; statusText = t.pending; }
+    else if (isAvailable) { statusClass = 'available'; statusText = t.available; }
+
+    const card = document.createElement('a');
+    card.className = `block-card ${statusClass}`;
+    if (!isLocked) {
+      card.href = `lesson.html?blockId=${block.id}`;
+    }
+    card.innerHTML = `
+      <div class="block-num">${ord}</div>
+      <div class="block-info">
+        <div class="block-title">${block.title_ru}</div>
+        <div class="block-status">${statusText}</div>
+      </div>
+      ${!isLocked ? '<div class="block-arrow">›</div>' : ''}
+    `;
+    list.appendChild(card);
+  });
+
+  showLoading(false);
+  document.getElementById('dashView').style.display = 'block';
+  if (tg?.BackButton) tg.BackButton.hide();
+}
+
+init();
+</script>
+</body>
+</html>
