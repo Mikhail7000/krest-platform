@@ -1,0 +1,265 @@
+:root {
+  --tg-bg: var(--tg-theme-bg-color, #ffffff);
+  --tg-text: var(--tg-theme-text-color, #000000);
+  --tg-hint: var(--tg-theme-hint-color, #707579);
+  --tg-link: var(--tg-theme-link-color, #2481cc);
+  --tg-btn: var(--tg-theme-button-color, #2481cc);
+  --tg-btn-text: var(--tg-theme-button-text-color, #ffffff);
+  --tg-secondary: var(--tg-theme-secondary-bg-color, #f1f1f1);
+  --accent: #0F2F5A;
+  --gold: #C9A961;
+  --radius: 12px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  font-size: 16px;
+  line-height: 1.5;
+  min-height: 100vh;
+  padding-bottom: calc(16px + var(--safe-bottom));
+}
+
+/* Loading */
+#loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--tg-hint);
+}
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--tg-secondary);
+  border-top-color: var(--tg-btn);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Page header */
+.page-header {
+  background: var(--accent);
+  color: #fff;
+  padding: 16px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.page-header h1 { font-size: 18px; font-weight: 600; }
+.page-header p { font-size: 13px; opacity: 0.75; margin-top: 2px; }
+
+/* Section */
+.section { padding: 16px; }
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--tg-hint);
+  margin-bottom: 8px;
+}
+
+/* Block card */
+.block-card {
+  background: var(--tg-secondary);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  text-decoration: none;
+  color: var(--tg-text);
+}
+.block-card:active { opacity: 0.7; }
+.block-card.locked { opacity: 0.5; cursor: default; pointer-events: none; }
+
+.block-num {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.block-card.approved .block-num { background: #34C759; }
+.block-card.pending .block-num { background: var(--gold); }
+.block-card.available .block-num { background: var(--tg-btn); }
+
+.block-info { flex: 1; min-width: 0; }
+.block-title { font-size: 15px; font-weight: 500; }
+.block-status { font-size: 13px; color: var(--tg-hint); margin-top: 2px; }
+
+.block-arrow { color: var(--tg-hint); font-size: 18px; }
+
+/* Progress bar */
+.progress-wrap {
+  background: var(--tg-secondary);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--tg-hint);
+  margin-bottom: 8px;
+}
+.progress-bar {
+  height: 6px;
+  background: #ddd;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--tg-btn));
+  border-radius: 3px;
+  transition: width 0.5s;
+}
+
+/* Login form */
+.login-wrap {
+  padding: 32px 20px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.login-logo .cross { font-size: 48px; }
+.login-logo h2 { font-size: 22px; font-weight: 700; color: var(--accent); margin-top: 8px; }
+.login-logo p { font-size: 14px; color: var(--tg-hint); margin-top: 4px; }
+
+.form-group { margin-bottom: 12px; }
+.form-group label {
+  display: block;
+  font-size: 13px;
+  color: var(--tg-hint);
+  margin-bottom: 4px;
+}
+.form-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--tg-secondary);
+  border-radius: var(--radius);
+  font-size: 16px;
+  background: var(--tg-secondary);
+  color: var(--tg-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-group input:focus { border-color: var(--tg-btn); }
+
+/* Buttons */
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  background: var(--tg-btn);
+  color: var(--tg-btn-text);
+}
+.btn:active { opacity: 0.8; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn-secondary {
+  background: var(--tg-secondary);
+  color: var(--tg-text);
+}
+
+/* Lesson page */
+.video-wrap {
+  position: relative;
+  padding-top: 56.25%;
+  background: #000;
+}
+.video-wrap iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  border: none;
+}
+
+.forum-wrap { padding: 16px; }
+.forum-wrap textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--tg-secondary);
+  border-radius: var(--radius);
+  font-size: 15px;
+  background: var(--tg-secondary);
+  color: var(--tg-text);
+  resize: none;
+  min-height: 120px;
+  outline: none;
+}
+.forum-wrap textarea:focus { border-color: var(--tg-btn); }
+.char-count { font-size: 12px; color: var(--tg-hint); text-align: right; margin-top: 4px; }
+
+.konspekt-wrap {
+  padding: 16px;
+  background: var(--tg-secondary);
+  margin: 0 16px 16px;
+  border-radius: var(--radius);
+}
+.konspekt-wrap img { width: 100%; border-radius: 8px; margin-bottom: 12px; }
+.konspekt-wrap h2, .konspekt-wrap h3 {
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.konspekt-wrap p { margin-bottom: 8px; font-size: 15px; }
+
+/* Toast notifications */
+.tg-toast {
+  position: fixed;
+  bottom: calc(20px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 999;
+  white-space: nowrap;
+  animation: fadeUp 0.2s ease;
+}
+.tg-toast--success { background: #34C759; color: #fff; }
+.tg-toast--error { background: #FF3B30; color: #fff; }
+.tg-toast--info { background: var(--accent); color: #fff; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Pending badge */
+.pending-badge {
+  display: inline-block;
+  background: var(--gold);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 4px;
+}

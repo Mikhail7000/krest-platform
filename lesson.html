@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Урок — КРЕСТ</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Загрузка...</span>
+</div>
+
+<div id="lessonView" style="display:none">
+  <!-- Video -->
+  <div class="video-wrap" id="videoWrap"></div>
+
+  <!-- Forum section (hidden until video complete) -->
+  <div id="forumSection" style="display:none">
+    <div class="forum-wrap">
+      <div class="section-title" style="margin-bottom:12px">💬 Форум</div>
+      <textarea id="forumText" placeholder="Напишите ответ (минимум 20 символов)..." oninput="updateCharCount()"></textarea>
+      <div class="char-count"><span id="charCount">0</span> / 20 минимум</div>
+      <button class="btn" id="forumBtn" style="margin-top:12px" onclick="submitForum()">Отправить</button>
+    </div>
+  </div>
+
+  <!-- Konspekt (hidden until forum submitted) -->
+  <div id="konspektSection" style="display:none">
+    <div class="section" style="padding-bottom:0">
+      <div class="section-title">📖 Конспект</div>
+    </div>
+    <div class="konspekt-wrap" id="konspektContent"></div>
+    <div class="section">
+      <div id="approvalStatus"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let ytPlayer = null;
+let maxWatched = 0;
+let videoComplete = false;
+let pollInterval = null;
+let currentUser = null;
+let currentProfile = null;
+let currentBlock = null;
+let currentProgress = null;
+
+const params = new URLSearchParams(location.search);
+const blockId = parseInt(params.get('blockId'));
+
+async function init() {
+  if (!blockId) { window.location.href = 'index.html'; return; }
+
+  const result = await requireAuth();
+  if (!result) return;
+  currentUser = result.user;
+  currentProfile = result.profile;
+
+  // Back button
+  if (tg?.BackButton) {
+    tg.BackButton.show();
+    tg.BackButton.onClick(() => { window.location.href = 'index.html'; });
+  }
+
+  // Load block
+  const { data: block, error } = await _supabase
+    .from('blocks')
+    .select('*')
+    .eq('id', blockId)
+    .single();
+
+  if (error || !block) {
+    toast('Блок не найден', 'error');
+    showLoading(false);
+    return;
+  }
+  currentBlock = block;
+
+  // Check access
+  if ((currentProfile.blocks_unlocked || 1) < block.order_num) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  // Load first lesson's video
+  const { data: lessons } = await _supabase
+    .from('lessons')
+    .select('*')
+    .eq('block_id', blockId)
+    .order('order_num')
+    .limit(1);
+
+  // Check existing progress
+  const { data: progress } = await _supabase
+    .from('student_progress')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .eq('block_id', blockId)
+    .is('lesson_id', null)
+    .single();
+
+  currentProgress = progress;
+
+  // Check existing journal entry
+  const { data: journal } = await _supabase
+    .from('journal_entries')
+    .select('id, content')
+    .eq('user_id', currentUser.id)
+    .eq('block_id', blockId)
+    .single();
+
+  const alreadySubmitted = !!journal;
+  const isApproved = progress?.admin_approved === true;
+
+  // Set page title
+  if (tg) tg.setHeaderColor(tg.themeParams.bg_color || '#ffffff');
+  document.title = block.title_ru + ' — КРЕСТ';
+
+  // Load video
+  const videoUrl = lessons?.[0]?.youtube_url;
+  if (videoUrl) {
+    loadYouTube(videoUrl, alreadySubmitted);
+  } else {
+    // No video — show forum directly if not submitted
+    if (!alreadySubmitted) showForum();
+  }
+
+  // If already submitted — show konspekt immediately
+  if (alreadySubmitted) {
+    showKonspekt(block, isApproved);
+  }
+
+  showLoading(false);
+  document.getElementById('lessonView').style.display = 'block';
+}
+
+function loadYouTube(url, skipToForum) {
+  const videoId = extractYtId(url);
+  if (!videoId) { if (!skipToForum) showForum(); return; }
+
+  const wrap = document.getElementById('videoWrap');
+  wrap.innerHTML = `<div id="ytPlayer"></div>`;
+
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+
+  window.onYouTubeIframeAPIReady = function () {
+    ytPlayer = new YT.Player('ytPlayer', {
+      videoId,
+      playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+      events: {
+        onReady: () => {
+          if (!skipToForum) startPolling();
+          else {
+            // Video still shown but forum already submitted
+          }
+        }
+      }
+    });
+  };
+}
+
+function startPolling() {
+  pollInterval = setInterval(() => {
+    if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
+    const current = ytPlayer.getCurrentTime();
+    const duration = ytPlayer.getDuration();
+
+    if (current > maxWatched + 2) {
+      ytPlayer.seekTo(maxWatched);
+    } else {
+      maxWatched = Math.max(maxWatched, current);
+    }
+
+    if (duration > 0 && maxWatched / duration >= 0.95 && !videoComplete) {
+      videoComplete = true;
+      clearInterval(pollInterval);
+      showForum();
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    }
+  }, 500);
+}
+
+function showForum() {
+  document.getElementById('forumSection').style.display = 'block';
+}
+
+function updateCharCount() {
+  const len = document.getElementById('forumText').value.length;
+  document.getElementById('charCount').textContent = len;
+  document.getElementById('forumBtn').disabled = len < 20;
+}
+
+async function submitForum() {
+  const text = document.getElementById('forumText').value.trim();
+  if (text.length < 20) { toast(t.forumMin, 'error'); return; }
+
+  const btn = document.getElementById('forumBtn');
+  btn.disabled = true;
+  btn.textContent = 'Сохранение...';
+
+  const { error: je } = await _supabase
+    .from('journal_entries')
+    .insert({
+      user_id: currentUser.id,
+      block_id: blockId,
+      lesson_id: null,
+      content: text,
+      submitted_to_leader: true
+    });
+
+  if (je) {
+    toast('Ошибка сохранения', 'error');
+    btn.disabled = false;
+    btn.textContent = t.send;
+    return;
+  }
+
+  // Save student_progress if not exists
+  if (!currentProgress) {
+    const { data: inserted } = await _supabase
+      .from('student_progress')
+      .insert({
+        user_id: currentUser.id,
+        block_id: blockId,
+        lesson_id: null,
+        admin_approved: false
+      })
+      .select()
+      .single();
+    currentProgress = inserted;
+  }
+
+  toast(t.saved, 'success');
+  document.getElementById('forumSection').style.display = 'none';
+  showKonspekt(currentBlock, false);
+}
+
+function showKonspekt(block, isApproved) {
+  document.getElementById('konspektSection').style.display = 'block';
+  document.getElementById('konspektContent').innerHTML = block.content_ru || '';
+
+  const status = document.getElementById('approvalStatus');
+  if (isApproved) {
+    status.innerHTML = '<div style="background:#34C75920;border-radius:12px;padding:14px;text-align:center;color:#34C759;font-weight:600">✅ Блок одобрен лидером</div>';
+  } else {
+    status.innerHTML = '<div style="background:#C9A96120;border-radius:12px;padding:14px;text-align:center;color:#8B6914">⏳ Ожидает проверки лидера</div>';
+  }
+}
+
+function extractYtId(url) {
+  const m = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+init();
+</script>
+</body>
+</html>
