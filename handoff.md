@@ -1,154 +1,120 @@
 # Session Handoff — КРЕСТ
-> Дата: 2026-04-25 | Сессия: Фазы 0–7 scaffold завершены
+> Дата: 2026-04-25 | Фазы 0–8 завершены
 
 ---
 
 ## Статус платформы
 
-- ✅ Next.js 16.2.4 задеплоен: https://krest-platform-web.vercel.app
-- ✅ Supabase подключён (aejhlmoydnhgedgfndql)
-- ✅ TypeScript 0 ошибок
-- ✅ Turborepo monorepo: apps/web + apps/miniapp + packages/supabase
-- ✅ GitHub: github.com/Mikhail7000/krest-platform (public)
-- ✅ Vercel: krest-platform-web (Hobby team) — автодеплой через GitHub Actions
-- ✅ SVG-диаграммы: public/content/block1–6.svg, прописаны в blocks.content_ru
-- ⏳ Фаза 7 — Telegram Mini App scaffold готов, **нужен деплой на Vercel**
+| Компонент | Статус | URL |
+|-----------|--------|-----|
+| Web App (Next.js) | ✅ Задеплоен | https://krest-platform-web.vercel.app |
+| Telegram Mini App | ✅ Задеплоен | https://krest-platform-web.vercel.app/miniapp/index.html |
+| Telegram Bot Webhook | ✅ Зарегистрирован | /api/telegram/webhook |
+| Supabase | ✅ Подключён | aejhlmoydnhgedgfndql |
+| GitHub | ✅ | github.com/Mikhail7000/krest-platform |
+| Vercel Auto-deploy | ✅ | GitHub Actions → Deploy Hook при пуше в main |
 
 ---
 
-## Завершённые фазы
+## Telegram Mini App — полная структура
 
-### ✅ Фаза 0 — Scaffold
-- Turborepo monorepo, Next.js 15→16.2.4, ветка legacy-vanilla
+**URL:** `https://krest-platform-web.vercel.app/miniapp/index.html`  
+**Расположение в репо:** `apps/web/public/miniapp/`  
+**Деплой:** автоматически вместе с основным web приложением (Next.js static files)
 
-### ✅ Фаза 1 — packages/supabase
-- TypeScript типы для 7 таблиц
+### Экраны
 
-### ✅ Фаза 2 — Auth + Middleware
-- `apps/web/src/middleware.ts`, login/page.tsx, supabase-browser/server.ts
+| Файл | Экран | Описание |
+|------|-------|----------|
+| `index.html` | Дашборд студента | Логин + 6 блоков со статусами, прогресс-бар |
+| `lesson.html` | Урок | YouTube no-skip → форум (20+ символов) → конспект с SVG |
+| `trainer.html` | Тренажёр стихов | Флэш-карточки: reference → reveal → "Знаю" / "Ещё раз" |
+| `profile.html` | Профиль | Статы, язык RU/EN, Telegram статус, выход |
+| `admin.html` | Лидер | Ожидающие одобрения + все студенты, одобрение одним тапом |
 
-### ✅ Фаза 3 — YouTube no-skip
-- `use-youtube-no-skip.ts`, LessonClient.tsx, api/student/journal/route.ts
+### Навигация
+- **Нижняя вкладка** (tab bar): Блоки / Тренажёр / Профиль — на всех студенческих экранах
+- **Back button** Telegram — на lesson.html, trainer.html, profile.html, admin.html
 
-### ✅ Фаза 4 — Дашборд студента
-- `student/page.tsx` — 6 карточек со статусами 🔒 / ▶️ / ⏳ / ✅
-
-### ✅ Фаза 5 — Страницы лидера
-- `admin/page.tsx`, `admin/students/[userId]/page.tsx`, ApproveButton.tsx
-
-### ✅ Фаза 6 — API Routes
-- `api/admin/approve/route.ts` — одобрение + разблокировка + Telegram
-
-### ✅ Фаза 7 — SVG конспекты
-- 6 SVG-диаграмм в `apps/web/public/content/block1–6.svg`
-- `blocks.content_ru` в Supabase: `<img src="/content/blockN.svg">` + HTML текст
-
-### 🔨 Фаза 8 — Telegram Mini App (scaffold готов)
-
-**Файлы:** `apps/miniapp/`
-
-| Файл | Назначение |
-|------|-----------|
-| `index.html` | Логин + дашборд студента (статусы блоков) |
-| `lesson.html` | YouTube no-skip → форум (20+ символов) → конспект |
-| `admin.html` | Лидер: список ожидающих + одобрение одним тапом |
-| `css/styles.css` | Telegram CSS vars + Apple-style UI |
-| `js/config.js` | Supabase init + Telegram.WebApp.ready() + i18n |
-| `js/auth.js` | requireAuth, requireAdmin, toast, showLoading |
-| `vercel.json` | X-Frame-Options ALLOWALL, CSP для Telegram iframe |
-
-**Бизнес-логика в miniapp:**
-- Те же правила: no-skip polling 500мс, форум 20+ символов, блоки только после admin_approved
-- Haptic feedback при одобрении и ошибках
-- Тема: автоматически берёт CSS vars из Telegram (`--tg-theme-*`)
+### JS/CSS файлы
+| Файл | Роль |
+|------|------|
+| `js/config.js` | Supabase init, Telegram WebApp.ready(), i18n (T.ru) |
+| `js/auth.js` | requireAuth(), requireAdmin(), toast(), showLoading() |
+| `css/styles.css` | Telegram CSS vars, Apple UI, tab bar, cards, toasts |
 
 ---
 
-## Следующий шаг: Деплой Telegram Mini App
+## Telegram Bot — настройка
 
-### Шаг 1 — Новый проект на Vercel
+**Bot Token:** `8348590676:AAFc2U8sAZTEAHq_xFFbi0cQEoTeugDkx70`
 
-1. Зайти на [vercel.com](https://vercel.com) → **New Project**
-2. Импортировать `github.com/Mikhail7000/krest-platform`
-3. Настройки проекта:
-   - **Framework Preset:** Other
-   - **Root Directory:** `apps/miniapp`
-   - **Build Command:** *(пусто)*
-   - **Output Directory:** *(пусто)*
-4. ENV переменные — **не нужны** (ключи Supabase захардкожены в `config.js`)
-5. Deploy → получить URL типа `krest-miniapp.vercel.app`
+| Что | Статус | Как настроено |
+|-----|--------|---------------|
+| Menu button (✝️ КРЕСТ) | ✅ | Bot API `setChatMenuButton` |
+| Webhook | ✅ | `https://krest-platform-web.vercel.app/api/telegram/webhook` |
+| Команды | ✅ | /start, /progress, /help |
 
-### Шаг 2 — Прописать URL в BotFather
-
-Открыть чат с [@BotFather](https://t.me/BotFather):
-```
-/newapp
-→ выбрать бота (тот, чей TELEGRAM_BOT_TOKEN в .env)
-→ Short Name: krest
-→ URL: https://krest-miniapp.vercel.app
-```
-Или для кнопки меню:
-```
-/setmenubutton
-→ выбрать бота
-→ URL: https://krest-miniapp.vercel.app
-→ Button Text: КРЕСТ
-```
-
-### Шаг 3 — Обновить approve API
-
-В `apps/web/src/app/api/admin/approve/route.ts` добавить кнопку Mini App в Telegram-сообщение студенту:
-
-```typescript
-// Текущий код отправляет просто текст
-// Нужно добавить inline_keyboard с кнопкой Web App:
-reply_markup: {
-  inline_keyboard: [[{
-    text: '✝️ Открыть КРЕСТ',
-    web_app: { url: 'https://krest-miniapp.vercel.app' }
-  }]]
-}
-```
+### Как студент подключает Telegram:
+1. Открывает бота → /start
+2. Вводит `/start email@example.com` — бот находит профиль и сохраняет `telegram_chat_id`
+3. После этого получает уведомления при одобрении блоков
 
 ---
 
-## Текущая структура проекта
+## Backend API Routes
+
+| Route | Метод | Назначение |
+|-------|-------|-----------|
+| `/api/admin/approve` | POST | Одобрение блока + Telegram студенту с кнопкой Mini App |
+| `/api/auth/logout` | POST | Выход |
+| `/api/student/journal` | POST | Сохранение форума + Telegram уведомление лидеру |
+| `/api/telegram/webhook` | POST | Бот: /start → сохранение telegram_chat_id в profiles |
+
+---
+
+## Web App — структура (apps/web/src/)
 
 ```
-apps/
-  web/src/
-    app/
-      admin/page.tsx, students/[userId]/page.tsx, ApproveButton.tsx
-      api/admin/approve/route.ts, auth/logout/route.ts, student/journal/route.ts
-      student/page.tsx, lesson/[blockId]/page.tsx, LessonClient.tsx
-      login/page.tsx, layout.tsx, globals.css
-    hooks/use-youtube-no-skip.ts
-    lib/supabase-browser.ts, supabase-server.ts
-    middleware.ts
-  web/public/content/
-    block1.svg … block6.svg        ← SVG конспекты
-  miniapp/
-    index.html                     ← студент: логин + дашборд
-    lesson.html                    ← студент: урок
-    admin.html                     ← лидер: одобрение блоков
-    css/styles.css
-    js/config.js, auth.js
-    vercel.json
-packages/supabase/src/
-  types.ts / client.ts / server.ts / middleware.ts / index.ts
+app/
+  admin/
+    page.tsx                    → список студентов
+    students/[userId]/
+      page.tsx                  → детали студента
+      ApproveButton.tsx         → кнопка одобрения
+  api/
+    admin/approve/route.ts      → POST: одобрить блок
+    auth/logout/route.ts        → POST: выход
+    student/journal/route.ts    → POST: сохранить форум + notify leader
+    telegram/webhook/route.ts   → POST: Telegram bot updates
+  student/
+    page.tsx                    → дашборд студента
+    lesson/[blockId]/
+      page.tsx                  → страница урока
+      LessonClient.tsx          → YouTube + форум + конспект
+  login/page.tsx
+  layout.tsx, globals.css
+hooks/use-youtube-no-skip.ts
+lib/supabase-browser.ts, supabase-server.ts
+middleware.ts
+public/
+  content/block1–6.svg         → SVG конспекты блоков
+  miniapp/                     → Telegram Mini App (статические файлы)
 ```
 
 ---
 
 ## Важные технические заметки
 
-**TypeScript workaround:** `createServerSupabase` из `@krest/supabase` возвращает `never` через workspace boundary. Решение: `apps/web/src/lib/supabase-server.ts` с прямым импортом типов. Все server components → `@/lib/supabase-server`.
+**SVG конспекты:** `blocks.content_ru` начинается с `<img src="/content/blockN.svg">` + HTML текст. Рендер через `dangerouslySetInnerHTML` в LessonClient.tsx.
 
-**SVG in konspekt:** `blocks.content_ru` начинается с `<img src="/content/blockN.svg">`, потом HTML текст. Рендерится через `dangerouslySetInnerHTML` в LessonClient.tsx.
+**TypeScript workaround:** `apps/web/src/lib/supabase-server.ts` — локальный server client с прямым импортом типов (из-за generic boundary в Turborepo).
 
 **Miniapp auth:** Supabase email/password + localStorage сессия. Telegram WebView сохраняет localStorage между открытиями.
 
-**block6.svg (7 Благословений):** файл меньше других (7KB vs 21–37KB) — возможно, не хватает последнего благословения (Цель от Бога / Мф 28:18-20). Проверить визуально.
+**SUPABASE_SERVICE_ROLE_KEY:** Текущее значение `sb_publishable_...` — это publishable key, НЕ service role. Для webhook route (запись telegram_chat_id без RLS) нужен настоящий service role key (`eyJ...`). Взять в Supabase Dashboard → Project Settings → API → service_role.
+
+**block6.svg:** файл меньше других (7KB vs 21–37KB) — возможно, не хватает 7-го благословения (Цель от Бога / Мф 28:18-20). Проверить визуально.
 
 ---
 
@@ -157,7 +123,7 @@ packages/supabase/src/
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://aejhlmoydnhgedgfndql.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=sb_publishable_UBF4D_waPjJlkPeT_35Iqg_14ILksGC
+SUPABASE_SERVICE_ROLE_KEY=sb_publishable_...  ← НУЖНО ЗАМЕНИТЬ на настоящий service_role JWT
 TELEGRAM_BOT_TOKEN=8348590676:AAFc2U8sAZTEAHq_xFFbi0cQEoTeugDkx70
 TELEGRAM_LEADER_CHAT_ID=255214568
 NEXT_PUBLIC_APP_URL=https://krest.vercel.app
@@ -165,10 +131,21 @@ NEXT_PUBLIC_APP_URL=https://krest.vercel.app
 
 ---
 
-## Как начать следующую сессию
+## Следующие шаги (приоритет)
 
-1. Прочитать `handoff.md`
-2. Задеплоить `apps/miniapp/` на Vercel (отдельный проект, Root Directory = `apps/miniapp`)
-3. Получить URL miniapp → прописать в BotFather
-4. Обновить `approve/route.ts` — добавить кнопку Web App в Telegram-уведомление
-5. Протестировать полный flow: студент в Telegram → видео → форум → лидер одобряет → студент получает сообщение с кнопкой → открывает miniapp
+1. **Исправить SUPABASE_SERVICE_ROLE_KEY** в Vercel ENV — взять настоящий JWT из Supabase Dashboard. Без этого webhook не может записать telegram_chat_id.
+2. **Добавить bible_verses в Supabase** — тренажёр уже готов, но данные нужно вставить (INSERT в таблицу bible_verses для каждого блока)
+3. **Протестировать полный flow:**
+   - Студент открывает бота → /start → вводит email
+   - Студент проходит урок в Mini App: видео → форум → конспект
+   - Лидер получает Telegram уведомление → одобряет → студент получает уведомление с кнопкой
+4. **Добавить новые разделы** легко через шаблон: создать `newpage.html` по образцу `trainer.html`, добавить вкладку в tab bar CSS
+
+---
+
+## Как добавить новый экран в Mini App
+
+1. Скопировать `trainer.html` как шаблон
+2. Обновить `<title>` и логику `init()`
+3. Добавить tab в `css/styles.css` `.tab-bar-nav` если нужна новая вкладка
+4. Закоммитить — Vercel задеплоит автоматически
