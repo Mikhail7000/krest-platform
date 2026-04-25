@@ -21,11 +21,16 @@ function createMiddlewareSupabase(request: NextRequest) {
 }
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Miniapp static files — bypass auth entirely
+  if (pathname.startsWith('/miniapp/')) {
+    return NextResponse.next()
+  }
+
   const { supabase, supabaseResponse } = createMiddlewareSupabase(request)
 
   const { data: { user } } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
 
   // Public routes
   if (pathname === '/login' || pathname === '/') {
