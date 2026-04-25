@@ -7,6 +7,247 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* ── Lesson header ── */
+    .lesson-header {
+      padding: 20px 20px 0;
+    }
+    .lesson-block-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(201,169,97,0.15);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+    .lesson-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--tg-text);
+      line-height: 1.3;
+      margin-bottom: 20px;
+    }
+
+    /* ── Video ── */
+    .video-wrap {
+      position: relative;
+      padding-top: 56.25%;
+      background: #000;
+    }
+    .video-wrap iframe,
+    .video-wrap > div {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* ── Forum ── */
+    .forum-wrap {
+      padding: 20px 16px 8px;
+    }
+    .forum-header {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .forum-header .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--tg-text);
+      margin-bottom: 6px;
+    }
+    .forum-intro {
+      font-size: 13px;
+      color: var(--tg-hint);
+      line-height: 1.5;
+    }
+    .forum-question {
+      background: var(--tg-secondary);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .question-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .question-num {
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .question-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--tg-text);
+      line-height: 1.4;
+    }
+    .forum-question textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      font-size: 14px;
+      background: rgba(255,255,255,0.05);
+      color: var(--tg-text);
+      resize: none;
+      min-height: 90px;
+      outline: none;
+      font-family: inherit;
+      line-height: 1.5;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    .forum-question textarea:focus {
+      border-color: var(--accent);
+    }
+    .forum-question textarea::placeholder {
+      color: var(--tg-hint);
+      font-size: 13px;
+    }
+    .q-counter {
+      font-size: 11px;
+      color: var(--tg-hint);
+      text-align: right;
+      margin-top: 6px;
+      transition: color 0.2s;
+    }
+    .q-counter.done {
+      color: #34C759;
+    }
+    .forum-submit-wrap {
+      padding: 4px 16px 20px;
+    }
+
+    /* ── Konspekt ── */
+    .konspekt-section {
+      padding: 0 0 40px;
+    }
+    .konspekt-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 24px 20px 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .konspekt-icon {
+      width: 36px;
+      height: 36px;
+      background: rgba(201,169,97,0.15);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .konspekt-label {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--tg-text);
+    }
+    .konspekt-body {
+      padding: 0 20px;
+    }
+    /* Rich text overrides for konspekt content */
+    .konspekt-body h1,
+    .konspekt-body h2,
+    .konspekt-body h3,
+    .konspekt-body h4 {
+      color: #C9A961 !important;
+      font-size: 17px !important;
+      font-weight: 700 !important;
+      margin: 22px 0 8px !important;
+      line-height: 1.4 !important;
+    }
+    .konspekt-body h1 { font-size: 19px !important; }
+    .konspekt-body p {
+      color: rgba(255,255,255,0.88) !important;
+      font-size: 15px !important;
+      line-height: 1.75 !important;
+      margin-bottom: 12px !important;
+    }
+    .konspekt-body ul,
+    .konspekt-body ol {
+      color: rgba(255,255,255,0.88) !important;
+      font-size: 15px !important;
+      line-height: 1.75 !important;
+      padding-left: 20px !important;
+      margin-bottom: 14px !important;
+    }
+    .konspekt-body li {
+      margin-bottom: 6px !important;
+    }
+    .konspekt-body strong,
+    .konspekt-body b {
+      color: #fff !important;
+      font-weight: 700 !important;
+    }
+    .konspekt-body em,
+    .konspekt-body i {
+      color: #C9A961 !important;
+      font-style: italic !important;
+    }
+    .konspekt-body blockquote {
+      border-left: 3px solid #C9A961 !important;
+      margin: 16px 0 !important;
+      padding: 10px 16px !important;
+      background: rgba(201,169,97,0.08) !important;
+      border-radius: 0 8px 8px 0 !important;
+      color: rgba(255,255,255,0.88) !important;
+      font-style: italic !important;
+    }
+    .konspekt-body img {
+      width: 100% !important;
+      border-radius: 12px !important;
+      margin: 12px 0 !important;
+    }
+    .konspekt-body hr {
+      border: none !important;
+      border-top: 1px solid rgba(255,255,255,0.1) !important;
+      margin: 20px 0 !important;
+    }
+
+    /* ── Approval status ── */
+    .approval-wrap {
+      margin: 20px 16px 0;
+    }
+    .approval-card {
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .approval-card.approved {
+      background: rgba(52,199,89,0.12);
+      color: #34C759;
+      border: 1px solid rgba(52,199,89,0.25);
+    }
+    .approval-card.pending {
+      background: rgba(201,169,97,0.1);
+      color: #C9A961;
+      border: 1px solid rgba(201,169,97,0.25);
+    }
+  </style>
 </head>
 <body>
 
@@ -16,32 +257,68 @@
 </div>
 
 <div id="lessonView" style="display:none">
-  <div class="page-header" id="lessonHeader" style="padding-bottom:8px">
-    <h1 id="lessonTitle"></h1>
+
+  <!-- Header -->
+  <div class="lesson-header">
+    <div class="lesson-block-badge" id="blockBadge"></div>
+    <div class="lesson-title" id="lessonTitle"></div>
   </div>
+
   <!-- Video -->
   <div class="video-wrap" id="videoWrap"></div>
 
-  <!-- Forum section (hidden until video complete) -->
+  <!-- Forum (hidden until video complete) -->
   <div id="forumSection" style="display:none">
     <div class="forum-wrap">
-      <div class="section-title" style="margin-bottom:12px">💬 Форум</div>
-      <textarea id="forumText" placeholder="Напишите ответ (минимум 20 символов)..." oninput="updateCharCount()"></textarea>
-      <div class="char-count"><span id="charCount">0</span> / 20 минимум</div>
-      <button class="btn" id="forumBtn" style="margin-top:12px" onclick="submitForum()">Отправить</button>
+      <div class="forum-header">
+        <div class="section-title">💬 Поделитесь размышлениями</div>
+        <p class="forum-intro">Ответьте на три вопроса — минимум 100 символов каждый.<br>Конспект откроется после отправки.</p>
+      </div>
+
+      <div class="forum-question">
+        <div class="question-label">
+          <div class="question-num">1</div>
+          <div class="question-text">Что нового узнал из этого урока?</div>
+        </div>
+        <textarea id="q1" placeholder="Поделитесь своими мыслями..." oninput="updateCount(1)"></textarea>
+        <div class="q-counter" id="cnt1">0 / 100</div>
+      </div>
+
+      <div class="forum-question">
+        <div class="question-label">
+          <div class="question-num">2</div>
+          <div class="question-text">Что вдохновило тебя?</div>
+        </div>
+        <textarea id="q2" placeholder="Что тронуло сердце..." oninput="updateCount(2)"></textarea>
+        <div class="q-counter" id="cnt2">0 / 100</div>
+      </div>
+
+      <div class="forum-question">
+        <div class="question-label">
+          <div class="question-num">3</div>
+          <div class="question-text">Что берёшь на практику?</div>
+        </div>
+        <textarea id="q3" placeholder="Конкретные шаги и решения..." oninput="updateCount(3)"></textarea>
+        <div class="q-counter" id="cnt3">0 / 100</div>
+      </div>
+    </div>
+    <div class="forum-submit-wrap">
+      <button class="btn" id="forumBtn" onclick="submitForum()" disabled>Отправить ответы</button>
     </div>
   </div>
 
   <!-- Konspekt (hidden until forum submitted) -->
   <div id="konspektSection" style="display:none">
-    <div class="section" style="padding-bottom:0">
-      <div class="section-title">📖 Конспект</div>
+    <div class="konspekt-header">
+      <div class="konspekt-icon">📖</div>
+      <div class="konspekt-label">Конспект урока</div>
     </div>
-    <div class="konspekt-wrap" id="konspektContent"></div>
-    <div class="section">
+    <div class="konspekt-body" id="konspektContent"></div>
+    <div class="approval-wrap">
       <div id="approvalStatus"></div>
     </div>
   </div>
+
 </div>
 
 <script src="js/config.js"></script>
@@ -67,13 +344,11 @@ async function init() {
   currentUser = result.user;
   currentProfile = result.profile;
 
-  // Back button
   if (tg?.BackButton) {
     tg.BackButton.show();
     tg.BackButton.onClick(() => { window.location.href = 'index.html'; });
   }
 
-  // Load block
   const { data: block, error } = await _supabase
     .from('blocks')
     .select('*')
@@ -87,13 +362,11 @@ async function init() {
   }
   currentBlock = block;
 
-  // Check access
   if ((currentProfile.blocks_unlocked || 1) < block.order_num) {
     window.location.href = 'index.html';
     return;
   }
 
-  // Check existing progress
   const { data: progress } = await _supabase
     .from('student_progress')
     .select('*')
@@ -104,10 +377,9 @@ async function init() {
 
   currentProgress = progress;
 
-  // Check existing journal entry
   const { data: journal } = await _supabase
     .from('journal_entries')
-    .select('id, content')
+    .select('id')
     .eq('user_id', currentUser.id)
     .eq('block_id', blockId)
     .single();
@@ -115,21 +387,17 @@ async function init() {
   const alreadySubmitted = !!journal;
   const isApproved = progress?.admin_approved === true;
 
-  // Set page title
-  if (tg) tg.setHeaderColor(tg.themeParams.bg_color || '#0B1E3D');
   document.title = block.title_ru + ' — КРЕСТ';
-  document.getElementById('lessonTitle').textContent = `Блок ${block.order_num} · ${block.title_ru}`;
+  document.getElementById('blockBadge').textContent = `Блок ${block.order_num}`;
+  document.getElementById('lessonTitle').textContent = block.title_ru;
 
-  // Load video from block's youtube_ru field
   const videoUrl = block.youtube_ru || block.youtube_en;
   if (videoUrl) {
     loadYouTube(videoUrl, alreadySubmitted);
   } else {
-    // No video — show forum directly if not submitted
     if (!alreadySubmitted) showForum();
   }
 
-  // If already submitted — show konspekt immediately
   if (alreadySubmitted) {
     showKonspekt(block, isApproved);
   }
@@ -156,9 +424,6 @@ function loadYouTube(url, skipToForum) {
       events: {
         onReady: () => {
           if (!skipToForum) startPolling();
-          else {
-            // Video still shown but forum already submitted
-          }
         }
       }
     });
@@ -188,21 +453,37 @@ function startPolling() {
 
 function showForum() {
   document.getElementById('forumSection').style.display = 'block';
+  document.getElementById('forumSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function updateCharCount() {
-  const len = document.getElementById('forumText').value.length;
-  document.getElementById('charCount').textContent = len;
-  document.getElementById('forumBtn').disabled = len < 20;
+function updateCount(n) {
+  const len = document.getElementById('q' + n).value.length;
+  const el = document.getElementById('cnt' + n);
+  el.textContent = len + ' / 100';
+  el.classList.toggle('done', len >= 100);
+  checkForumReady();
+}
+
+function checkForumReady() {
+  const ok = [1,2,3].every(n => document.getElementById('q' + n).value.length >= 100);
+  document.getElementById('forumBtn').disabled = !ok;
 }
 
 async function submitForum() {
-  const text = document.getElementById('forumText').value.trim();
-  if (text.length < 20) { toast(t.forumMin, 'error'); return; }
+  const q1 = document.getElementById('q1').value.trim();
+  const q2 = document.getElementById('q2').value.trim();
+  const q3 = document.getElementById('q3').value.trim();
+
+  if ([q1,q2,q3].some(q => q.length < 100)) {
+    toast('Минимум 100 символов в каждом ответе', 'error');
+    return;
+  }
 
   const btn = document.getElementById('forumBtn');
   btn.disabled = true;
   btn.textContent = 'Сохранение...';
+
+  const content = `1. Что нового узнал:\n${q1}\n\n2. Что вдохновило:\n${q2}\n\n3. Беру на практику:\n${q3}`;
 
   const { error: je } = await _supabase
     .from('journal_entries')
@@ -210,18 +491,17 @@ async function submitForum() {
       user_id: currentUser.id,
       block_id: blockId,
       lesson_id: null,
-      content: text,
+      content,
       submitted_to_leader: true
     });
 
   if (je) {
     toast('Ошибка сохранения', 'error');
     btn.disabled = false;
-    btn.textContent = t.send;
+    btn.textContent = 'Отправить ответы';
     return;
   }
 
-  // Save student_progress if not exists
   if (!currentProgress) {
     const { data: inserted } = await _supabase
       .from('student_progress')
@@ -236,7 +516,8 @@ async function submitForum() {
     currentProgress = inserted;
   }
 
-  toast(t.saved, 'success');
+  if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+  toast('Ответы отправлены!', 'success');
   document.getElementById('forumSection').style.display = 'none';
   showKonspekt(currentBlock, false);
 }
@@ -245,12 +526,16 @@ function showKonspekt(block, isApproved) {
   document.getElementById('konspektSection').style.display = 'block';
   document.getElementById('konspektContent').innerHTML = block.content_ru || '';
 
-  const status = document.getElementById('approvalStatus');
+  const el = document.getElementById('approvalStatus');
   if (isApproved) {
-    status.innerHTML = '<div style="background:#34C75920;border-radius:12px;padding:14px;text-align:center;color:#34C759;font-weight:600">✅ Блок одобрен лидером</div>';
+    el.innerHTML = '<div class="approval-card approved">✅ Блок одобрен лидером<br><span style="font-weight:400;font-size:13px;opacity:0.8">Следующий блок открыт</span></div>';
   } else {
-    status.innerHTML = '<div style="background:#C9A96120;border-radius:12px;padding:14px;text-align:center;color:#8B6914">⏳ Ожидает проверки лидера</div>';
+    el.innerHTML = '<div class="approval-card pending">⏳ Ожидает проверки лидера<br><span style="font-weight:400;font-size:13px;opacity:0.8">Вы получите уведомление в Telegram</span></div>';
   }
+
+  setTimeout(() => {
+    document.getElementById('konspektSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 300);
 }
 
 function extractYtId(url) {
