@@ -543,34 +543,24 @@ function showKonspekt(block, isApproved) {
 
 async function notifyLeader(journalContent) {
   try {
-    // Use SECURITY DEFINER function to bypass RLS and get leader chat_id
-    const { data: chatIdData } = await _supabase
-      .rpc('get_leader_chat_id', { student_id: currentUser.id });
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (!session?.access_token) return;
 
-    const chatId = chatIdData;
-    if (!chatId) return;
+    const preview = journalContent.slice(0, 300) + (journalContent.length > 300 ? '...' : '');
 
-    const studentName = currentProfile.full_name || currentUser.email;
-    const blockName = currentBlock.title_ru;
-    const preview = journalContent.slice(0, 200);
-
-    await fetch(`https://api.telegram.org/bot8348590676:AAFc2U8sAZTEAHq_xFFbi0cQEoTeugDkx70/sendMessage`, {
+    await fetch('https://krest-platform-web.vercel.app/api/miniapp/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        chat_id: chatId,
-        text: `📝 <b>Новый ответ студента</b>\n\n👤 <b>${studentName}</b>\n📖 Блок ${currentBlock.order_num}: ${blockName}\n\n${preview}${journalContent.length > 200 ? '...' : ''}`,
-        parse_mode: 'HTML',
-        reply_markup: {
-          inline_keyboard: [[{
-            text: '✅ Открыть панель лидера',
-            web_app: { url: 'https://krest-platform-web.vercel.app/miniapp/admin.html' }
-          }]]
-        }
+        access_token: session.access_token,
+        block_num: currentBlock.order_num,
+        block_name: currentBlock.title_ru,
+        student_name: currentProfile.full_name || currentUser.email,
+        preview
       })
     });
   } catch (e) {
-    console.error('Telegram notify error:', e);
+    console.error('notify error:', e);
   }
 }
 
