@@ -543,29 +543,11 @@ function showKonspekt(block, isApproved) {
 
 async function notifyLeader(journalContent) {
   try {
-    // Find leader: student's nastavnik or any admin
-    let chatId = null;
+    // Use SECURITY DEFINER function to bypass RLS and get leader chat_id
+    const { data: chatIdData } = await _supabase
+      .rpc('get_leader_chat_id', { student_id: currentUser.id });
 
-    if (currentProfile.nastavnik_id) {
-      const { data: nastavnik } = await _supabase
-        .from('profiles')
-        .select('telegram_chat_id')
-        .eq('id', currentProfile.nastavnik_id)
-        .single();
-      chatId = nastavnik?.telegram_chat_id;
-    }
-
-    // Fallback: first admin with telegram_chat_id
-    if (!chatId) {
-      const { data: admins } = await _supabase
-        .from('profiles')
-        .select('telegram_chat_id')
-        .eq('role', 'admin')
-        .not('telegram_chat_id', 'is', null)
-        .limit(1);
-      chatId = admins?.[0]?.telegram_chat_id;
-    }
-
+    const chatId = chatIdData;
     if (!chatId) return;
 
     const studentName = currentProfile.full_name || currentUser.email;
