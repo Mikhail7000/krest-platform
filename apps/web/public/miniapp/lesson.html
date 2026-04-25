@@ -520,6 +520,9 @@ async function submitForum() {
   toast('Ответы отправлены!', 'success');
   document.getElementById('forumSection').style.display = 'none';
   showKonspekt(currentBlock, false);
+
+  // Notify leader via Telegram
+  notifyLeader(content);
 }
 
 function showKonspekt(block, isApproved) {
@@ -536,6 +539,57 @@ function showKonspekt(block, isApproved) {
   setTimeout(() => {
     document.getElementById('konspektSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 300);
+}
+
+async function notifyLeader(journalContent) {
+  try {
+    // Find leader: student's nastavnik or any admin
+    let chatId = null;
+
+    if (currentProfile.nastavnik_id) {
+      const { data: nastavnik } = await _supabase
+        .from('profiles')
+        .select('telegram_chat_id')
+        .eq('id', currentProfile.nastavnik_id)
+        .single();
+      chatId = nastavnik?.telegram_chat_id;
+    }
+
+    // Fallback: first admin with telegram_chat_id
+    if (!chatId) {
+      const { data: admins } = await _supabase
+        .from('profiles')
+        .select('telegram_chat_id')
+        .eq('role', 'admin')
+        .not('telegram_chat_id', 'is', null)
+        .limit(1);
+      chatId = admins?.[0]?.telegram_chat_id;
+    }
+
+    if (!chatId) return;
+
+    const studentName = currentProfile.full_name || currentUser.email;
+    const blockName = currentBlock.title_ru;
+    const preview = journalContent.slice(0, 200);
+
+    await fetch(`https://api.telegram.org/bot8348590676:AAFc2U8sAZTEAHq_xFFbi0cQEoTeugDkx70/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `📝 <b>Новый ответ студента</b>\n\n👤 <b>${studentName}</b>\n📖 Блок ${currentBlock.order_num}: ${blockName}\n\n${preview}${journalContent.length > 200 ? '...' : ''}`,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [[{
+            text: '✅ Открыть панель лидера',
+            web_app: { url: 'https://krest-platform-web.vercel.app/miniapp/admin.html' }
+          }]]
+        }
+      })
+    });
+  } catch (e) {
+    console.error('Telegram notify error:', e);
+  }
 }
 
 function extractYtId(url) {
