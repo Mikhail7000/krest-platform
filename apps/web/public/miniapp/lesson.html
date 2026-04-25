@@ -16,6 +16,9 @@
 </div>
 
 <div id="lessonView" style="display:none">
+  <div class="page-header" id="lessonHeader" style="padding-bottom:8px">
+    <h1 id="lessonTitle"></h1>
+  </div>
   <!-- Video -->
   <div class="video-wrap" id="videoWrap"></div>
 
@@ -90,14 +93,6 @@ async function init() {
     return;
   }
 
-  // Load first lesson's video
-  const { data: lessons } = await _supabase
-    .from('lessons')
-    .select('*')
-    .eq('block_id', blockId)
-    .order('order_num')
-    .limit(1);
-
   // Check existing progress
   const { data: progress } = await _supabase
     .from('student_progress')
@@ -121,11 +116,12 @@ async function init() {
   const isApproved = progress?.admin_approved === true;
 
   // Set page title
-  if (tg) tg.setHeaderColor(tg.themeParams.bg_color || '#ffffff');
+  if (tg) tg.setHeaderColor(tg.themeParams.bg_color || '#0B1E3D');
   document.title = block.title_ru + ' — КРЕСТ';
+  document.getElementById('lessonTitle').textContent = `Блок ${block.order_num} · ${block.title_ru}`;
 
-  // Load video
-  const videoUrl = lessons?.[0]?.youtube_url;
+  // Load video from block's youtube_ru field
+  const videoUrl = block.youtube_ru || block.youtube_en;
   if (videoUrl) {
     loadYouTube(videoUrl, alreadySubmitted);
   } else {
@@ -258,6 +254,8 @@ function showKonspekt(block, isApproved) {
 }
 
 function extractYtId(url) {
+  if (!url) return null;
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url.trim())) return url.trim();
   const m = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   return m ? m[1] : null;
 }
