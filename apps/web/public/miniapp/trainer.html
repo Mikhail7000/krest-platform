@@ -10,29 +10,36 @@
   <link rel="stylesheet" href="css/styles.css" />
   <style>
     .verse-card {
-      background: var(--tg-secondary);
-      border-radius: var(--radius);
-      padding: 24px 20px;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(201,169,97,0.2);
+      border-radius: 16px;
+      padding: 32px 24px;
       margin: 16px;
-      min-height: 240px;
+      min-height: 280px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
     }
     .verse-reference {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 16px;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--gold);
+      margin-bottom: 20px;
+      letter-spacing: 0.3px;
+      text-shadow: 0 2px 8px rgba(201,169,97,0.3);
     }
     .verse-text {
-      font-size: 16px;
-      line-height: 1.6;
-      color: var(--tg-text);
-      margin-bottom: 20px;
+      font-size: 17px;
+      line-height: 1.75;
+      color: rgba(255,255,255,0.92);
+      margin-bottom: 24px;
       display: none;
+      font-weight: 500;
     }
     .verse-text.revealed { display: block; }
     .verse-actions {
@@ -45,12 +52,18 @@
     .verse-actions .btn {
       flex: 1;
     }
+    .verse-actions .btn-secondary {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(201,169,97,0.25);
+      color: var(--gold);
+    }
     .progress-indicator {
       text-align: center;
       font-size: 14px;
       color: var(--tg-hint);
-      padding: 12px 0;
-      font-weight: 500;
+      padding: 14px 0;
+      font-weight: 600;
+      letter-spacing: 0.3px;
     }
     .completion-screen {
       display: flex;
@@ -58,23 +71,27 @@
       align-items: center;
       justify-content: center;
       min-height: 60vh;
-      padding: 32px 20px;
+      padding: 40px 20px;
       text-align: center;
     }
     .completion-screen .icon {
-      font-size: 72px;
-      margin-bottom: 16px;
+      font-size: 80px;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 4px 16px rgba(201,169,97,0.3));
     }
     .completion-screen h2 {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 8px;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--gold);
+      margin-bottom: 10px;
+      letter-spacing: 0.3px;
     }
     .completion-screen p {
       font-size: 15px;
       color: var(--tg-hint);
-      margin-bottom: 24px;
+      margin-bottom: 28px;
+      font-weight: 500;
+      line-height: 1.5;
     }
     .empty-state {
       display: flex;
@@ -82,48 +99,62 @@
       align-items: center;
       justify-content: center;
       min-height: 60vh;
-      padding: 32px 20px;
+      padding: 40px 20px;
       text-align: center;
       color: var(--tg-hint);
     }
-    .empty-state .icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
-    .empty-state p { font-size: 15px; }
+    .empty-state .icon {
+      font-size: 72px;
+      margin-bottom: 20px;
+      opacity: 0.4;
+      filter: drop-shadow(0 2px 8px rgba(201,169,97,0.2));
+    }
+    .empty-state p {
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1.5;
+    }
     .mode-toggle {
       display: flex;
-      background: var(--tg-secondary);
-      border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(201,169,97,0.15);
+      border-radius: 12px;
       margin: 12px 16px 0;
-      padding: 3px;
+      padding: 4px;
     }
     .mode-btn {
       flex: 1;
-      padding: 8px;
+      padding: 10px 8px;
       text-align: center;
       font-size: 12px;
-      font-weight: 500;
-      border-radius: 7px;
+      font-weight: 600;
+      border-radius: 9px;
       cursor: pointer;
       color: var(--tg-hint);
-      transition: all 0.15s;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       border: none;
       background: none;
+      letter-spacing: 0.2px;
     }
     .mode-btn.active {
-      background: var(--tg-bg);
-      color: var(--tg-text);
-      font-weight: 600;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      background: rgba(201,169,97,0.2);
+      color: var(--gold);
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(201,169,97,0.2);
     }
     .block-badge {
       display: inline-block;
-      background: var(--accent);
-      color: #fff;
+      background: rgba(201,169,97,0.15);
+      color: var(--gold);
       font-size: 11px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 10px;
-      margin-bottom: 12px;
-      opacity: 0.8;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      border: 1px solid rgba(201,169,97,0.3);
     }
   </style>
 </head>
