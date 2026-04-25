@@ -88,6 +88,43 @@
     }
     .empty-state .icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
     .empty-state p { font-size: 15px; }
+    .mode-toggle {
+      display: flex;
+      background: var(--tg-secondary);
+      border-radius: 10px;
+      margin: 12px 16px 0;
+      padding: 3px;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 7px;
+      cursor: pointer;
+      color: var(--tg-hint);
+      transition: all 0.15s;
+      border: none;
+      background: none;
+    }
+    .mode-btn.active {
+      background: var(--tg-bg);
+      color: var(--tg-text);
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .block-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body class="has-tab-bar">
@@ -102,6 +139,10 @@
     <h1>✦ Тренажёр стихов</h1>
     <p id="trainerSubtitle">Учите стихи Библии</p>
   </div>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="modeRef" onclick="setMode('ref')">📖 Ссылка → Текст</button>
+    <button class="mode-btn" id="modeText" onclick="setMode('text')">✍️ Текст → Ссылка</button>
+  </div>
 
   <div class="progress-indicator" id="progressIndicator"></div>
 
@@ -112,9 +153,24 @@
 <script src="js/auth.js"></script>
 <script>
 let verses = [];
+let allVerses = [];
 let currentIndex = 0;
 let knownVerses = [];
 let isRevealed = false;
+let trainerMode = 'ref'; // 'ref' = reference shown, recall text | 'text' = text shown, recall reference
+
+function setMode(mode) {
+  trainerMode = mode;
+  document.getElementById('modeRef').classList.toggle('active', mode === 'ref');
+  document.getElementById('modeText').classList.toggle('active', mode === 'text');
+  // Reset with fresh copy
+  verses = [...allVerses];
+  knownVerses = [];
+  currentIndex = 0;
+  if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+  if (verses.length === 0) showEmptyState();
+  else showVerse();
+}
 
 async function init() {
   const auth = await requireAuth();
@@ -123,10 +179,11 @@ async function init() {
 
   const blocksUnlocked = profile.blocks_unlocked || 1;
 
-  // Load all verses for blocks 1 through blocksUnlocked
+  // Load global verse content (user_id IS NULL) for unlocked blocks
   const { data, error } = await _supabase
     .from('bible_verses')
-    .select('*')
+    .select('id, block_id, reference, text_ru, order_num')
+    .is('user_id', null)
     .lte('block_id', blocksUnlocked)
     .order('block_id')
     .order('order_num');
@@ -138,7 +195,8 @@ async function init() {
     return;
   }
 
-  verses = data || [];
+  allVerses = data || [];
+  verses = [...allVerses];
 
   showLoading(false);
   document.getElementById('trainerView').style.display = 'block';
@@ -178,26 +236,48 @@ function showVerse() {
   isRevealed = false;
   const verse = verses[currentIndex];
   const content = document.getElementById('verseContent');
+  const blockNames = ['','Принцип Сотворения','Коренная Проблема','6 Состояний','3 Состояния','3 Работы Христа','7 Благословений'];
 
-  content.innerHTML = `
-    <div class="verse-card">
-      <div class="verse-reference">${verse.reference}</div>
-      <div class="verse-text" id="verseText">${verse.text_ru}</div>
-    </div>
-    <div class="verse-actions">
-      <button class="btn" id="revealBtn" onclick="revealVerse()">Показать</button>
-    </div>
-  `;
+  if (trainerMode === 'ref') {
+    // Show reference, hide text
+    content.innerHTML = `
+      <div class="verse-card">
+        <div class="block-badge">Блок ${verse.block_id} · ${blockNames[verse.block_id] || ''}</div>
+        <div class="verse-reference">${verse.reference}</div>
+        <div class="verse-text" id="verseText">${verse.text_ru}</div>
+      </div>
+      <div class="verse-actions">
+        <button class="btn" id="revealBtn" onclick="revealVerse()">Показать текст</button>
+      </div>
+    `;
+  } else {
+    // Show text, hide reference
+    content.innerHTML = `
+      <div class="verse-card">
+        <div class="block-badge">Блок ${verse.block_id} · ${blockNames[verse.block_id] || ''}</div>
+        <div class="verse-text revealed" style="display:block;margin-bottom:16px">${verse.text_ru}</div>
+        <div class="verse-reference" id="verseRef" style="display:none;color:var(--gold)">${verse.reference}</div>
+      </div>
+      <div class="verse-actions">
+        <button class="btn" id="revealBtn" onclick="revealVerse()">Показать ссылку</button>
+      </div>
+    `;
+  }
 
   updateProgress();
 }
 
 function revealVerse() {
   if (isRevealed) return;
-
   isRevealed = true;
-  const textEl = document.getElementById('verseText');
-  textEl.classList.add('revealed');
+
+  if (trainerMode === 'ref') {
+    const textEl = document.getElementById('verseText');
+    if (textEl) textEl.classList.add('revealed');
+  } else {
+    const refEl = document.getElementById('verseRef');
+    if (refEl) refEl.style.display = 'block';
+  }
 
   const actionsEl = document.querySelector('.verse-actions');
   actionsEl.innerHTML = `
