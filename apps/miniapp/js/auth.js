@@ -3,7 +3,7 @@
 async function requireAuth() {
   const { data: { session } } = await _supabase.auth.getSession();
   if (!session) {
-    window.location.href = '/apps/miniapp/index.html';
+    window.location.href = './index.html';
     return null;
   }
   const { data: profile } = await _supabase
@@ -29,6 +29,21 @@ function toast(msg, type = 'info') {
   }
 
   setTimeout(() => el.remove(), 3000);
+}
+
+async function requireAdmin() {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (!session) { window.location.href = './index.html'; return null; }
+  const { data: profile } = await _supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', session.user.id)
+    .single();
+  if (!profile || profile.role !== 'admin') {
+    window.location.href = './index.html';
+    return null;
+  }
+  return { user: session.user, profile };
 }
 
 function showLoading(show) {
