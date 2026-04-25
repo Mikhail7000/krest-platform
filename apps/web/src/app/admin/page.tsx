@@ -9,9 +9,19 @@ interface StudentRow {
   email: string | null
   blocks_unlocked: number
   pendingCount: number
+  city: string | null
+  gornitsa_type: string | null
+  nastavnik_id: string | null
+  nastavnik_name: string | null
+  onboarding_done: boolean | null
 }
 
-export default async function AdminDashboard() {
+interface PageProps {
+  searchParams: Promise<{ filter?: string }>
+}
+
+export default async function AdminDashboard({ searchParams }: PageProps) {
+  const { filter } = await searchParams
   const supabase = await createServerSupabase()
 
   const { data: authData } = await supabase.auth.getUser()
@@ -33,6 +43,17 @@ export default async function AdminDashboard() {
     .order('full_name', { ascending: true })
   const students = (rawStudents as unknown as Profile[]) ?? []
 
+  const nastavnikIds = [...new Set(students.map(s => s.nastavnik_id).filter(Boolean))]
+  const { data: rawNastavniki } = nastavnikIds.length > 0
+    ? await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', nastavnikIds)
+    : { data: [] }
+  const nastavnikiMap = new Map(
+    ((rawNastavniki as unknown as Profile[]) ?? []).map(n => [n.id, n.full_name])
+  )
+
   const { data: rawPending } = await supabase
     .from('student_progress')
     .select('user_id, admin_approved')
@@ -45,13 +66,26 @@ export default async function AdminDashboard() {
     pendingByUser.set(user_id, (pendingByUser.get(user_id) ?? 0) + 1)
   })
 
-  const studentRows: StudentRow[] = students.map((s) => ({
+  let studentRows: StudentRow[] = students.map((s) => ({
     id: s.id,
     full_name: s.full_name,
     email: s.email,
     blocks_unlocked: s.blocks_unlocked,
     pendingCount: pendingByUser.get(s.id) ?? 0,
+    city: s.city,
+    gornitsa_type: s.gornitsa_type,
+    nastavnik_id: s.nastavnik_id,
+    nastavnik_name: s.nastavnik_id ? nastavnikiMap.get(s.nastavnik_id) ?? null : null,
+    onboarding_done: s.onboarding_done,
   }))
+
+  if (filter === 'offline') {
+    studentRows = studentRows.filter(s => s.gornitsa_type === 'offline')
+  } else if (filter === 'online') {
+    studentRows = studentRows.filter(s => s.gornitsa_type === 'online')
+  } else if (filter === 'pending') {
+    studentRows = studentRows.filter(s => s.onboarding_done === false || s.onboarding_done === null)
+  }
 
   const totalPending = pending.length
 
@@ -70,6 +104,49 @@ export default async function AdminDashboard() {
           )}
         </div>
 
+        <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+          <Link
+            href="/admin"
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              !filter
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Все
+          </Link>
+          <Link
+            href="/admin?filter=offline"
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              filter === 'offline'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Офлайн
+          </Link>
+          <Link
+            href="/admin?filter=online"
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              filter === 'online'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Онлайн
+          </Link>
+          <Link
+            href="/admin?filter=pending"
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              filter === 'pending'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            Не выбрано
+          </Link>
+        </div>
+
         <div className="space-y-3">
           {studentRows.length === 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
@@ -85,6 +162,16 @@ export default async function AdminDashboard() {
                       {s.full_name || 'Без имени'}
                     </p>
                     <p className="text-sm text-gray-400 truncate">{s.email}</p>
+                    {s.city && s.gornitsa_type && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {s.gornitsa_type === 'offline' ? '⛪️' : '🌐'} {s.city} ({s.gornitsa_type === 'offline' ? 'офлайн' : 'онлайн'})
+                      </p>
+                    )}
+                    {s.nastavnik_name && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Наставник: {s.nastavnik_name}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <div className="text-right">

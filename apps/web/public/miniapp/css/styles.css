@@ -295,3 +295,163 @@ body {
 
 /* Add padding to body when tab bar shown */
 body.has-tab-bar { padding-bottom: calc(60px + var(--safe-bottom)); }
+
+/* ===== CELESTIAL THEME ===== */
+
+/* Deep navy background for pages */
+body {
+  background: linear-gradient(160deg, #0B1E3D 0%, #0F2F5A 50%, #1A1A2E 100%);
+  min-height: 100vh;
+}
+
+/* Override tg vars with celestial palette when not in Telegram */
+:root {
+  --tg-bg: rgba(11, 30, 61, 0.95);
+  --tg-text: #E8EAF0;
+  --tg-hint: rgba(200, 210, 230, 0.6);
+  --tg-secondary: rgba(255, 255, 255, 0.07);
+  --tg-btn: #C9A961;
+  --tg-btn-text: #0B1E3D;
+  --tg-link: #C9A961;
+}
+
+/* Gold glow on active elements */
+.block-card.available .block-num,
+.block-card.available {
+  box-shadow: 0 2px 12px rgba(201, 169, 97, 0.25);
+}
+
+/* Cross watermark in header */
+.page-header {
+  background: linear-gradient(135deg, #0B1E3D 0%, #162B50 100%);
+  border-bottom: 1px solid rgba(201, 169, 97, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+.page-header::after {
+  content: '✝';
+  position: absolute;
+  right: 60px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 64px;
+  opacity: 0.04;
+  color: #C9A961;
+  pointer-events: none;
+}
+
+/* Section titles in gold */
+.section-title {
+  color: rgba(201, 169, 97, 0.8);
+  letter-spacing: 1px;
+}
+
+/* Card backgrounds celestial */
+.block-card, .student-card, .progress-wrap, .konspekt-wrap {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(201, 169, 97, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Tab bar celestial */
+.tab-bar-nav {
+  background: rgba(11, 30, 61, 0.95);
+  border-top: 1px solid rgba(201, 169, 97, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Buttons gold */
+.btn {
+  background: linear-gradient(135deg, #C9A961 0%, #E8C84A 100%);
+  color: #0B1E3D;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(201, 169, 97, 0.3);
+}
+.btn-secondary {
+  background: rgba(255,255,255,0.08);
+  color: #E8EAF0;
+  border: 1px solid rgba(201,169,97,0.3);
+  box-shadow: none;
+}
+
+/* Form inputs celestial */
+.form-group input, .forum-wrap textarea {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(201, 169, 97, 0.2);
+  color: #E8EAF0;
+}
+.form-group input::placeholder, .forum-wrap textarea::placeholder {
+  color: rgba(200, 210, 230, 0.4);
+}
+.form-group input:focus, .forum-wrap textarea:focus {
+  border-color: rgba(201, 169, 97, 0.6);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* Stars animation (subtle) */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+/* Login logo cross glow */
+.login-logo .cross { filter: drop-shadow(0 0 8px rgba(201,169,97,0.4)); }
+.login-logo h2 { color: #C9A961; }
+
+/* Progress fill gold */
+.progress-fill {
+  background: linear-gradient(90deg, #C9A961, #E8C84A);
+  box-shadow: 0 0 8px rgba(201, 169, 97, 0.4);
+}
+
+/* Block nums */
+.block-num { box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+/* Approve button */
+.approve-btn {
+  background: linear-gradient(135deg, #34C759, #2EA04F);
+  box-shadow: 0 2px 8px rgba(52,199,89,0.3);
+}
+
+/* Stars background effect */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, rgba(201, 169, 97, 0.3), transparent),
+    radial-gradient(2px 2px at 60% 70%, rgba(201, 169, 97, 0.2), transparent),
+    radial-gradient(1px 1px at 50% 50%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 80% 10%, rgba(255, 255, 255, 0.2), transparent),
+    radial-gradient(2px 2px at 90% 60%, rgba(201, 169, 97, 0.25), transparent),
+    radial-gradient(1px 1px at 33% 80%, rgba(255, 255, 255, 0.2), transparent),
+    radial-gradient(1px 1px at 15% 90%, rgba(201, 169, 97, 0.3), transparent);
+  background-size: 200% 200%;
+  background-position: 0% 0%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Subtle twinkle for some stars */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 40% 20%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 70% 50%, rgba(201, 169, 97, 0.4), transparent),
+    radial-gradient(1px 1px at 25% 60%, rgba(255, 255, 255, 0.3), transparent);
+  background-size: 300% 300%;
+  pointer-events: none;
+  z-index: 0;
+  animation: twinkle 4s ease-in-out infinite;
+  opacity: 0.5;
+}

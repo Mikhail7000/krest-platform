@@ -53,6 +53,16 @@ export default async function StudentDetailPage({ params }: PageProps) {
   const journal = (rawJournal as unknown as JournalEntry[]) ?? []
   const journalMap = new Map(journal.map((j) => [j.block_id, j]))
 
+  let nastavnik: Profile | null = null
+  if (student.nastavnik_id) {
+    const { data: rawNastavnik } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', student.nastavnik_id)
+      .single()
+    nastavnik = rawNastavnik as unknown as Profile | null
+  }
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-8">
@@ -64,6 +74,34 @@ export default async function StudentDetailPage({ params }: PageProps) {
             {student.full_name || 'Студент'}
           </h1>
           <p className="text-sm text-gray-400">{student.email}</p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+          <h2 className="font-semibold text-gray-900 mb-3">Информация о горнице</h2>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Тип:</span>
+              <span className="text-gray-900 font-medium">
+                {student.gornitsa_type === 'offline'
+                  ? 'Офлайн'
+                  : student.gornitsa_type === 'online'
+                  ? 'Онлайн'
+                  : 'Не выбрано'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Город:</span>
+              <span className="text-gray-900 font-medium">
+                {student.city || '—'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Наставник:</span>
+              <span className="text-gray-900 font-medium">
+                {nastavnik ? nastavnik.full_name : 'не назначен'}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-4">

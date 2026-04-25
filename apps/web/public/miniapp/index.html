@@ -110,6 +110,12 @@ async function loadDashboard(user) {
     return;
   }
 
+  // Check if onboarding is needed
+  if (!profile.onboarding_done) {
+    window.location.href = 'setup.html';
+    return;
+  }
+
   const { data: blocks } = await _supabase
     .from('blocks')
     .select('id, order_num, title_ru')

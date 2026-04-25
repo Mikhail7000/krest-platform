@@ -14,6 +14,11 @@ export type Database = {
           role: 'student' | 'admin'
           blocks_unlocked: number
           telegram_chat_id: number | null
+          city: string | null
+          region: string | null
+          gornitsa_type: string | null
+          nastavnik_id: string | null
+          onboarding_done: boolean | null
           created_at: string
         }
         Insert: {
@@ -23,6 +28,11 @@ export type Database = {
           role?: 'student' | 'admin'
           blocks_unlocked?: number
           telegram_chat_id?: number | null
+          city?: string | null
+          region?: string | null
+          gornitsa_type?: string | null
+          nastavnik_id?: string | null
+          onboarding_done?: boolean | null
           created_at?: string
         }
         Update: {
@@ -32,6 +42,11 @@ export type Database = {
           role?: 'student' | 'admin'
           blocks_unlocked?: number
           telegram_chat_id?: number | null
+          city?: string | null
+          region?: string | null
+          gornitsa_type?: string | null
+          nastavnik_id?: string | null
+          onboarding_done?: boolean | null
           created_at?: string
         }
       }
