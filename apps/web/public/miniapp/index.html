@@ -110,6 +110,12 @@ async function loadDashboard(user) {
     return;
   }
 
+  // Admin — redirect to admin panel
+  if (profile.role === 'admin') {
+    window.location.href = 'admin.html';
+    return;
+  }
+
   // Check if onboarding is needed
   if (!profile.onboarding_done) {
     window.location.href = 'setup.html';
