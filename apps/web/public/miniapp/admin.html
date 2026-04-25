@@ -175,6 +175,7 @@
   <div class="page-header">
     <h1>✝️ КРЕСТ — Лидер</h1>
     <p id="leaderName"></p>
+    <button onclick="doLogout()" style="margin-top:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:var(--tg-hint);font-size:13px;font-weight:600;padding:8px 20px;border-radius:20px;cursor:pointer;letter-spacing:0.3px;">Выйти из аккаунта</button>
   </div>
 
   <div class="section">
@@ -396,6 +397,11 @@ function switchTab(tab) {
   document.getElementById('tabAll').classList.toggle('active', tab === 'all');
   document.getElementById('pendingView').style.display = tab === 'pending' ? 'block' : 'none';
   document.getElementById('allView').style.display = tab === 'all' ? 'block' : 'none';
+}
+
+async function doLogout() {
+  await _supabase.auth.signOut();
+  window.location.href = 'index.html';
 }
 
 init();
