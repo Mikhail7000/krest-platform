@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="КРЕСТ — платформа управляемого ученичества" />
+  <title>Профиль — КРЕСТ</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .profile-header {
+      background: linear-gradient(135deg, var(--accent), var(--tg-btn));
+      color: #fff;
+      padding: 32px 16px;
+      text-align: center;
+    }
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--tg-btn));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      font-weight: 700;
+      margin: 0 auto 12px;
+      border: 4px solid rgba(255,255,255,0.3);
+    }
+    .profile-name { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .profile-email { font-size: 14px; opacity: 0.8; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: var(--tg-secondary);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--tg-btn);
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--tg-hint);
+    }
+
+    .lang-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .lang-btn {
+      flex: 1;
+      padding: 12px;
+      border: 1.5px solid var(--tg-secondary);
+      border-radius: var(--radius);
+      background: var(--tg-secondary);
+      color: var(--tg-text);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .lang-btn.active {
+      background: var(--tg-btn);
+      color: var(--tg-btn-text);
+      border-color: var(--tg-btn);
+    }
+    .lang-btn:active { opacity: 0.7; }
+
+    .telegram-card {
+      background: var(--tg-secondary);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .telegram-card .label {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--tg-hint);
+      margin-bottom: 8px;
+    }
+    .telegram-card .content {
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .telegram-connected { color: #34C759; }
+    .telegram-not-connected { color: var(--tg-hint); }
+  </style>
+</head>
+<body class="has-tab-bar">
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Загрузка...</span>
+</div>
+
+<div id="profileView" style="display:none">
+  <div class="profile-header">
+    <div class="avatar" id="avatar"></div>
+    <div class="profile-name" id="profileName"></div>
+    <div class="profile-email" id="profileEmail"></div>
+  </div>
+
+  <div class="section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="blocksCount">0</div>
+        <div class="stat-label" id="blocksLabel">Блоков пройдено</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="journalCount">0</div>
+        <div class="stat-label" id="journalLabel">Записей в журнале</div>
+      </div>
+    </div>
+
+    <div class="section-title" id="langTitle">Язык</div>
+    <div class="lang-toggle">
+      <button class="lang-btn" id="langRu" onclick="setLang('ru')">🇷🇺 Русский</button>
+      <button class="lang-btn" id="langEn" onclick="setLang('en')">🇬🇧 English</button>
+    </div>
+
+    <div class="telegram-card">
+      <div class="label">Telegram уведомления</div>
+      <div class="content" id="telegramStatus"></div>
+    </div>
+
+    <button class="btn btn-secondary" onclick="doLogout()" id="logoutBtn">Выйти</button>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+async function init() {
+  const auth = await requireAuth();
+  if (!auth) return;
+
+  const { user, profile } = auth;
+
+  // Avatar with first letter
+  const firstLetter = (profile.full_name || user.email || '?').charAt(0).toUpperCase();
+  document.getElementById('avatar').textContent = firstLetter;
+
+  // Profile info
+  document.getElementById('profileName').textContent = profile.full_name || user.email;
+  document.getElementById('profileEmail').textContent = user.email;
+
+  // Stats: blocks approved
+  const { data: progresses } = await _supabase
+    .from('student_progress')
+    .select('admin_approved')
+    .eq('user_id', user.id)
+    .is('lesson_id', null);
+
+  const approvedCount = (progresses || []).filter(p => p.admin_approved === true).length;
+  document.getElementById('blocksCount').textContent = approvedCount;
+
+  // Stats: journal entries
+  const { data: journalEntries } = await _supabase
+    .from('journal_entries')
+    .select('id', { count: 'exact' })
+    .eq('user_id', user.id);
+
+  const journalCount = journalEntries?.length || 0;
+  document.getElementById('journalCount').textContent = journalCount;
+
+  // Language toggle
+  const currentLang = LANG;
+  if (currentLang === 'ru') {
+    document.getElementById('langRu').classList.add('active');
+  } else {
+    document.getElementById('langEn').classList.add('active');
+  }
+
+  // Telegram connection status
+  const telegramStatus = document.getElementById('telegramStatus');
+  if (profile.telegram_chat_id) {
+    telegramStatus.innerHTML = '<span class="telegram-connected">✅ ' + t.telegramConnected + '</span>';
+  } else {
+    telegramStatus.innerHTML = '<span class="telegram-not-connected">' + t.telegramNotConnected + '</span>';
+  }
+
+  // i18n for static labels
+  document.getElementById('blocksLabel').textContent = t.blocksCompleted;
+  document.getElementById('journalLabel').textContent = t.journalEntries;
+  document.getElementById('langTitle').textContent = t.language;
+  document.getElementById('logoutBtn').textContent = t.logout;
+
+  showLoading(false);
+  document.getElementById('profileView').style.display = 'block';
+
+  // Telegram back button
+  if (tg?.BackButton) {
+    tg.BackButton.show();
+    tg.BackButton.onClick(() => {
+      window.location.href = './index.html';
+    });
+  }
+}
+
+function setLang(lang) {
+  localStorage.setItem('crest_lang', lang);
+  location.reload();
+}
+
+async function doLogout() {
+  const btn = document.getElementById('logoutBtn');
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  await _supabase.auth.signOut();
+  toast(t.logoutConfirm, 'success');
+
+  setTimeout(() => {
+    window.location.href = './index.html';
+  }, 1000);
+}
+
+init();
+</script>
+
+<nav class="tab-bar-nav">
+  <a href="index.html"><span class="tab-icon">🏠</span><span class="tab-label">Блоки</span></a>
+  <a href="trainer.html"><span class="tab-icon">📖</span><span class="tab-label">Тренажёр</span></a>
+  <a href="profile.html" class="active"><span class="tab-icon">👤</span><span class="tab-label">Профиль</span></a>
+</nav>
+
+</body>
+</html>

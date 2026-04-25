@@ -90,7 +90,7 @@
     .empty-state p { font-size: 15px; }
   </style>
 </head>
-<body>
+<body class="has-tab-bar">
 
 <div id="loading">
   <div class="spinner"></div>
@@ -263,5 +263,12 @@ function restart() {
 
 init();
 </script>
+
+<nav class="tab-bar-nav">
+  <a href="index.html"><span class="tab-icon">🏠</span><span class="tab-label">Блоки</span></a>
+  <a href="trainer.html" class="active"><span class="tab-icon">📖</span><span class="tab-label">Тренажёр</span></a>
+  <a href="profile.html"><span class="tab-icon">👤</span><span class="tab-label">Профиль</span></a>
+</nav>
+
 </body>
 </html>

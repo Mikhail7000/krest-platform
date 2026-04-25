@@ -38,6 +38,23 @@ const T = {
     forumMin: 'Минимум 20 символов',
     saved: 'Сохранено!',
     watchFull: 'Посмотрите видео полностью',
+    trainerTitle: 'Тренажёр стихов',
+    trainerSubtitle: 'Учите стихи Библии',
+    reveal: 'Показать',
+    iKnow: 'Знаю ✓',
+    tryAgain: 'Ещё раз ↩',
+    versesProgress: 'стихов',
+    allLearned: 'Все стихи выучены!',
+    greatWork: 'Отличная работа!',
+    repeatAgain: 'Повторить снова',
+    versesAppear: 'Стихи появятся после открытия блоков',
+    profile: 'Профиль',
+    blocksCompleted: 'Блоков пройдено',
+    journalEntries: 'Записей в журнале',
+    language: 'Язык',
+    logoutConfirm: 'Вы вышли из системы',
+    telegramConnected: 'Telegram уведомления подключены',
+    telegramNotConnected: 'Чтобы получать уведомления от лидера, напишите /start нашему боту @krest_bot',
   }
 };
 const LANG = localStorage.getItem('crest_lang') || 'ru';

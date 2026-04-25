@@ -9,7 +9,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
-<body>
+<body class="has-tab-bar">
 
 <div id="loading">
   <div class="spinner"></div>
@@ -68,8 +68,6 @@ async function init() {
   if (!session) {
     showLoading(false);
     document.getElementById('loginView').style.display = 'block';
-    // Set up Telegram back button behavior
-    if (tg?.BackButton) tg.BackButton.hide();
     return;
   }
   await loadDashboard(session.user);
@@ -167,10 +165,16 @@ async function loadDashboard(user) {
 
   showLoading(false);
   document.getElementById('dashView').style.display = 'block';
-  if (tg?.BackButton) tg.BackButton.hide();
 }
 
 init();
 </script>
+
+<nav class="tab-bar-nav">
+  <a href="index.html" class="active"><span class="tab-icon">🏠</span><span class="tab-label">Блоки</span></a>
+  <a href="trainer.html"><span class="tab-icon">📖</span><span class="tab-label">Тренажёр</span></a>
+  <a href="profile.html"><span class="tab-icon">👤</span><span class="tab-label">Профиль</span></a>
+</nav>
+
 </body>
 </html>
