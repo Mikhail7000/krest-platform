@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CREST — Курс для лидеров и студентов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+body { background: linear-gradient(135deg, #f5f5f7 0%, #e8f0fe 100%); }
+
+.lang-toggle {
+  position: fixed;
+  top: 20px; right: 24px;
+  display: flex;
+  gap: 4px;
+  z-index: 100;
+}
+.lang-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.lang-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+.acronym-card {
+  background: rgba(255,255,255,.8);
+  backdrop-filter: blur(16px);
+  border-radius: 20px;
+  padding: 32px 40px;
+  border: 1px solid rgba(255,255,255,.6);
+  box-shadow: 0 4px 40px rgba(0,113,227,.1);
+  margin-bottom: 48px;
+  width: 100%;
+  max-width: 520px;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-width: 700px;
+  width: 100%;
+  margin-bottom: 48px;
+}
+.feature-card {
+  background: rgba(255,255,255,.8);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,.6);
+}
+.feature-icon { font-size: 28px; margin-bottom: 8px; }
+.feature-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.feature-desc { font-size: 12px; color: var(--text2); }
+
+.cta-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+@media (max-width: 600px) {
+  .feature-grid { grid-template-columns: 1fr; }
+  .acronym-card { padding: 24px; }
+  .crest-word { font-size: 15px; }
+  .crest-desc { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="lang-toggle">
+  <button class="lang-btn" id="btn-ru" onclick="setLang('ru')">RU</button>
+  <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+</div>
+
+<div class="landing-hero">
+
+  <div class="landing-logo">CREST</div>
+  <p class="landing-sub" id="hero-sub">Курс для студентов и лидеров</p>
+
+  <div class="acronym-card">
+    <div class="crest-acronym" id="acronym"></div>
+  </div>
+
+  <div class="feature-grid" id="features"></div>
+
+  <div class="cta-group">
+    <a href="login.html" class="btn btn-primary" style="font-size:16px;padding:14px 32px" id="btn-login">Войти в курс</a>
+  </div>
+
+  <p style="margin-top:32px;font-size:13px;color:var(--text2)" id="footer-note">
+    Платформа для обучения и подготовки лидеров церкви
+  </p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script>
+document.getElementById('btn-' + LANG).classList.add('active');
+
+const ACRONYMS = {
+  ru: [
+    { letter: 'C', full: 'Принцип Сотворения',       desc: 'Кем Бог создал человека' },
+    { letter: 'R', full: 'Коренная Проблема',         desc: 'Что пошло не так' },
+    { letter: 'E', full: '6 Состояний неверующего',   desc: 'Последствия жизни без Бога' },
+    { letter: 'S', full: '3 Состояния мира',          desc: 'Ложные пути к Богу' },
+    { letter: 'T', full: '3 Работы Христа',           desc: 'Что Бог сделал для спасения' },
+  ],
+  en: [
+    { letter: 'C', full: 'Principle of Creation',     desc: 'Who did God create man to be' },
+    { letter: 'R', full: 'Root Problem',              desc: 'What went wrong' },
+    { letter: 'E', full: '6 States of the Unbeliever',desc: 'Life without God' },
+    { letter: 'S', full: '3 States of the World',     desc: 'False paths to God' },
+    { letter: 'T', full: '3 Works of Christ',         desc: 'What God did for salvation' },
+  ]
+};
+
+const FEATURES = {
+  ru: [
+    { icon: '🎬', title: 'Видеоуроки',   desc: 'YouTube-видео в каждом блоке' },
+    { icon: '📔', title: 'Дневник',       desc: 'Записи и откровения студентов' },
+    { icon: '🗺️', title: 'Карта',         desc: 'Где находятся студенты' },
+    { icon: '📖', title: 'Стихи',         desc: 'Заучивание библейских стихов' },
+    { icon: '👥', title: 'Лидеры',        desc: 'Отслеживание прогресса' },
+    { icon: '🌐', title: 'RU / EN',       desc: 'Двуязычная платформа' },
+  ],
+  en: [
+    { icon: '🎬', title: 'Video Lessons', desc: 'YouTube video in each block' },
+    { icon: '📔', title: 'Journal',       desc: 'Student notes and reflections' },
+    { icon: '🗺️', title: 'Map',           desc: 'Where students are located' },
+    { icon: '📖', title: 'Verses',        desc: 'Bible verse memorization' },
+    { icon: '👥', title: 'Leaders',       desc: 'Track student progress' },
+    { icon: '🌐', title: 'RU / EN',       desc: 'Bilingual platform' },
+  ]
+};
+
+document.getElementById('hero-sub').textContent    = LANG === 'ru' ? 'Курс для студентов и лидеров' : 'Course for Students and Leaders';
+document.getElementById('btn-login').textContent   = LANG === 'ru' ? 'Войти в курс' : 'Enter Course';
+document.getElementById('footer-note').textContent = LANG === 'ru'
+  ? 'Платформа для обучения и подготовки лидеров церкви'
+  : 'Platform for training church students and leaders';
+
+const acEl = document.getElementById('acronym');
+ACRONYMS[LANG].forEach(a => {
+  acEl.innerHTML += `<div class="crest-row">
+    <span class="crest-letter">${a.letter}</span>
+    <span class="crest-word">${a.full}</span>
+    <span class="crest-desc">— ${a.desc}</span>
+  </div>`;
+});
+acEl.innerHTML += `<div class="crest-row" style="opacity:.55">
+  <span class="crest-letter" style="color:var(--text3)">+</span>
+  <span class="crest-word">${LANG==='ru' ? '7 Благословений верующего' : '7 Blessings of the Believer'}</span>
+</div>`;
+
+const fEl = document.getElementById('features');
+FEATURES[LANG].forEach(f => {
+  fEl.innerHTML += `<div class="feature-card">
+    <div class="feature-icon">${f.icon}</div>
+    <div class="feature-title">${f.title}</div>
+    <div class="feature-desc">${f.desc}</div>
+  </div>`;
+});
+
+async function checkSession() {
+  const { data: { user } } = await _supabase.auth.getUser();
+  if (!user) return;
+  const { data: p } = await _supabase.from('profiles').select('role').eq('id', user.id).single();
+  location.href = p?.role === 'admin' ? 'admin/index.html' : 'student/index.html';
+}
+checkSession();
+</script>
+</body>
+</html>

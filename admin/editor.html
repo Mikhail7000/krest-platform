@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CREST — Редактор уроков</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<style>
+.editor-wrap {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.editor-sidebar {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: calc(var(--nav-h) + 20px);
+}
+
+.sidebar-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.lessons-panel {
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  padding: 0 0 8px;
+}
+.lessons-label {
+  padding: 10px 20px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+.lesson-item {
+  padding: 8px 20px;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: background .1s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.lesson-item:hover { background: var(--bg); color: var(--text); }
+.lesson-item.active { background: var(--blue-light); color: var(--blue); font-weight: 600; }
+.lesson-item-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 0 2px; }
+.lesson-item-del:hover { color: var(--red); }
+
+.editor-panel { background: var(--surface); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+.editor-panel h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.preview-video { margin-top: 12px; }
+
+.tab-bar-sm {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.tab-btn-sm {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text2);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all .15s;
+}
+.tab-btn-sm.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+@media (max-width: 900px) {
+  .editor-wrap { grid-template-columns: 1fr; }
+  .editor-sidebar { position: static; }
+}
+</style>
+</head>
+<body>
+<nav id="topnav"></nav>
+
+<div class="page-wide">
+  <div class="page-title" id="page-title">Редактор уроков</div>
+  <div class="page-sub"   id="page-sub">Добавляй видео и контент к каждому блоку</div>
+
+  <div class="editor-wrap">
+
+    <!-- Sidebar: blocks + lessons -->
+    <div class="editor-sidebar">
+      <div class="sidebar-header" id="lbl-blocks">Блоки CREST</div>
+      <div id="blocks-list"></div>
+    </div>
+
+    <!-- Editor panel -->
+    <div class="editor-panel" id="editor-content">
+      <div style="color:var(--text2);text-align:center;padding:40px">
+        ${LANG === 'ru' ? 'Выберите блок для редактирования' : 'Select a block to edit'}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+let currentUser, currentProfile;
+let allBlocks   = [];
+let allLessons  = {};
+let activeBlock = null;
+let activeLesson = null;
+
+const COLORS = ['#0071e3','#ff6b35','#8e44ad','#e67e22','#27ae60','#2980b9'];
+
+async function init() {
+  const ctx = await requireAdmin('../login.html');
+  if (!ctx) return;
+  currentUser    = ctx.user;
+  currentProfile = ctx.profile;
+  renderNav(currentProfile, true);
+  applyTranslations();
+  await loadBlocks();
+}
+
+function applyTranslations() {
+  document.getElementById('page-title').textContent = LANG === 'ru' ? 'Редактор уроков' : 'Lesson Editor';
+  document.getElementById('page-sub').textContent   = LANG === 'ru' ? 'Добавляй видео и контент к каждому блоку' : 'Add videos and content to each block';
+  document.getElementById('lbl-blocks').textContent = LANG === 'ru' ? 'Блоки CREST' : 'CREST Blocks';
+}
+
+async function loadBlocks() {
+  const { data } = await _supabase.from('blocks').select('*').order('order_num');
+  allBlocks = data || [];
+
+  // Load all lessons
+  const { data: lessons } = await _supabase.from('lessons').select('*').order('order_num');
+  allLessons = {};
+  (lessons || []).forEach(l => {
+    if (!allLessons[l.block_id]) allLessons[l.block_id] = [];
+    allLessons[l.block_id].push(l);
+  });
+
+  renderBlocksList();
+}
+
+function renderBlocksList() {
+  const list = document.getElementById('blocks-list');
+  list.innerHTML = '';
+  allBlocks.forEach((b, i) => {
+    const color  = COLORS[i] || '#0071e3';
+    const title  = LANG === 'ru' ? b.title_ru : b.title_en;
+    const lessons = allLessons[b.id] || [];
+    const isActive = activeBlock?.id === b.id;
+
+    list.innerHTML += `
+      <div class="editor-item ${isActive ? 'active' : ''}" onclick="selectBlock(${b.id})">
+        <span class="editor-letter" style="color:${color}">${b.letter}</span>
+        <span style="flex:1;font-size:13px">${title}</span>
+        <span style="font-size:11px;color:var(--text3)">${lessons.length}</span>
+      </div>`;
+
+    if (isActive) {
+      list.innerHTML += `<div class="lessons-panel">
+        <div class="lessons-label">${LANG === 'ru' ? 'Уроки' : 'Lessons'}</div>
+        ${lessons.map(l => `
+          <div class="lesson-item ${activeLesson?.id === l.id ? 'active' : ''}" onclick="selectLesson(${l.id})">
+            <span style="flex:1">${(LANG === 'ru' ? l.title_ru : l.title_en) || ('Урок ' + l.order_num)}</span>
+            <button class="lesson-item-del" onclick="event.stopPropagation();deleteLesson(${l.id})" title="Удалить">×</button>
+          </div>`).join('')}
+        <div class="lesson-item" onclick="addLesson(${b.id})" style="color:var(--blue)">
+          + ${LANG === 'ru' ? 'Добавить урок' : 'Add Lesson'}
+        </div>
+      </div>`;
+    }
+  });
+}
+
+function selectBlock(blockId) {
+  activeBlock  = allBlocks.find(b => b.id === blockId);
+  activeLesson = null;
+  renderBlocksList();
+  renderBlockEditor();
+}
+
+function selectLesson(lessonId) {
+  for (const lessons of Object.values(allLessons)) {
+    const l = lessons.find(x => x.id === lessonId);
+    if (l) { activeLesson = l; break; }
+  }
+  renderBlocksList();
+  renderLessonEditor();
+}
+
+function renderBlockEditor() {
+  if (!activeBlock) return;
+  const b     = activeBlock;
+  const color = COLORS[allBlocks.findIndex(x => x.id === b.id)] || '#0071e3';
+
+  document.getElementById('editor-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <span style="font-size:36px;font-weight:900;color:${color}">${b.letter}</span>
+      <div>
+        <h3 style="margin:0">${LANG === 'ru' ? b.title_ru : b.title_en}</h3>
+        <span style="font-size:13px;color:var(--text2)">${LANG === 'ru' ? 'Настройки блока' : 'Block settings'}</span>
+      </div>
+    </div>
+
+    <div class="tab-bar-sm">
+      <button class="tab-btn-sm active" onclick="switchEditorTab('ru', this)">RU</button>
+      <button class="tab-btn-sm"        onclick="switchEditorTab('en', this)">EN</button>
+    </div>
+
+    <div class="tab-pane active" id="ep-ru">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Название (RU)</label>
+          <input class="form-input" id="b-title-ru" value="${b.title_ru || ''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Подзаголовок (RU)</label>
+          <input class="form-input" id="b-sub-ru" value="${b.subtitle_ru || ''}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Описание блока (RU)</label>
+        <textarea class="form-textarea" id="b-desc-ru">${b.description_ru || ''}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">YouTube ссылка (RU) — обзорное видео блока</label>
+        <input class="form-input" id="b-yt-ru" value="${b.youtube_ru || ''}" placeholder="https://youtube.com/watch?v=...">
+        <div class="preview-video" id="yt-preview-ru"></div>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="ep-en">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Title (EN)</label>
+          <input class="form-input" id="b-title-en" value="${b.title_en || ''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subtitle (EN)</label>
+          <input class="form-input" id="b-sub-en" value="${b.subtitle_en || ''}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description (EN)</label>
+        <textarea class="form-textarea" id="b-desc-en">${b.description_en || ''}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">YouTube URL (EN) — block overview video</label>
+        <input class="form-input" id="b-yt-en" value="${b.youtube_en || ''}" placeholder="https://youtube.com/watch?v=...">
+        <div class="preview-video" id="yt-preview-en"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-primary" onclick="saveBlock()">
+        ${LANG === 'ru' ? 'Сохранить блок' : 'Save Block'}
+      </button>
+      <button class="btn btn-outline" onclick="previewYt()">
+        ${LANG === 'ru' ? 'Предпросмотр видео' : 'Preview Video'}
+      </button>
+    </div>`;
+}
+
+function renderLessonEditor() {
+  if (!activeLesson) return;
+  const l = activeLesson;
+
+  document.getElementById('editor-content').innerHTML = `
+    <h3>${LANG === 'ru' ? 'Урок' : 'Lesson'} ${l.order_num}: ${(LANG === 'ru' ? l.title_ru : l.title_en) || ''}</h3>
+
+    <div class="tab-bar-sm">
+      <button class="tab-btn-sm active" onclick="switchEditorTab('lru', this)">RU</button>
+      <button class="tab-btn-sm"        onclick="switchEditorTab('len', this)">EN</button>
+    </div>
+
+    <div class="tab-pane active" id="ep-lru">
+      <div class="form-group">
+        <label class="form-label">Название урока (RU)</label>
+        <input class="form-input" id="l-title-ru" value="${l.title_ru || ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">YouTube ссылка для этого урока</label>
+        <input class="form-input" id="l-yt" value="${l.youtube_url || ''}" placeholder="https://youtube.com/watch?v=...">
+        <div id="l-yt-preview" class="preview-video"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Содержание урока (RU)</label>
+        <textarea class="form-textarea" id="l-content-ru" style="min-height:200px">${l.content_ru || ''}</textarea>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="ep-len">
+      <div class="form-group">
+        <label class="form-label">Lesson Title (EN)</label>
+        <input class="form-input" id="l-title-en" value="${l.title_en || ''}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lesson Content (EN)</label>
+        <textarea class="form-textarea" id="l-content-en" style="min-height:200px">${l.content_en || ''}</textarea>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveLesson()">
+        ${LANG === 'ru' ? 'Сохранить урок' : 'Save Lesson'}
+      </button>
+      <button class="btn btn-outline" onclick="previewLessonYt()">
+        ${LANG === 'ru' ? 'Предпросмотр видео' : 'Preview Video'}
+      </button>
+      <button class="btn btn-outline btn-danger" onclick="deleteLesson(${l.id})" style="margin-left:auto">
+        ${LANG === 'ru' ? 'Удалить урок' : 'Delete Lesson'}
+      </button>
+    </div>`;
+}
+
+function switchEditorTab(id, btn) {
+  btn.closest('.tab-bar-sm').querySelectorAll('.tab-btn-sm').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const prefix = id.startsWith('l') ? 'ep-l' : 'ep-';
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('ep-' + id)?.classList.add('active');
+}
+
+function previewYt() {
+  const url = document.getElementById('b-yt-ru')?.value;
+  const el  = document.getElementById('yt-preview-ru');
+  if (el) el.innerHTML = ytEmbed(url);
+}
+
+function previewLessonYt() {
+  const url = document.getElementById('l-yt')?.value;
+  const el  = document.getElementById('l-yt-preview');
+  if (el) el.innerHTML = ytEmbed(url);
+}
+
+async function saveBlock() {
+  if (!activeBlock) return;
+  const { error } = await _supabase.from('blocks').update({
+    title_ru:       document.getElementById('b-title-ru')?.value || activeBlock.title_ru,
+    title_en:       document.getElementById('b-title-en')?.value || activeBlock.title_en,
+    subtitle_ru:    document.getElementById('b-sub-ru')?.value   || activeBlock.subtitle_ru,
+    subtitle_en:    document.getElementById('b-sub-en')?.value   || activeBlock.subtitle_en,
+    description_ru: document.getElementById('b-desc-ru')?.value,
+    description_en: document.getElementById('b-desc-en')?.value,
+    youtube_ru:     document.getElementById('b-yt-ru')?.value,
+    youtube_en:     document.getElementById('b-yt-en')?.value,
+  }).eq('id', activeBlock.id);
+
+  if (!error) {
+    toast(LANG === 'ru' ? 'Блок сохранён' : 'Block saved', 'success');
+    await loadBlocks();
+    renderBlocksList();
+  } else {
+    toast(error.message, 'error');
+  }
+}
+
+async function saveLesson() {
+  if (!activeLesson) return;
+  const { error } = await _supabase.from('lessons').update({
+    title_ru:    document.getElementById('l-title-ru')?.value,
+    title_en:    document.getElementById('l-title-en')?.value,
+    content_ru:  document.getElementById('l-content-ru')?.value,
+    content_en:  document.getElementById('l-content-en')?.value,
+    youtube_url: document.getElementById('l-yt')?.value,
+  }).eq('id', activeLesson.id);
+
+  if (!error) {
+    toast(LANG === 'ru' ? 'Урок сохранён' : 'Lesson saved', 'success');
+    await loadBlocks();
+    renderBlocksList();
+  } else {
+    toast(error.message, 'error');
+  }
+}
+
+async function addLesson(blockId) {
+  const lessons = allLessons[blockId] || [];
+  const nextOrder = lessons.length + 1;
+  const { data, error } = await _supabase.from('lessons').insert({
+    block_id:  blockId,
+    order_num: nextOrder,
+    title_ru:  `${LANG === 'ru' ? 'Урок' : 'Lesson'} ${nextOrder}`,
+    title_en:  `Lesson ${nextOrder}`,
+  }).select().single();
+
+  if (!error && data) {
+    await loadBlocks();
+    selectLesson(data.id);
+  }
+}
+
+async function deleteLesson(id) {
+  if (!confirm(LANG === 'ru' ? 'Удалить урок?' : 'Delete lesson?')) return;
+  await _supabase.from('lessons').delete().eq('id', id);
+  activeLesson = null;
+  await loadBlocks();
+  if (activeBlock) renderBlockEditor();
+}
+
+init();
+</script>
+</body>
+</html>

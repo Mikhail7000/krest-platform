@@ -1,0 +1,22 @@
+# Env files
+.env
+.env.local
+.env*.local
+.mcp.json
+
+# OS
+.DS_Store
+
+# Monorepo
+node_modules/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Vercel
+.vercel/
+
+# IDE
+.idea/
+.vscode/
+*.swp

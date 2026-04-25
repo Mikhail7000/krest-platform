@@ -1,0 +1,165 @@
+// ============================================================
+// CREST Platform — Supabase Configuration
+// ============================================================
+
+const SUPABASE_URL  = 'https://aejhlmoydnhgedgfndql.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlamhsbW95ZG5oZ2VkZ2ZuZHFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1OTkxNjEsImV4cCI6MjA5MjE3NTE2MX0.OhWK6etLZPw6_uWUNxJExCNEBdKg_JGWe50s4n0JCyw';
+
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ============================================================
+// Telegram Bot — уведомления
+// ============================================================
+const TELEGRAM_BOT_TOKEN   = '8348590676:AAFc2U8sAZTEAHq_xFFbi0cQEoTeugDkx70';
+const TELEGRAM_LEADER_CHAT = 255214568; // Миша Моряк (@Rogue02)
+
+// ============================================================
+// i18n — translations
+// ============================================================
+const LANG = localStorage.getItem('crest_lang') || 'ru';
+
+const T = {
+  ru: {
+    appName: 'CREST',
+    appSub: 'Курс для студентов и лидеров',
+    login: 'Войти',
+    logout: 'Выйти',
+    email: 'Email',
+    password: 'Пароль',
+    loginBtn: 'Войти в аккаунт',
+    loginError: 'Неверный email или пароль',
+    dashboard: 'Главная',
+    students: 'Студенты',
+    editor: 'Редактор',
+    progress: 'Прогресс',
+    journal: 'Дневник',
+    verses: 'Стихи',
+    submit: 'Отправить лидеру',
+    save: 'Сохранить',
+    back: 'Назад',
+    next: 'Далее',
+    prev: 'Предыдущий',
+    nextLesson: 'Следующий урок',
+    markDone: 'Отметить как пройденный',
+    done: 'Пройден ✓',
+    writeJournal: 'Напишите ваши мысли, откровения, вопросы...',
+    addVerse: 'Добавить стих',
+    verseRef: 'Ссылка (напр. Ин 3:16)',
+    verseText: 'Текст стиха',
+    memorized: 'Выучил наизусть',
+    uploadPhoto: 'Загрузить фото заметок',
+    submitFriday: 'Отправить итог недели',
+    submitted: 'Отправлено ✓',
+    grantAdmin: 'Дать права лидера',
+    revokeAdmin: 'Убрать права лидера',
+    location: 'Местоположение',
+    interests: 'Интересы',
+    lastActive: 'Последний визит',
+    totalStudents: 'Студентов',
+    activeWeek: 'Активны на неделе',
+    pendingReview: 'Ожидают проверки',
+    noStudents: 'Студентов пока нет',
+    profile: 'Профиль',
+    editProfile: 'Редактировать профиль',
+    fullName: 'Имя',
+    role: 'Роль',
+    admin: 'Лидер',
+    student: 'Студент',
+    youtubeUrl: 'YouTube ссылка (RU)',
+    youtubeUrlEn: 'YouTube ссылка (EN)',
+    titleRu: 'Название (RU)',
+    titleEn: 'Название (EN)',
+    contentRu: 'Содержание (RU)',
+    contentEn: 'Содержание (EN)',
+    feedback: 'Обратная связь от лидера',
+    weeklyReport: 'Итог недели',
+    blockComplete: 'Блок пройден!',
+    congratulations: 'Поздравляем!',
+    courseComplete: 'Курс CREST пройден!',
+    of: 'из',
+    block: 'Блок',
+    lesson: 'Урок',
+    week: 'Неделя',
+    friday: 'Пятничный отчёт',
+    map: 'Карта студентов',
+    distance: 'Расстояние',
+    km: 'км',
+    noLocation: 'Местоположение не указано',
+    lang: 'EN',
+  },
+  en: {
+    appName: 'CREST',
+    appSub: 'Course for Students and Leaders',
+    login: 'Login',
+    logout: 'Logout',
+    email: 'Email',
+    password: 'Password',
+    loginBtn: 'Sign In',
+    loginError: 'Invalid email or password',
+    dashboard: 'Dashboard',
+    students: 'Students',
+    editor: 'Editor',
+    progress: 'Progress',
+    journal: 'Journal',
+    verses: 'Verses',
+    submit: 'Send to Leader',
+    save: 'Save',
+    back: 'Back',
+    next: 'Next',
+    prev: 'Previous',
+    nextLesson: 'Next Lesson',
+    markDone: 'Mark as Completed',
+    done: 'Completed ✓',
+    writeJournal: 'Write your thoughts, revelations, questions...',
+    addVerse: 'Add Verse',
+    verseRef: 'Reference (e.g. John 3:16)',
+    verseText: 'Verse text',
+    memorized: 'Memorized',
+    uploadPhoto: 'Upload photo of notes',
+    submitFriday: 'Submit weekly report',
+    submitted: 'Submitted ✓',
+    grantAdmin: 'Grant Leader Rights',
+    revokeAdmin: 'Revoke Leader Rights',
+    location: 'Location',
+    interests: 'Interests',
+    lastActive: 'Last Active',
+    totalStudents: 'Students',
+    activeWeek: 'Active This Week',
+    pendingReview: 'Pending Review',
+    noStudents: 'No students yet',
+    profile: 'Profile',
+    editProfile: 'Edit Profile',
+    fullName: 'Full Name',
+    role: 'Role',
+    admin: 'Leader',
+    student: 'Student',
+    youtubeUrl: 'YouTube URL (RU)',
+    youtubeUrlEn: 'YouTube URL (EN)',
+    titleRu: 'Title (RU)',
+    titleEn: 'Title (EN)',
+    contentRu: 'Content (RU)',
+    contentEn: 'Content (EN)',
+    feedback: 'Leader Feedback',
+    weeklyReport: 'Weekly Report',
+    blockComplete: 'Block Complete!',
+    congratulations: 'Congratulations!',
+    courseComplete: 'CREST Course Complete!',
+    of: 'of',
+    block: 'Block',
+    lesson: 'Lesson',
+    week: 'Week',
+    friday: 'Friday Report',
+    map: 'Student Map',
+    distance: 'Distance',
+    km: 'km',
+    noLocation: 'No location set',
+    lang: 'RU',
+  }
+};
+
+const t = T[LANG];
+
+function setLang(l) {
+  localStorage.setItem('crest_lang', l);
+  location.reload();
+}

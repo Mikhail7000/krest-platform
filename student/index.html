@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>КРЕСТ — Мой курс</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<style>
+/* ════════════════════════════════════════
+   Apple-style tokens
+════════════════════════════════════════ */
+:root {
+  --apple-bg:      #f5f5f7;
+  --apple-card:    #ffffff;
+  --apple-text:    #1d1d1f;
+  --apple-text2:   #6e6e73;
+  --apple-text3:   #aeaeb2;
+  --apple-blue:    #0071e3;
+  --apple-green:   #34c759;
+  --apple-r:       20px;
+  --apple-r-lg:    28px;
+  --ease:          cubic-bezier(.4,0,.2,1);
+}
+
+body { background: var(--apple-bg); }
+
+/* ── Page ── */
+.apple-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* ── Top greeting ── */
+.greeting {
+  padding: 44px 0 32px;
+  animation: fadeDown .5s var(--ease) both;
+}
+.greeting-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--apple-blue);
+  margin-bottom: 8px;
+}
+.greeting-title {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -.7px;
+  color: var(--apple-text);
+  line-height: 1.15;
+  margin-bottom: 14px;
+}
+.motivate-card {
+  background: var(--apple-card);
+  border-radius: var(--apple-r);
+  padding: 18px 22px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--apple-text2);
+  box-shadow: 0 2px 16px rgba(0,0,0,.07);
+  border-left: 4px solid var(--apple-blue);
+}
+.motivate-card strong { color: var(--apple-text); font-weight: 700; }
+
+/* ── Streak chip ── */
+.streak-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--apple-card);
+  border-radius: 40px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--apple-text);
+  box-shadow: 0 1px 8px rgba(0,0,0,.08);
+  margin-top: 16px;
+}
+.streak-chip .fire { font-size: 17px; }
+.streak-chip .days { color: var(--apple-blue); }
+
+/* ── Section label ── */
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--apple-text3);
+  margin: 36px 0 14px;
+}
+
+/* ══════════════════════════════════════
+   CURRENT BLOCK HERO CARD
+══════════════════════════════════════ */
+.hero-block {
+  background: var(--apple-card);
+  border-radius: var(--apple-r-lg);
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,.11);
+  animation: fadeUp .5s var(--ease) .1s both;
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+.hero-block:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 56px rgba(0,0,0,.15);
+}
+
+.hero-band {
+  height: 8px;
+  width: 100%;
+}
+
+.hero-body {
+  padding: 28px 30px 24px;
+}
+
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+
+.hero-title {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -.4px;
+  color: var(--apple-text);
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.hero-sub {
+  font-size: 16px;
+  color: var(--apple-text2);
+  margin-bottom: 24px;
+  line-height: 1.45;
+}
+
+.hero-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hero-progress {
+  flex: 1;
+}
+.hero-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--apple-text2);
+  margin-bottom: 6px;
+}
+.hero-bar-bg {
+  height: 6px;
+  background: #e8e8ed;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hero-bar-fill {
+  height: 6px;
+  border-radius: 3px;
+  transition: width .6s var(--ease);
+}
+
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--apple-blue);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.hero-cta:hover { background: #005ec5; }
+
+/* ══════════════════════════════════════
+   COMPLETED BLOCKS (compact)
+══════════════════════════════════════ */
+.done-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.done-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--apple-card);
+  border-radius: var(--apple-r);
+  padding: 14px 18px;
+  box-shadow: 0 1px 8px rgba(0,0,0,.05);
+  text-decoration: none;
+  color: inherit;
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+  animation: fadeUp .4s var(--ease) both;
+}
+.done-item:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px rgba(0,0,0,.09);
+}
+
+.done-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--apple-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.done-info { flex: 1; min-width: 0; }
+.done-title { font-size: 14px; font-weight: 700; color: var(--apple-text); }
+.done-sub   { font-size: 12px; color: var(--apple-text2); margin-top: 1px; }
+
+.done-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--apple-green);
+  background: rgba(52,199,89,.1);
+  padding: 3px 10px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════
+   LOCKED HINT
+══════════════════════════════════════ */
+.locked-hint {
+  text-align: center;
+  padding: 32px 20px;
+  background: var(--apple-card);
+  border-radius: var(--apple-r);
+  box-shadow: 0 1px 8px rgba(0,0,0,.05);
+  animation: fadeUp .4s var(--ease) .3s both;
+}
+.locked-icon { font-size: 36px; margin-bottom: 10px; }
+.locked-title { font-size: 16px; font-weight: 700; color: var(--apple-text); margin-bottom: 6px; }
+.locked-sub   { font-size: 14px; color: var(--apple-text2); line-height: 1.5; }
+
+/* ══════════════════════════════════════
+   RECENT JOURNALS
+══════════════════════════════════════ */
+.journal-card {
+  background: var(--apple-card);
+  border-radius: var(--apple-r);
+  padding: 18px 20px;
+  box-shadow: 0 1px 8px rgba(0,0,0,.05);
+  cursor: pointer;
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+  margin-bottom: 8px;
+  animation: fadeUp .4s var(--ease) both;
+}
+.journal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.1);
+}
+.journal-meta { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.journal-block { font-size: 12px; font-weight: 700; color: var(--apple-blue); }
+.journal-date  { font-size: 12px; color: var(--apple-text3); }
+.journal-text  { font-size: 14px; color: var(--apple-text2); line-height: 1.55; }
+.journal-sent  { display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 700;
+                 color: var(--apple-green); background: rgba(52,199,89,.1);
+                 padding: 2px 10px; border-radius: 20px; }
+.journal-fb    { margin-top: 10px; padding: 10px 12px; background: rgba(0,113,227,.06);
+                 border-radius: 10px; font-size: 13px; color: var(--apple-blue); }
+
+/* ══════════════════════════════════════
+   PROFILE
+══════════════════════════════════════ */
+.profile-card {
+  background: var(--apple-card);
+  border-radius: var(--apple-r);
+  padding: 24px;
+  box-shadow: 0 1px 8px rgba(0,0,0,.06);
+  animation: fadeUp .4s var(--ease) .2s both;
+}
+.profile-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.profile-head-title { font-size: 17px; font-weight: 800; color: var(--apple-text); }
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 520px) { .profile-grid { grid-template-columns: 1fr; } }
+
+/* ══════════════════════════════════════
+   TRAINER BANNER
+══════════════════════════════════════ */
+.trainer-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, #1c1c1e, #3a3a3c);
+  border-radius: var(--apple-r);
+  padding: 20px 22px;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 4px 24px rgba(0,0,0,.18);
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+  animation: fadeUp .4s var(--ease) .15s both;
+}
+.trainer-banner:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 36px rgba(0,0,0,.25);
+}
+.trainer-emoji { font-size: 36px; flex-shrink: 0; }
+.trainer-text-title { font-size: 16px; font-weight: 800; margin-bottom: 3px; }
+.trainer-text-sub   { font-size: 13px; opacity: .7; }
+.trainer-arrow { margin-left: auto; font-size: 20px; opacity: .6; }
+
+/* ══════════════════════════════════════
+   FRIDAY BANNER
+══════════════════════════════════════ */
+.friday-banner {
+  display: none;
+  background: linear-gradient(135deg, var(--apple-blue), #005ec5);
+  border-radius: var(--apple-r);
+  padding: 20px 24px;
+  color: #fff;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0,113,227,.3);
+  animation: fadeUp .4s var(--ease) both;
+  margin-bottom: 0;
+}
+.friday-banner.show { display: flex; }
+.friday-title { font-size: 15px; font-weight: 800; margin-bottom: 3px; }
+.friday-sub   { font-size: 13px; opacity: .85; }
+
+/* ══════════════════════════════════════
+   MODALS
+══════════════════════════════════════ */
+.apple-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+}
+.apple-overlay.open { display: flex; animation: overlayIn .2s ease; }
+@keyframes overlayIn { from { opacity: 0 } to { opacity: 1 } }
+
+.apple-sheet {
+  background: var(--apple-card);
+  border-radius: 28px 28px 0 0;
+  padding: 24px 24px 40px;
+  width: 100%;
+  max-width: 640px;
+  animation: sheetUp .3s var(--ease);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+@keyframes sheetUp {
+  from { transform: translateY(100%) }
+  to   { transform: translateY(0) }
+}
+.sheet-handle {
+  width: 36px; height: 4px;
+  background: #d1d1d6;
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.sheet-title { font-size: 20px; font-weight: 900; margin-bottom: 20px; }
+
+/* ══════════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════════ */
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-16px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+
+/* Apple-style buttons */
+.apple-btn {
+  background: var(--apple-blue);
+  color: #fff;
+  border: none;
+  border-radius: 40px;
+  padding: 12px 24px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+}
+.apple-btn:hover { background: #005ec5; }
+.apple-btn-outline {
+  background: transparent;
+  color: var(--apple-blue);
+  border: 1.5px solid rgba(0,113,227,.3);
+  border-radius: 40px;
+  padding: 11px 22px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+}
+.apple-btn-outline:hover { background: rgba(0,113,227,.06); }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
+
+/* Override global page */
+.apple-page .form-input,
+.apple-page .form-textarea {
+  background: #f5f5f7;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  padding: 14px 16px;
+}
+.apple-page .form-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--apple-text2);
+  margin-bottom: 6px;
+}
+</style>
+</head>
+<body>
+<nav id="topnav"></nav>
+
+<div class="apple-page">
+
+  <!-- GREETING -->
+  <div class="greeting">
+    <div class="greeting-eyebrow" id="eyebrow-label">КРЕСТ — путь спасения</div>
+    <h1 class="greeting-title" id="welcome-title">Продолжай изучать КРЕСТ</h1>
+    <div class="motivate-card" id="welcome-sub"></div>
+    <div class="streak-chip">
+      <span class="fire">🔥</span>
+      <span id="streak-label">Серия:</span>
+      <span class="days" id="streak-val">0 дней</span>
+    </div>
+  </div>
+
+  <!-- FRIDAY BANNER -->
+  <div class="friday-banner" id="friday-banner">
+    <div>
+      <div class="friday-title" id="friday-title">Сегодня пятница — время отправить итог недели</div>
+      <div class="friday-sub"  id="friday-sub">Напиши резюме и отправь своему лидеру</div>
+    </div>
+    <button class="apple-btn" style="font-size:13px;padding:9px 18px" onclick="openFriday()" id="friday-btn">Отправить</button>
+  </div>
+
+  <!-- CURRENT BLOCK -->
+  <div class="section-label" id="lbl-current">Текущий блок</div>
+  <div id="hero-area"></div>
+
+  <!-- COMPLETED BLOCKS -->
+  <div id="done-section" style="display:none">
+    <div class="section-label" id="lbl-done">Пройдено</div>
+    <div class="done-list" id="done-list"></div>
+  </div>
+
+  <!-- LOCKED HINT -->
+  <div id="locked-hint" style="display:none;margin-top:28px">
+    <div class="locked-hint">
+      <div class="locked-icon">🔒</div>
+      <div class="locked-title" id="locked-title">Следующий блок закрыт</div>
+      <div class="locked-sub"  id="locked-sub">Лидер откроет следующий блок после того, как ты завершишь текущий.</div>
+    </div>
+  </div>
+
+  <!-- RECENT JOURNALS -->
+  <div id="journals-section" style="display:none;margin-top:36px">
+    <div class="section-label" id="lbl-journals">Последние записи</div>
+    <div id="recent-list"></div>
+  </div>
+
+</div>
+
+<!-- FRIDAY MODAL (bottom sheet) -->
+<div class="apple-overlay" id="friday-modal">
+  <div class="apple-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheet-friday-title">Итог недели</div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-summary">Краткое резюме пройденного блока</label>
+      <textarea class="form-textarea" id="friday-summary" style="min-height:180px;background:#f5f5f7;border:none;border-radius:12px;font-size:15px;padding:14px"
+        placeholder="Что я узнал, как это изменило моё понимание..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="apple-btn" onclick="submitFriday()" id="submit-friday-btn">Отправить лидеру</button>
+      <button class="apple-btn-outline" onclick="closeSheet('friday-modal')">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+
+const BLOCK_COLORS  = ['#0071e3','#ff6b35','#8e44ad','#e67e22','#27ae60','#2980b9'];
+const BLOCK_EMOJI   = ['🌍','💔','🌑','🌪️','✝️','👑'];
+
+let currentUser, currentProfile, allBlocks = [], progressMap = {};
+
+// ════════════════════════════════════════
+// MOTIVATIONS (66 — по книгам Библии)
+// ════════════════════════════════════════
+const MOTIVATIONS = [
+  'Бог создал тебя духовным существом — <strong>по образу Своему</strong>. Это меняет всё. <em>(Бытие 1:27)</em>',
+  'Бог видит твоё рабство и приходит освободить. <strong>Он всегда выводит — из Египта, из греха, из страха.</strong> <em>(Исход 3:7–8)</em>',
+  'Бог говорит: <strong>«Будьте святы, ибо Я свят».</strong> Святость — это не религия, это близость к Богу. <em>(Левит 11:44)</em>',
+  'Даже в пустыне Бог кормит, ведёт и не оставляет. <strong>Твой путь не случаен.</strong> <em>(Числа 14:14)</em>',
+  '<strong>Избери жизнь</strong> — это не просто слова. Это выбор, который делается каждый день. <em>(Второзаконие 30:19)</em>',
+  'Будь твёрд и мужествен. <strong>Бог идёт впереди тебя — не бойся и не унывай.</strong> <em>(Иисус Навин 1:9)</em>',
+  'Бог берёт слабых и делает их героями. <strong>Твоя немощь — не приговор, а место для Его силы.</strong> <em>(Судей 6:14)</em>',
+  'Верность в малом открывает великие двери. <strong>Бог замечает каждый твой шаг.</strong> <em>(Руфь 2:12)</em>',
+  'Человек смотрит на лицо, <strong>а Бог смотрит на сердце.</strong> <em>(1 Царств 16:7)</em>',
+  'Даже падший Давид был восстановлен. <strong>Бог не отворачивается от раскаявшегося сердца.</strong> <em>(2 Царств 12:13)</em>',
+  'Проси у Бога мудрости — <strong>Он даёт щедро и без упрёков.</strong> <em>(3 Царств 3:9)</em>',
+  'Один верный человек меняет целую нацию. <strong>Не думай, что ты слишком мал.</strong> <em>(4 Царств 22:2)</em>',
+  'Бог помнит каждое имя, каждый род, каждую историю. <strong>Твоя жизнь записана у Него.</strong> <em>(1 Паралипоменон 4:10)</em>',
+  'Если смириться и молиться — <strong>Бог услышит с небес и исцелит землю.</strong> <em>(2 Паралипоменон 7:14)</em>',
+  'Бог может вернуть из любого плена. <strong>Ни одна ситуация не является финальной.</strong> <em>(Ездра 1:1–2)</em>',
+  'Молитва плюс действие — вот формула Неемии. <strong>Молись и строй.</strong> <em>(Неемия 2:4–5)</em>',
+  'Ты создан для такого времени. <strong>Твоё «сейчас» — не случайность.</strong> <em>(Есфирь 4:14)</em>',
+  'Иов потерял всё — но не потерял Бога. <strong>Страдание не означает, что Бог ушёл.</strong> <em>(Иов 19:25)</em>',
+  'Господь — Пастырь мой. <strong>Мне ни в чём не будет недостатка.</strong> <em>(Псалом 22:1)</em>',
+  'Надейся на Господа всем сердцем и не опирайся на свой разум. <strong>Он выпрямит твои пути.</strong> <em>(Притчи 3:5–6)</em>',
+  'Всё суета — кроме одного: <strong>бояться Бога и исполнять Его повеления.</strong> <em>(Екклесиаст 12:13)</em>',
+  'Бог любит тебя не за заслуги. <strong>Его любовь — как неугасимый огонь.</strong> <em>(Песнь Песней 8:7)</em>',
+  'Надеющиеся на Господа <strong>обновятся в силе, поднимут крылья, как орлы.</strong> <em>(Исаия 40:31)</em>',
+  'Планы Бога о тебе — <strong>мир, а не беда. Будущее и надежда.</strong> <em>(Иеремия 29:11)</em>',
+  'Даже в самой тёмной точке — <strong>милости Господа новы каждое утро.</strong> <em>(Плач Иеремии 3:22–23)</em>',
+  'Сухие кости оживают по слову Бога. <strong>Он оживляет то, что казалось мёртвым.</strong> <em>(Иезекиль 37:4–5)</em>',
+  'Даниил остался верен в языческом царстве. <strong>Верность Богу не зависит от окружения.</strong> <em>(Даниил 1:8)</em>',
+  'Бог говорит: <strong>«Я привлеку тебя узами любви».</strong> Он ищет тебя — не отворачивается. <em>(Осия 11:4)</em>',
+  'Дух Божий будет излит <strong>на всякую плоть.</strong> Ты в списке. <em>(Иоиль 2:28)</em>',
+  'Пусть течёт правда, как вода. <strong>Бог хочет не религии — а справедливой жизни.</strong> <em>(Амос 5:24)</em>',
+  'Гордость ведёт к падению. <strong>Смиренный устоит.</strong> <em>(Авдий 1:3–4)</em>',
+  'От Бога не убежать — <strong>но к Нему всегда можно вернуться.</strong> <em>(Иона 2:1–2)</em>',
+  'Бог требует немногого: <strong>поступать справедливо, любить милосердие, смиренно ходить с Богом.</strong> <em>(Михей 6:8)</em>',
+  'Господь — <strong>крепость в день скорби</strong> и знает тех, кто уповает на Него. <em>(Наум 1:7)</em>',
+  '<strong>Праведный верою жив будет.</strong> Не силой, не умом — а верой. <em>(Аввакум 2:4)</em>',
+  'Господь <strong>радуется о тебе с радостью, торжествует о тебе с пением.</strong> <em>(Софония 3:17)</em>',
+  'Сначала Царство Бога — <strong>всё остальное приложится.</strong> Не откладывай главное. <em>(Аггей 1:5–7)</em>',
+  'Не силою и не властью — <strong>но Духом Моим,</strong> говорит Господь. <em>(Захария 4:6)</em>',
+  'Господь не меняется. <strong>«Я — Господь, Я не изменяюсь».</strong> На Него можно положиться. <em>(Малахия 3:6)</em>',
+  'Идите и <strong>научите все народы.</strong> Это не пожелание — это повеление с обещанием. <em>(Матфея 28:19)</em>',
+  'Иисус действовал немедленно. <strong>Вера — это не ожидание, а движение.</strong> <em>(Марка 1:18)</em>',
+  'Потерянная овца, блудный сын — <strong>Бог ищет и радуется, когда находит.</strong> <em>(Луки 15:7)</em>',
+  'Грех — это неверие. <strong>«Я есмь путь и истина и жизнь»</strong> — альтернативы нет. <em>(Иоанна 14:6)</em>',
+  'Дух Святой даёт силу быть свидетелем — <strong>в своём городе и до края земли.</strong> <em>(Деяния 1:8)</em>',
+  'Сердцем веруют к праведности, <strong>а устами исповедуют ко спасению.</strong> Слова имеют силу. <em>(Римлянам 10:10)</em>',
+  'Ты — храм Святого Духа. <strong>Бог живёт не в зданиях — Он живёт в тебе.</strong> <em>(1 Коринфянам 3:16)</em>',
+  'Сила Бога <strong>совершается в немощи.</strong> Твоя слабость — место для Его славы. <em>(2 Коринфянам 12:9)</em>',
+  'Свободою Христос освободил нас. <strong>Стой в этой свободе и не возвращайся в рабство.</strong> <em>(Галатам 5:1)</em>',
+  'Ты создан для добрых дел, <strong>которые Бог приготовил заранее.</strong> Твоя миссия уже написана. <em>(Ефесянам 2:10)</em>',
+  'Жительство наше — на небесах. <strong>Ты временный житель земли и вечный гражданин неба.</strong> <em>(Филиппийцам 3:20)</em>',
+  'Христос в тебе — <strong>надежда славы.</strong> Не снаружи, не рядом — внутри. <em>(Колоссянам 1:27)</em>',
+  'Радуйтесь всегда, молитесь непрестанно, <strong>за всё благодарите.</strong> Это воля Бога о тебе. <em>(1 Фессалоникийцам 5:16–18)</em>',
+  'Господь верен. <strong>Он утвердит и сохранит тебя от лукавого.</strong> <em>(2 Фессалоникийцам 3:3)</em>',
+  'Бог дал нам не дух страха, <strong>а дух силы, любви и целомудрия.</strong> <em>(1 Тимофею 1:7)</em>',
+  'Слово Бога не связано. <strong>Никакие обстоятельства не могут остановить Его слово.</strong> <em>(2 Тимофею 2:9)</em>',
+  'Благодать Бога учит нас жить <strong>праведно, благочестиво и воздержанно.</strong> <em>(Титу 2:11–12)</em>',
+  'Во Христе даже чужой становится братом. <strong>Евангелие меняет отношения.</strong> <em>(Филимону 1:16)</em>',
+  'Вера — это <strong>уверенность в невидимом.</strong> Ты идёшь туда, куда ещё не видишь. <em>(Евреям 11:1)</em>',
+  'Вера без дел мертва. <strong>Настоящая вера всегда видна в действиях.</strong> <em>(Иакова 2:17)</em>',
+  'Ты — <strong>царственное священство, святой народ, народ Божий.</strong> Это не заслужено — это дар. <em>(1 Петра 2:9)</em>',
+  'Бог дал тебе всё потребное <strong>для жизни и благочестия.</strong> Тебе ни в чём не недостаёт. <em>(2 Петра 1:3)</em>',
+  'Бог есть любовь. <strong>Кто живёт в любви — живёт в Боге, и Бог в нём.</strong> <em>(1 Иоанна 4:16)</em>',
+  'Ходи в истине. <strong>Истина освобождает — не ограничивает.</strong> <em>(2 Иоанна 1:4)</em>',
+  'Молюсь, чтобы ты преуспевал и был здоров — <strong>как преуспевает душа твоя.</strong> <em>(3 Иоанна 1:2)</em>',
+  'Бог может сохранить тебя от падения <strong>и поставить непорочным пред Своей славой.</strong> <em>(Иуды 1:24)</em>',
+  'Побеждающему дам венец жизни. <strong>Держись того, что имеешь — никто не отнимет.</strong> <em>(Откровение 2:10)</em>',
+];
+
+// ════════════════════════════════════════
+async function init() {
+  const ctx = await requireAuth('../login.html');
+  if (!ctx) return;
+  currentUser    = ctx.user;
+  currentProfile = ctx.profile;
+  renderNav(currentProfile, false);
+  applyTranslations();
+  renderMotivation();
+  renderStreak();
+
+  if (new Date().getDay() === 5)
+    document.getElementById('friday-banner').classList.add('show');
+
+  await loadBlocks();
+  await loadProgress();
+  renderDashboard();
+  await loadRecentJournals();
+}
+
+function applyTranslations() {
+  const ru = LANG === 'ru';
+  document.getElementById('eyebrow-label').textContent      = ru ? 'КРЕСТ — путь спасения' : 'KREST — path of salvation';
+  document.getElementById('welcome-title').textContent      = ru ? 'Продолжай изучать КРЕСТ' : 'Continue your KREST journey';
+  document.getElementById('streak-label').textContent       = ru ? 'Серия:' : 'Streak:';
+  document.getElementById('friday-title').textContent       = ru ? 'Сегодня пятница — время отправить итог недели' : 'It\'s Friday — submit your weekly report';
+  document.getElementById('friday-sub').textContent         = ru ? 'Напиши резюме и отправь своему лидеру' : 'Write a summary and send to your leader';
+  document.getElementById('friday-btn').textContent         = ru ? 'Отправить' : 'Submit';
+  document.getElementById('lbl-current').textContent        = ru ? 'Текущий блок' : 'Current Block';
+  document.getElementById('lbl-done').textContent           = ru ? 'Пройдено' : 'Completed';
+  document.getElementById('locked-title').textContent       = ru ? 'Следующий блок закрыт' : 'Next block is locked';
+  document.getElementById('locked-sub').textContent         = ru ? 'Лидер откроет следующий блок после того, как ты завершишь текущий.' : 'Your leader will unlock the next block once you complete the current one.';
+  document.getElementById('lbl-journals').textContent       = ru ? 'Последние записи' : 'Recent Entries';
+  document.getElementById('sheet-friday-title').textContent = ru ? 'Итог недели' : 'Weekly Report';
+  document.getElementById('lbl-summary').textContent        = ru ? 'Краткое резюме пройденного блока' : 'Summary of your current block';
+  document.getElementById('submit-friday-btn').textContent  = ru ? 'Отправить лидеру' : 'Send to Leader';
+}
+
+function renderMotivation() {
+  const idx = Math.floor(Math.random() * MOTIVATIONS.length);
+  document.getElementById('welcome-sub').innerHTML = MOTIVATIONS[idx];
+}
+
+function renderStreak() {
+  const s = parseInt(localStorage.getItem('crest_streak') || '0');
+  const ru = LANG === 'ru';
+  document.getElementById('streak-val').textContent =
+    s + ' ' + (ru ? (s===1?'день':s<5?'дня':'дней') : (s===1?'day':'days'));
+}
+
+async function loadBlocks() {
+  const { data } = await _supabase.from('blocks').select('*').order('order_num');
+  allBlocks = data || [];
+}
+
+async function loadProgress() {
+  const { data } = await _supabase
+    .from('student_progress')
+    .select('block_id, lesson_id, completed')
+    .eq('user_id', currentUser.id);
+  progressMap = {};
+  (data || []).forEach(p => {
+    if (!progressMap[p.block_id]) progressMap[p.block_id] = { total: 0, done: 0 };
+    progressMap[p.block_id].total++;
+    if (p.completed) progressMap[p.block_id].done++;
+  });
+}
+
+// ════════════════════════════════════════
+// RENDER DASHBOARD — учитывает blocks_unlocked
+// ════════════════════════════════════════
+function renderDashboard() {
+  const unlocked = currentProfile.blocks_unlocked || 1;
+  const heroArea  = document.getElementById('hero-area');
+  const doneList  = document.getElementById('done-list');
+  const doneSec   = document.getElementById('done-section');
+
+  heroArea.innerHTML = '';
+  doneList.innerHTML = '';
+
+  // Find current active block (first unlocked + incomplete or last unlocked)
+  let activeBlock = null;
+  const completedBlocks = [];
+
+  for (let i = 0; i < allBlocks.length; i++) {
+    const b = allBlocks[i];
+    if (b.order_num > unlocked) break; // locked
+
+    const prog = progressMap[b.id];
+    const pct  = prog && prog.total > 0 ? Math.round(prog.done / prog.total * 100) : 0;
+
+    if (pct < 100 && !activeBlock) {
+      activeBlock = { block: b, pct, idx: i };
+    } else if (activeBlock) {
+      // also unlocked but after active — still show as unlocked-but-upcoming
+    } else {
+      completedBlocks.push({ block: b, pct, idx: i });
+    }
+  }
+
+  // If all unlocked blocks done, last one is active
+  if (!activeBlock && allBlocks.length > 0) {
+    const last = allBlocks[Math.min(unlocked - 1, allBlocks.length - 1)];
+    const prog = progressMap[last.id];
+    const pct  = prog && prog.total > 0 ? Math.round(prog.done / prog.total * 100) : 0;
+    activeBlock = { block: last, pct, idx: unlocked - 1 };
+  }
+
+  // Hero card — current block
+  if (activeBlock) {
+    const { block: b, pct, idx } = activeBlock;
+    const color = BLOCK_COLORS[idx];
+    const emoji = BLOCK_EMOJI[idx];
+    const title = LANG === 'ru' ? b.title_ru  : b.title_en;
+    const sub   = LANG === 'ru' ? b.subtitle_ru : b.subtitle_en;
+    heroArea.innerHTML = `
+      <a href="lesson.html?block=${b.id}" class="hero-block">
+        <div class="hero-band" style="background:${color}"></div>
+        <div class="hero-body">
+          <div class="hero-tag" style="background:${color}22;color:${color}">
+            <span>${emoji}</span>
+            <span>${LANG==='ru'?'Блок':'Block'} ${b.order_num}</span>
+          </div>
+          <div class="hero-title">${title}</div>
+          <div class="hero-sub">${sub || ''}</div>
+          <div class="hero-footer">
+            <div class="hero-progress">
+              <div class="hero-pct">${pct > 0 ? pct + '% ' + (LANG==='ru'?'пройдено':'completed') : (LANG==='ru'?'Начни сейчас':'Start now')}</div>
+              <div class="hero-bar-bg">
+                <div class="hero-bar-fill" style="width:${pct}%;background:${color}"></div>
+              </div>
+            </div>
+            <div class="hero-cta">${pct > 0 ? (LANG==='ru'?'Продолжить':'Continue') : (LANG==='ru'?'Начать':'Start')} ›</div>
+          </div>
+        </div>
+      </a>`;
+  }
+
+  // Completed blocks
+  if (completedBlocks.length > 0) {
+    doneSec.style.display = 'block';
+    completedBlocks.forEach(({ block: b, idx }) => {
+      const color = BLOCK_COLORS[idx];
+      const emoji = BLOCK_EMOJI[idx];
+      const title = LANG === 'ru' ? b.title_ru : b.title_en;
+      const div = document.createElement('a');
+      div.href = `lesson.html?block=${b.id}`;
+      div.className = 'done-item';
+      div.style.animationDelay = (idx * 0.05) + 's';
+      div.innerHTML = `
+        <div class="done-num">${emoji}</div>
+        <div class="done-info">
+          <div class="done-title">${title}</div>
+          <div class="done-sub">${LANG==='ru'?'Блок':'Block'} ${b.order_num}</div>
+        </div>
+        <div class="done-badge">${LANG==='ru'?'Пройден ✓':'Done ✓'}</div>`;
+      doneList.appendChild(div);
+    });
+  }
+
+  // Locked hint (if there are blocks beyond unlocked)
+  const hasLocked = unlocked < allBlocks.length;
+  document.getElementById('locked-hint').style.display = hasLocked ? 'block' : 'none';
+}
+
+// ════════════════════════════════════════
+async function loadRecentJournals() {
+  const { data } = await _supabase
+    .from('journal_entries')
+    .select('*, blocks(title_ru, title_en)')
+    .eq('user_id', currentUser.id)
+    .order('updated_at', { ascending: false })
+    .limit(3);
+
+  if (!data || data.length === 0) return;
+  document.getElementById('journals-section').style.display = 'block';
+
+  const list = document.getElementById('recent-list');
+  list.innerHTML = '';
+  data.forEach((e, i) => {
+    const blockTitle = LANG === 'ru' ? e.blocks?.title_ru : e.blocks?.title_en;
+    const preview = (e.content || '').slice(0, 130) + ((e.content||'').length > 130 ? '…' : '');
+    const div = document.createElement('div');
+    div.className = 'journal-card';
+    div.style.animationDelay = (i * 0.07) + 's';
+    div.onclick = () => location.href = `lesson.html?block=${e.block_id}`;
+    div.innerHTML = `
+      <div class="journal-meta">
+        <span class="journal-block">${blockTitle || ''}</span>
+        <span class="journal-date">${fmtDate(e.updated_at)}</span>
+      </div>
+      <div class="journal-text">${preview || (LANG==='ru'?'(пусто)':'(empty)')}</div>
+      ${e.submitted_to_leader ? `<span class="journal-sent">${LANG==='ru'?'Отправлено лидеру ✓':'Sent to leader ✓'}</span>` : ''}
+      ${e.leader_feedback ? `<div class="journal-fb">💬 ${e.leader_feedback}</div>` : ''}`;
+    list.appendChild(div);
+  });
+}
+
+function openFriday()     { document.getElementById('friday-modal').classList.add('open'); }
+function closeSheet(id)   { document.getElementById(id).classList.remove('open'); }
+
+async function submitFriday() {
+  const summary = document.getElementById('friday-summary').value.trim();
+  if (!summary) return;
+  const currentBlock = allBlocks.find(b => {
+    const p = progressMap[b.id];
+    return !p || p.done < p.total;
+  }) || allBlocks[allBlocks.length - 1];
+  const weekNum = Math.ceil((Date.now() - new Date(currentProfile.created_at)) / (7*24*3600*1000));
+  const { error } = await _supabase.from('weekly_submissions').insert({
+    user_id: currentUser.id, week_number: weekNum,
+    block_id: currentBlock?.id, summary,
+  });
+  if (!error) {
+    toast(LANG==='ru'?'Отчёт отправлен!':'Report submitted!', 'success');
+    closeSheet('friday-modal');
+    document.getElementById('friday-summary').value = '';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

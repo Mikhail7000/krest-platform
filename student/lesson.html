@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>КРЕСТ — Урок</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<style>
+:root {
+  --ease: cubic-bezier(.4,0,.2,1);
+}
+body { background: #f5f5f7; }
+
+/* ── Layout ── */
+.lesson-wrap {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* ── Block header ── */
+.block-header {
+  padding: 28px 0 24px;
+  animation: fadeDown .4s var(--ease) both;
+}
+.block-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+.block-title {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -.5px;
+  color: #1d1d1f;
+  margin-bottom: 6px;
+}
+.block-sub {
+  font-size: 16px;
+  color: #6e6e73;
+}
+
+/* ── VIDEO STAGE ── */
+.video-stage {
+  position: relative;
+  background: #000;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 12px 48px rgba(0,0,0,.25);
+  margin-bottom: 24px;
+  animation: fadeUp .5s var(--ease) .1s both;
+}
+.video-stage iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16/9;
+  border: none;
+  pointer-events: none; /* we handle clicks ourselves */
+}
+
+/* Custom video overlay */
+.video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 50%);
+  pointer-events: none;
+}
+.video-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  pointer-events: all;
+}
+.play-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  backdrop-filter: blur(8px);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.play-btn:hover { background: rgba(255,255,255,.35); }
+
+.progress-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,.3);
+  border-radius: 2px;
+  position: relative;
+  cursor: default; /* no seeking */
+}
+.progress-fill {
+  height: 4px;
+  background: #fff;
+  border-radius: 2px;
+  transition: width .5s linear;
+  pointer-events: none;
+}
+.time-label {
+  font-size: 12px;
+  color: rgba(255,255,255,.8);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* No-skip notice */
+.no-skip-notice {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  letter-spacing: .04em;
+}
+
+/* ── WATCH BUTTON ── */
+.watch-btn-wrap {
+  text-align: center;
+  margin: 8px 0 32px;
+  animation: fadeUp .4s var(--ease) .2s both;
+}
+.watch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #1d1d1f;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 16px 36px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .2s var(--ease);
+  opacity: .4;
+  pointer-events: none;
+}
+.watch-btn.ready {
+  opacity: 1;
+  pointer-events: all;
+  background: #0071e3;
+  box-shadow: 0 6px 24px rgba(0,113,227,.4);
+}
+.watch-btn.ready:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(0,113,227,.5);
+}
+.watch-btn-hint {
+  font-size: 13px;
+  color: #aeaeb2;
+  margin-top: 10px;
+}
+
+/* ── FORUM MODAL (bottom sheet) ── */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sheet-overlay.open { display: flex; animation: overlayIn .2s ease; }
+@keyframes overlayIn { from{opacity:0}to{opacity:1} }
+
+.bottom-sheet {
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+  padding: 0 24px 48px;
+  width: 100%;
+  max-width: 640px;
+  animation: sheetUp .35s var(--ease);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+@keyframes sheetUp {
+  from{transform:translateY(100%)}
+  to{transform:translateY(0)}
+}
+.sheet-drag {
+  width: 36px; height: 4px;
+  background: #d1d1d6;
+  border-radius: 2px;
+  margin: 16px auto 24px;
+}
+.sheet-title { font-size: 24px; font-weight: 900; margin-bottom: 4px; }
+.sheet-subtitle { font-size: 14px; color: #6e6e73; margin-bottom: 24px; line-height: 1.55; }
+
+.forum-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.forum-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f5f7;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #1d1d1f;
+  cursor: pointer;
+  transition: background .15s;
+  user-select: none;
+}
+.forum-prompt:hover { background: #e8e8ed; }
+.forum-prompt.selected { background: #e8f0fe; color: #0071e3; font-weight: 600; }
+.forum-prompt-icon { font-size: 18px; flex-shrink: 0; }
+
+.forum-textarea {
+  width: 100%;
+  min-height: 140px;
+  border: none;
+  background: #f5f5f7;
+  border-radius: 16px;
+  padding: 16px;
+  font-family: inherit;
+  font-size: 15px;
+  resize: vertical;
+  outline: none;
+  transition: background .15s;
+  box-sizing: border-box;
+}
+.forum-textarea:focus { background: #eef1f8; }
+
+.forum-submit {
+  width: 100%;
+  background: #0071e3;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 16px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 14px;
+  transition: background .15s;
+}
+.forum-submit:hover { background: #005ec5; }
+
+/* ── CONGRATS ── */
+.congrats-wrap {
+  display: none;
+  text-align: center;
+  padding: 40px 20px 32px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+  margin-bottom: 32px;
+  animation: fadeUp .5s var(--ease) both;
+}
+.congrats-icon  { font-size: 56px; margin-bottom: 12px; }
+.congrats-title { font-size: 26px; font-weight: 900; margin-bottom: 8px; color: #1d1d1f; }
+.congrats-sub   { font-size: 15px; color: #6e6e73; line-height: 1.55; }
+
+/* ── CONTENT (конспект) ── */
+.content-section {
+  display: none;
+  animation: fadeUp .5s var(--ease) .1s both;
+}
+.content-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #aeaeb2;
+  margin-bottom: 16px;
+}
+.content-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 32px;
+  box-shadow: 0 2px 16px rgba(0,0,0,.06);
+  font-size: 15px;
+  line-height: 1.75;
+  color: #1d1d1f;
+}
+.content-card h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0071e3;
+  margin: 28px 0 10px;
+}
+.content-card h2:first-child { margin-top: 0; }
+.content-card h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0071e3;
+  margin: 20px 0 8px;
+  letter-spacing: .02em;
+}
+.content-card p  { margin-bottom: 14px; }
+.content-card ul, .content-card ol { padding-left: 24px; margin-bottom: 14px; }
+.content-card li { margin-bottom: 6px; }
+.content-card strong { font-weight: 700; }
+.content-card em { color: #6e6e73; font-style: normal; }
+
+/* ── NEXT BUTTON ── */
+.next-wrap {
+  display: none;
+  margin-top: 32px;
+  animation: fadeUp .4s var(--ease) .2s both;
+}
+.next-btn-locked {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f5f5f7;
+  border-radius: 20px;
+  padding: 20px 24px;
+  color: #aeaeb2;
+  font-size: 15px;
+  font-weight: 700;
+}
+.next-btn-locked .lock-icon { font-size: 24px; }
+.next-btn-locked .lock-text { flex: 1; }
+.next-btn-locked .lock-sub { font-size: 13px; font-weight: 400; color: #aeaeb2; margin-top: 2px; }
+
+.next-btn-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0071e3;
+  border-radius: 20px;
+  padding: 20px 24px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 800;
+  transition: all .2s var(--ease);
+  box-shadow: 0 6px 24px rgba(0,113,227,.3);
+}
+.next-btn-open:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(0,113,227,.4); }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeDown { from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+<nav id="topnav"></nav>
+
+<div class="lesson-wrap">
+
+  <!-- Block header -->
+  <div class="block-header">
+    <div class="block-tag" id="block-tag">Блок 1</div>
+    <div class="block-title" id="block-title">Загрузка...</div>
+    <div class="block-sub"   id="block-sub"></div>
+  </div>
+
+  <!-- VIDEO STAGE -->
+  <div class="video-stage" id="video-stage">
+    <div id="yt-player"></div>
+    <div class="video-overlay">
+      <div class="no-skip-notice" id="no-skip-label">⏸ Перемотка недоступна</div>
+      <div class="video-controls">
+        <button class="play-btn" id="play-btn" onclick="togglePlay()">▶</button>
+        <div class="progress-track" id="progress-track">
+          <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+        <div class="time-label" id="time-label">0:00 / 0:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WATCH BUTTON -->
+  <div class="watch-btn-wrap">
+    <button class="watch-btn" id="watch-btn" onclick="openForum()">
+      ✓ Отметить просмотренным
+    </button>
+    <div class="watch-btn-hint" id="watch-hint">Досмотри видео до конца чтобы продолжить</div>
+  </div>
+
+  <!-- CONGRATS -->
+  <div class="congrats-wrap" id="congrats-wrap">
+    <div class="congrats-icon">🎉</div>
+    <div class="congrats-title" id="congrats-title">Поздравляем!</div>
+    <div class="congrats-sub"  id="congrats-sub">У тебя появился конспект урока. Изучи его внимательно.</div>
+  </div>
+
+  <!-- CONTENT (конспект) -->
+  <div class="content-section" id="content-section">
+    <div class="content-label" id="content-label">Конспект урока</div>
+    <div class="content-card"  id="content-body"></div>
+  </div>
+
+  <!-- NEXT -->
+  <div class="next-wrap" id="next-wrap"></div>
+
+</div>
+
+<!-- FORUM MODAL -->
+<div class="sheet-overlay" id="forum-overlay">
+  <div class="bottom-sheet">
+    <div class="sheet-drag"></div>
+    <div class="sheet-title" id="forum-title">Форум</div>
+    <div class="sheet-subtitle" id="forum-subtitle">Поделись с лидером своими мыслями после просмотра</div>
+
+    <div class="forum-prompts">
+      <div class="forum-prompt" id="prompt-1" onclick="selectPrompt(1)">
+        <span class="forum-prompt-icon">💡</span>
+        <span id="prompt-text-1">Что узнал нового?</span>
+      </div>
+      <div class="forum-prompt" id="prompt-2" onclick="selectPrompt(2)">
+        <span class="forum-prompt-icon">🔥</span>
+        <span id="prompt-text-2">Что вдохновило?</span>
+      </div>
+      <div class="forum-prompt" id="prompt-3" onclick="selectPrompt(3)">
+        <span class="forum-prompt-icon">🎯</span>
+        <span id="prompt-text-3">Что возьму в практику?</span>
+      </div>
+    </div>
+
+    <textarea class="forum-textarea" id="forum-text"
+      placeholder="Напиши свои мысли, отзыв или вопрос..."></textarea>
+
+    <button class="forum-submit" onclick="submitForum()" id="forum-submit-btn">
+      Отправить лидеру →
+    </button>
+  </div>
+</div>
+
+<!-- YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+let currentUser, currentProfile;
+let currentBlock, currentLesson = null;
+let ytPlayer = null;
+let maxWatched = 0;
+let videoDuration = 0;
+let isPlaying = false;
+let pollInterval = null;
+let videoCompleted = false;
+let forumSubmitted = false;
+let adminApproved = false;
+
+const BLOCK_COLORS = ['#0071e3','#ff6b35','#8e44ad','#e67e22','#27ae60','#2980b9'];
+const BLOCK_EMOJI  = ['🌍','💔','🌑','🌪️','✝️','👑'];
+
+// ══════════════════════════════════════
+async function init() {
+  const ctx = await requireAuth('../login.html');
+  if (!ctx) return;
+  currentUser    = ctx.user;
+  currentProfile = ctx.profile;
+  renderNav(currentProfile, false);
+  applyTranslations();
+
+  const params  = new URLSearchParams(location.search);
+  const blockId = parseInt(params.get('block')) || 1;
+
+  await loadBlock(blockId);
+}
+
+function applyTranslations() {
+  const ru = LANG === 'ru';
+  document.getElementById('no-skip-label').textContent    = ru ? '⏸ Перемотка недоступна' : '⏸ Seeking disabled';
+  document.getElementById('watch-hint').textContent       = ru ? 'Досмотри видео до конца чтобы продолжить' : 'Watch the full video to continue';
+  document.getElementById('congrats-title').textContent   = ru ? 'Поздравляем!' : 'Congratulations!';
+  document.getElementById('congrats-sub').textContent     = ru ? 'У тебя появился конспект урока. Изучи его внимательно.' : 'Your lesson notes are ready. Study them carefully.';
+  document.getElementById('content-label').textContent    = ru ? 'Конспект урока' : 'Lesson Notes';
+  document.getElementById('forum-title').textContent      = ru ? 'Форум' : 'Forum';
+  document.getElementById('forum-subtitle').textContent   = ru ? 'Поделись с лидером своими мыслями после просмотра' : 'Share your thoughts with the leader after watching';
+  document.getElementById('prompt-text-1').textContent    = ru ? 'Что узнал нового?' : 'What did I learn new?';
+  document.getElementById('prompt-text-2').textContent    = ru ? 'Что вдохновило?' : 'What inspired me?';
+  document.getElementById('prompt-text-3').textContent    = ru ? 'Что возьму в практику?' : 'What will I apply?';
+  document.getElementById('forum-submit-btn').textContent = ru ? 'Отправить лидеру →' : 'Send to Leader →';
+  document.getElementById('watch-btn').childNodes[1] && (
+    document.getElementById('watch-btn').innerHTML =
+      `✓ ${ru ? 'Отметить просмотренным' : 'Mark as watched'}`
+  );
+}
+
+// ══════════════════════════════════════
+async function loadBlock(blockId) {
+  const { data: block } = await _supabase.from('blocks').select('*').eq('id', blockId).single();
+  currentBlock = block;
+
+  const idx   = (block.order_num || 1) - 1;
+  const color = BLOCK_COLORS[idx] || '#0071e3';
+  const emoji = BLOCK_EMOJI[idx]  || '📖';
+  const title = LANG === 'ru' ? block.title_ru  : block.title_en;
+  const sub   = LANG === 'ru' ? block.subtitle_ru : block.subtitle_en;
+
+  const tag = document.getElementById('block-tag');
+  tag.textContent = `${emoji} ${LANG==='ru'?'Блок':'Block'} ${block.order_num}`;
+  tag.style.background = color + '20';
+  tag.style.color = color;
+  document.getElementById('block-title').textContent = title || '';
+  document.getElementById('block-sub').textContent   = sub   || '';
+
+  // Check if forum already submitted
+  const { data: journal } = await _supabase
+    .from('journal_entries')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .eq('block_id', blockId)
+    .is('lesson_id', null)
+    .single();
+
+  if (journal?.submitted_to_leader) {
+    forumSubmitted = true;
+    videoCompleted = true;
+  }
+
+  // Check admin approval
+  const { data: prog } = await _supabase
+    .from('student_progress')
+    .select('admin_approved')
+    .eq('user_id', currentUser.id)
+    .eq('block_id', blockId)
+    .is('lesson_id', null)
+    .single();
+
+  adminApproved = prog?.admin_approved || false;
+
+  // Load YouTube video
+  const ytUrl = LANG === 'ru' ? block.youtube_ru : block.youtube_en;
+  const videoId = ytId(ytUrl);
+  if (videoId) {
+    loadYouTubePlayer(videoId);
+  } else {
+    document.getElementById('video-stage').innerHTML =
+      `<div style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:#6e6e73;font-size:15px;background:#1c1c1e;border-radius:20px">
+        ${LANG==='ru'?'Видео будет добавлено лидером':'Video will be added by the leader'}
+      </div>`;
+    enableWatchButton();
+  }
+
+  // If already submitted → show content immediately
+  if (forumSubmitted) {
+    showContent();
+  }
+}
+
+// ══════════════════════════════════════
+// YOUTUBE NO-SKIP PLAYER
+// ══════════════════════════════════════
+function loadYouTubePlayer(videoId) {
+  ytPlayer = new YT.Player('yt-player', {
+    videoId,
+    playerVars: {
+      controls:       0,  // hide native controls
+      disablekb:      1,  // disable keyboard shortcuts
+      fs:             0,  // no fullscreen button
+      modestbranding: 1,
+      rel:            0,
+      iv_load_policy: 3,
+      origin:         location.origin,
+    },
+    events: {
+      onReady:       onPlayerReady,
+      onStateChange: onPlayerStateChange,
+    }
+  });
+}
+
+function onPlayerReady(e) {
+  videoDuration = e.target.getDuration();
+  startPolling();
+
+  // If already completed, enable button immediately
+  if (forumSubmitted) {
+    enableWatchButton();
+  }
+}
+
+function onPlayerStateChange(e) {
+  const YT_PLAYING = 1;
+  const YT_PAUSED  = 2;
+  const YT_ENDED   = 0;
+
+  if (e.data === YT_PLAYING) {
+    isPlaying = true;
+    document.getElementById('play-btn').textContent = '⏸';
+  } else if (e.data === YT_PAUSED) {
+    isPlaying = false;
+    document.getElementById('play-btn').textContent = '▶';
+  } else if (e.data === YT_ENDED) {
+    isPlaying = false;
+    document.getElementById('play-btn').textContent = '▶';
+    videoCompleted = true;
+    enableWatchButton();
+  }
+}
+
+function startPolling() {
+  pollInterval = setInterval(() => {
+    if (!ytPlayer || !ytPlayer.getCurrentTime) return;
+
+    const current  = ytPlayer.getCurrentTime();
+    const duration = ytPlayer.getDuration() || videoDuration;
+
+    // Anti-skip: if jumped ahead more than 2s, snap back
+    if (current > maxWatched + 2) {
+      ytPlayer.seekTo(maxWatched, true);
+      return;
+    }
+
+    if (current > maxWatched) maxWatched = current;
+
+    // Update UI
+    const pct = duration > 0 ? (current / duration) * 100 : 0;
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('time-label').textContent =
+      fmtTime(current) + ' / ' + fmtTime(duration);
+
+    // Enable button when 95% watched
+    if (!videoCompleted && pct >= 95) {
+      videoCompleted = true;
+      enableWatchButton();
+    }
+  }, 500);
+}
+
+function fmtTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+
+function togglePlay() {
+  if (!ytPlayer) return;
+  if (isPlaying) {
+    ytPlayer.pauseVideo();
+  } else {
+    ytPlayer.playVideo();
+  }
+}
+
+function enableWatchButton() {
+  const btn  = document.getElementById('watch-btn');
+  const hint = document.getElementById('watch-hint');
+  btn.classList.add('ready');
+  if (hint) hint.style.display = 'none';
+}
+
+// ══════════════════════════════════════
+// FORUM
+// ══════════════════════════════════════
+function openForum() {
+  if (forumSubmitted) { showContent(); return; }
+  document.getElementById('forum-overlay').classList.add('open');
+}
+
+function selectPrompt(n) {
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById('prompt-' + i).classList.toggle('selected', i === n);
+  }
+  const prompts = {
+    1: LANG==='ru' ? 'Что узнал нового:\n' : 'What I learned new:\n',
+    2: LANG==='ru' ? 'Что вдохновило:\n'   : 'What inspired me:\n',
+    3: LANG==='ru' ? 'Что возьму в практику:\n' : 'What I will apply:\n',
+  };
+  const ta = document.getElementById('forum-text');
+  if (!ta.value.startsWith(prompts[n])) {
+    ta.value = prompts[n] + (ta.value.replace(/^.+:\n/, ''));
+  }
+  ta.focus();
+}
+
+async function submitForum() {
+  const text = document.getElementById('forum-text').value.trim();
+  if (!text) {
+    document.getElementById('forum-text').style.border = '2px solid #ff3b30';
+    setTimeout(() => document.getElementById('forum-text').style.border = '', 1500);
+    return;
+  }
+
+  const btn = document.getElementById('forum-submit-btn');
+  btn.disabled = true;
+  btn.textContent = LANG==='ru' ? 'Отправка...' : 'Sending...';
+
+  // Save journal entry
+  await _supabase.from('journal_entries').upsert({
+    user_id:            currentUser.id,
+    block_id:           currentBlock.id,
+    lesson_id:          null,
+    content:            text,
+    submitted_to_leader: true,
+    submitted_at:       new Date().toISOString(),
+    created_at:         new Date().toISOString(),
+    updated_at:         new Date().toISOString(),
+  }, { onConflict: 'user_id,block_id,lesson_id' });
+
+  // Record progress (not yet admin_approved)
+  await _supabase.from('student_progress').upsert({
+    user_id:    currentUser.id,
+    block_id:   currentBlock.id,
+    lesson_id:  null,
+    completed:  false,
+    last_visited: new Date().toISOString(),
+  }, { onConflict: 'user_id,block_id,lesson_id' });
+
+  forumSubmitted = true;
+  document.getElementById('forum-overlay').classList.remove('open');
+
+  // Notify leader in Telegram
+  const blockTitle = LANG === 'ru' ? currentBlock.title_ru : currentBlock.title_en;
+  const studentName = currentProfile.full_name || currentProfile.email;
+  sendTelegramMsg(
+    TELEGRAM_LEADER_CHAT,
+    `📩 <b>${studentName}</b> отправил ответ по блоку «${blockTitle}»\n\n${text.slice(0, 300)}${text.length > 300 ? '...' : ''}`
+  );
+
+  showContent();
+}
+
+// ══════════════════════════════════════
+// SHOW CONTENT (конспект)
+// ══════════════════════════════════════
+function showContent() {
+  // Hide watch button
+  document.getElementById('watch-btn-wrap').style.display = 'none';
+
+  // Show congrats
+  document.getElementById('congrats-wrap').style.display = 'block';
+
+  // Show content
+  const content = LANG === 'ru' ? currentBlock.content_ru : currentBlock.content_en;
+  const contentEl = document.getElementById('content-body');
+  if (content) {
+    contentEl.innerHTML = content;
+  } else {
+    contentEl.innerHTML = `<p style="color:#6e6e73">${LANG==='ru'?'Конспект будет добавлен лидером':'Notes will be added by the leader'}</p>`;
+  }
+  document.getElementById('content-section').style.display = 'block';
+
+  // Show next button
+  renderNextButton();
+}
+
+function renderNextButton() {
+  const wrap = document.getElementById('next-wrap');
+  wrap.style.display = 'block';
+
+  if (adminApproved) {
+    const nextBlockId = currentBlock.id + 1;
+    wrap.innerHTML = `
+      <a href="lesson.html?block=${nextBlockId}" class="next-btn-open">
+        <span>${LANG==='ru'?'Следующий блок':'Next Block'}</span>
+        <span>›</span>
+      </a>`;
+  } else {
+    wrap.innerHTML = `
+      <div class="next-btn-locked">
+        <span class="lock-icon">🔒</span>
+        <div class="lock-text">
+          <div>${LANG==='ru'?'Следующий блок закрыт':'Next block is locked'}</div>
+          <div class="lock-sub">${LANG==='ru'?'Лидер проверит твой ответ и откроет следующий блок':'Your leader will review your response and unlock the next block'}</div>
+        </div>
+      </div>`;
+  }
+}
+
+// YouTube IFrame API callback
+function onYouTubeIframeAPIReady() {
+  // Called automatically when API loads
+  // init() may have already set videoId
+}
+
+init();
+</script>
+</body>
+</html>

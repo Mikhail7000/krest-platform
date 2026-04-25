@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CREST — Панель лидера</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<style>
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+
+.activity-feed { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
+.feed-header { padding: 20px 24px; border-bottom: 1px solid var(--border); font-size: 16px; font-weight: 700; }
+.feed-item {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  cursor: pointer;
+  transition: background .1s;
+}
+.feed-item:last-child { border-bottom: none; }
+.feed-item:hover { background: var(--bg); }
+.feed-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--blue-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: var(--blue);
+  flex-shrink: 0;
+}
+.feed-body { flex: 1; }
+.feed-name   { font-size: 14px; font-weight: 600; color: var(--text); }
+.feed-action { font-size: 13px; color: var(--text2); }
+.feed-time   { font-size: 12px; color: var(--text3); flex-shrink: 0; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+
+.pending-item {
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background .1s;
+}
+.pending-item:hover { background: #e8f0fe; }
+.pending-meta { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+.pending-text { font-size: 14px; color: var(--text); }
+.pending-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+@media (max-width: 900px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .two-col { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<nav id="topnav"></nav>
+
+<div class="page">
+  <div class="page-title" id="page-title">Панель лидера</div>
+  <div class="page-sub"   id="page-sub">Следи за прогрессом студентов</div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label" id="lbl-total">Всего студентов</div>
+      <div class="stat-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" id="lbl-active">Активны на неделе</div>
+      <div class="stat-value" id="stat-active">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" id="lbl-pending">Ожидают проверки</div>
+      <div class="stat-value" id="stat-pending">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" id="lbl-complete">Завершили курс</div>
+      <div class="stat-value" id="stat-complete">—</div>
+    </div>
+  </div>
+
+  <!-- Two columns -->
+  <div class="two-col">
+
+    <!-- Pending submissions -->
+    <div>
+      <div class="activity-feed">
+        <div class="feed-header" id="pending-title">Записи ожидают проверки</div>
+        <div id="pending-list" style="padding:0 24px 16px;margin-top:16px"></div>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div>
+      <div class="activity-feed">
+        <div class="feed-header" id="activity-title">Последняя активность</div>
+        <div id="activity-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback modal -->
+<div class="modal-overlay" id="feedback-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-fb-title">Обратная связь</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div style="background:var(--bg);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;font-size:14px;color:var(--text)" id="modal-journal-text"></div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-fb">Ваш ответ студенту</label>
+      <textarea class="form-textarea" id="feedback-input" style="min-height:120px" placeholder="Напишите обратную связь..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="sendFeedback()" id="send-fb-btn">Отправить</button>
+      <button class="btn btn-outline" onclick="closeModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+let currentUser, currentProfile;
+let activeFeedbackId = null;
+
+async function init() {
+  const ctx = await requireAdmin('../login.html');
+  if (!ctx) return;
+  currentUser    = ctx.user;
+  currentProfile = ctx.profile;
+  renderNav(currentProfile, true);
+  applyTranslations();
+  await loadStats();
+  await loadPending();
+  await loadActivity();
+}
+
+function applyTranslations() {
+  document.getElementById('page-title').textContent   = LANG === 'ru' ? 'Панель лидера' : 'Leader Dashboard';
+  document.getElementById('page-sub').textContent     = LANG === 'ru' ? 'Следи за прогрессом студентов' : 'Track student progress';
+  document.getElementById('lbl-total').textContent    = LANG === 'ru' ? 'Всего студентов' : 'Total Students';
+  document.getElementById('lbl-active').textContent   = LANG === 'ru' ? 'Активны на неделе' : 'Active This Week';
+  document.getElementById('lbl-pending').textContent  = LANG === 'ru' ? 'Ожидают проверки' : 'Pending Review';
+  document.getElementById('lbl-complete').textContent = LANG === 'ru' ? 'Завершили курс' : 'Completed Course';
+  document.getElementById('pending-title').textContent = LANG === 'ru' ? 'Записи ожидают проверки' : 'Entries Awaiting Review';
+  document.getElementById('activity-title').textContent = LANG === 'ru' ? 'Последняя активность' : 'Recent Activity';
+  document.getElementById('lbl-fb').textContent       = LANG === 'ru' ? 'Ваш ответ студенту' : 'Your response to student';
+  document.getElementById('send-fb-btn').textContent  = LANG === 'ru' ? 'Отправить' : 'Send';
+}
+
+async function loadStats() {
+  const { data: students } = await _supabase.from('profiles').select('id, created_at').eq('role', 'student');
+  const total = students?.length || 0;
+  document.getElementById('stat-total').textContent = total;
+
+  const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+  const { data: active } = await _supabase
+    .from('student_progress')
+    .select('user_id')
+    .gte('last_visited', weekAgo);
+  const uniqueActive = new Set((active || []).map(a => a.user_id)).size;
+  document.getElementById('stat-active').textContent = uniqueActive;
+
+  const { count: pending } = await _supabase
+    .from('journal_entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('submitted_to_leader', true)
+    .is('leader_feedback', null);
+  document.getElementById('stat-pending').textContent = pending || 0;
+
+  // Count students who completed all 6 blocks (simplified: have 6+ completed progress entries)
+  document.getElementById('stat-complete').textContent = '—';
+}
+
+async function loadPending() {
+  const { data } = await _supabase
+    .from('journal_entries')
+    .select('*, profiles(full_name, email), blocks(title_ru, title_en), lessons(title_ru, title_en)')
+    .eq('submitted_to_leader', true)
+    .is('leader_feedback', null)
+    .order('submitted_at', { ascending: false })
+    .limit(10);
+
+  const list = document.getElementById('pending-list');
+  if (!data?.length) {
+    list.innerHTML = `<p style="color:var(--text2);font-size:14px;text-align:center;padding:16px 0">
+      ${LANG === 'ru' ? 'Нет записей для проверки' : 'No entries to review'}</p>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  data.forEach(e => {
+    const name       = e.profiles?.full_name || e.profiles?.email || '?';
+    const blockTitle = LANG === 'ru' ? e.blocks?.title_ru : e.blocks?.title_en;
+    const preview    = (e.content || '').slice(0, 100) + '...';
+    const initials   = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+
+    list.innerHTML += `
+      <div class="pending-item" onclick="openFeedback(${e.id}, '${name}', \`${(e.content||'').replace(/`/g,"'")}\`)">
+        <div class="pending-meta">${name} · ${blockTitle || ''} · ${fmtDate(e.submitted_at)}</div>
+        <div class="pending-text">${preview}</div>
+        <div class="pending-actions">
+          <button class="btn btn-primary" style="padding:6px 14px;font-size:13px"
+            onclick="event.stopPropagation();openFeedback(${e.id}, '${name}', \`${(e.content||'').replace(/`/g,"'")}\`)">
+            ${LANG === 'ru' ? 'Ответить' : 'Reply'}
+          </button>
+        </div>
+      </div>`;
+  });
+}
+
+async function loadActivity() {
+  const { data } = await _supabase
+    .from('student_progress')
+    .select('*, profiles(full_name, email), blocks(title_ru, title_en), lessons(title_ru, title_en)')
+    .order('last_visited', { ascending: false })
+    .limit(12);
+
+  const list = document.getElementById('activity-list');
+  list.innerHTML = '';
+  (data || []).forEach(p => {
+    const name    = p.profiles?.full_name || p.profiles?.email || '?';
+    const initials= name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+    const block   = LANG === 'ru' ? p.blocks?.title_ru : p.blocks?.title_en;
+    const lesson  = LANG === 'ru' ? p.lessons?.title_ru : p.lessons?.title_en;
+    const action  = p.completed
+      ? (LANG === 'ru' ? 'завершил урок' : 'completed lesson')
+      : (LANG === 'ru' ? 'посетил урок' : 'visited lesson');
+
+    list.innerHTML += `
+      <div class="feed-item" onclick="location.href='students.html?user=${p.user_id}'">
+        <div class="feed-avatar">${initials}</div>
+        <div class="feed-body">
+          <div class="feed-name">${name}</div>
+          <div class="feed-action">${action}: ${lesson || ''} (${block || ''})</div>
+        </div>
+        <div class="feed-time">${fmtDate(p.last_visited)}</div>
+      </div>`;
+  });
+  if (!data?.length) {
+    list.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text2)">
+      ${LANG === 'ru' ? 'Активности пока нет' : 'No activity yet'}</div>`;
+  }
+}
+
+function openFeedback(id, name, text) {
+  activeFeedbackId = id;
+  document.getElementById('modal-fb-title').textContent = (LANG === 'ru' ? 'Ответ для ' : 'Reply to ') + name;
+  document.getElementById('modal-journal-text').textContent = text;
+  document.getElementById('feedback-input').value = '';
+  document.getElementById('feedback-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('feedback-modal').classList.remove('open');
+  activeFeedbackId = null;
+}
+
+async function sendFeedback() {
+  const fb = document.getElementById('feedback-input').value.trim();
+  if (!fb || !activeFeedbackId) return;
+
+  const { error } = await _supabase
+    .from('journal_entries')
+    .update({ leader_feedback: fb })
+    .eq('id', activeFeedbackId);
+
+  if (!error) {
+    toast(LANG === 'ru' ? 'Обратная связь отправлена' : 'Feedback sent', 'success');
+    closeModal();
+    await loadPending();
+    await loadStats();
+  }
+}
+
+init();
+</script>
+</body>
+</html>

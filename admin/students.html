@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>КРЕСТ — Студенты</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<style>
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.search-bar .form-input { max-width: 320px; }
+
+.progress-cell { width: 140px; }
+.mini-bar { height: 4px; border-radius: 2px; background: var(--bg); margin-top: 4px; }
+.mini-fill { height: 4px; border-radius: 2px; background: var(--blue); }
+
+.unlock-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+.unlock-block-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+.student-detail { display: flex; flex-direction: column; gap: 16px; }
+.detail-block { background: var(--bg); border-radius: var(--radius-sm); padding: 16px; }
+.detail-block h4 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.journal-preview { font-size: 13px; color: var(--text2); padding: 10px; background: var(--surface); border-radius: 8px; margin-bottom: 6px; cursor: pointer; }
+.journal-preview:hover { background: var(--blue-light); }
+
+.block-progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.block-progress-row .block-lbl { font-size: 13px; font-weight: 700; width: 20px; color: var(--blue); }
+.block-progress-row .block-name { font-size: 13px; flex: 1; color: var(--text); }
+.block-progress-row .block-pct  { font-size: 12px; color: var(--text2); width: 36px; text-align: right; }
+</style>
+</head>
+<body>
+<nav id="topnav"></nav>
+
+<div class="page">
+  <div class="page-title" id="page-title">Студенты</div>
+  <div class="page-sub"   id="page-sub">Прогресс и активность</div>
+
+  <!-- Search -->
+  <div class="search-bar">
+    <input class="form-input" id="search" type="text" placeholder="Поиск по имени или email..." oninput="filterStudents()">
+    <button class="btn btn-outline" onclick="location.href='index.html'">← Дашборд</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th id="th-name">Студент</th>
+          <th id="th-location">Местоположение</th>
+          <th id="th-progress">Прогресс</th>
+          <th id="th-active">Последняя активность</th>
+          <th id="th-role">Роль</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="students-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Student modal -->
+<div class="modal-overlay" id="student-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-student-name">Студент</div>
+        <div style="font-size:13px;color:var(--text2)" id="modal-student-email"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+
+    <div id="modal-student-info" class="student-detail"></div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap" id="modal-actions"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+let currentUser, currentProfile;
+let allStudents = [], filteredStudents = [];
+let allBlocks   = [];
+let selectedStudent = null;
+const BLOCK_COLORS = ['#0071e3','#ff6b35','#8e44ad','#e67e22','#27ae60','#2980b9'];
+
+async function init() {
+  const ctx = await requireAdmin('../login.html');
+  if (!ctx) return;
+  currentUser    = ctx.user;
+  currentProfile = ctx.profile;
+  renderNav(currentProfile, true);
+  applyTranslations();
+  await loadBlocks();
+  await loadStudents();
+
+  // Auto-open student from URL
+  const params = new URLSearchParams(location.search);
+  const uid = params.get('user');
+  if (uid) {
+    const s = allStudents.find(s => s.id === uid);
+    if (s) openStudent(s);
+  }
+}
+
+function applyTranslations() {
+  document.getElementById('page-title').textContent     = LANG === 'ru' ? 'Студенты' : 'Students';
+  document.getElementById('page-sub').textContent       = LANG === 'ru' ? 'Прогресс и активность' : 'Progress & Activity';
+  document.getElementById('th-name').textContent        = LANG === 'ru' ? 'Студент' : 'Student';
+  document.getElementById('th-location').textContent    = LANG === 'ru' ? 'Местоположение' : 'Location';
+  document.getElementById('th-progress').textContent    = LANG === 'ru' ? 'Прогресс' : 'Progress';
+  document.getElementById('th-active').textContent      = LANG === 'ru' ? 'Последняя активность' : 'Last Active';
+  document.getElementById('th-role').textContent        = LANG === 'ru' ? 'Роль' : 'Role';
+  document.getElementById('search').placeholder         = LANG === 'ru' ? 'Поиск по имени или email...' : 'Search by name or email...';
+}
+
+async function loadBlocks() {
+  const { data } = await _supabase.from('blocks').select('*').order('order_num');
+  allBlocks = data || [];
+}
+
+async function loadStudents() {
+  const { data: students } = await _supabase
+    .from('profiles')
+    .select('*')
+    .order('created_at');
+
+  // Load progress counts
+  const { data: progress } = await _supabase
+    .from('student_progress')
+    .select('user_id, completed');
+
+  // Load last visit
+  const { data: lastVisit } = await _supabase
+    .from('student_progress')
+    .select('user_id, last_visited')
+    .order('last_visited', { ascending: false });
+
+  const progMap = {};
+  (progress || []).forEach(p => {
+    if (!progMap[p.user_id]) progMap[p.user_id] = { total: 0, done: 0 };
+    progMap[p.user_id].total++;
+    if (p.completed) progMap[p.user_id].done++;
+  });
+
+  const lastMap = {};
+  (lastVisit || []).forEach(p => {
+    if (!lastMap[p.user_id]) lastMap[p.user_id] = p.last_visited;
+  });
+
+  allStudents = (students || []).map(s => ({
+    ...s,
+    prog:      progMap[s.id] || { total: 0, done: 0 },
+    lastVisit: lastMap[s.id] || null,
+  }));
+
+  filteredStudents = [...allStudents];
+  renderTable();
+}
+
+function filterStudents() {
+  const q = document.getElementById('search').value.toLowerCase();
+  filteredStudents = allStudents.filter(s =>
+    (s.full_name || '').toLowerCase().includes(q) ||
+    (s.email     || '').toLowerCase().includes(q) ||
+    (s.location_name || '').toLowerCase().includes(q)
+  );
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('students-tbody');
+  tbody.innerHTML = '';
+
+  if (!filteredStudents.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:32px">
+      ${LANG === 'ru' ? 'Студентов не найдено' : 'No students found'}</td></tr>`;
+    return;
+  }
+
+  filteredStudents.forEach(s => {
+    const pct = s.prog.total > 0 ? Math.round(s.prog.done / s.prog.total * 100) : 0;
+    const name = s.full_name || s.email;
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+
+    tbody.innerHTML += `
+      <tr class="clickable" onclick="openStudent(allStudents.find(x=>x.id==='${s.id}'))">
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--blue);flex-shrink:0">${initials}</div>
+            <div>
+              <div style="font-weight:600">${name}</div>
+              <div style="font-size:12px;color:var(--text2)">${s.email}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-size:13px;color:var(--text2)">${s.location_name || '—'}</td>
+        <td class="progress-cell">
+          <div style="font-size:13px;font-weight:600">${pct}%</div>
+          <div class="mini-bar"><div class="mini-fill" style="width:${pct}%"></div></div>
+          <div style="font-size:11px;color:var(--text3)">${s.prog.done}/${s.prog.total} ${LANG==='ru'?'уроков':'lessons'}</div>
+        </td>
+        <td style="font-size:13px;color:var(--text2)">${fmtDate(s.lastVisit)}</td>
+        <td><span class="badge ${s.role === 'admin' ? 'badge-admin' : 'badge-student'}">${s.role === 'admin' ? t.admin : t.student}</span></td>
+        <td><button class="btn-sm" onclick="event.stopPropagation();openStudent(allStudents.find(x=>x.id==='${s.id}'))">→</button></td>
+      </tr>`;
+  });
+}
+
+async function openStudent(s) {
+  if (!s) return;
+  selectedStudent = s;
+  document.getElementById('modal-student-name').textContent  = s.full_name || s.email;
+  document.getElementById('modal-student-email').textContent = s.email;
+
+  // Build content
+  const pct = s.prog.total > 0 ? Math.round(s.prog.done / s.prog.total * 100) : 0;
+
+  // Load per-block progress
+  const { data: blockProg } = await _supabase
+    .from('student_progress')
+    .select('block_id, completed')
+    .eq('user_id', s.id);
+
+  const bpMap = {};
+  (blockProg || []).forEach(p => {
+    if (!bpMap[p.block_id]) bpMap[p.block_id] = { total: 0, done: 0 };
+    bpMap[p.block_id].total++;
+    if (p.completed) bpMap[p.block_id].done++;
+  });
+
+  // Load journals
+  const { data: journals } = await _supabase
+    .from('journal_entries')
+    .select('*, blocks(title_ru, title_en)')
+    .eq('user_id', s.id)
+    .order('updated_at', { ascending: false })
+    .limit(5);
+
+  // Load bible verses count
+  const { count: verseCount } = await _supabase
+    .from('bible_verses')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', s.id);
+
+  const COLORS = ['#0071e3','#ff6b35','#8e44ad','#e67e22','#27ae60','#2980b9'];
+
+  let html = `
+    <div class="detail-block">
+      <h4>${LANG === 'ru' ? 'Прогресс по блокам' : 'Block Progress'}</h4>
+      ${allBlocks.map((b, i) => {
+        const bp   = bpMap[b.id] || { total: 0, done: 0 };
+        const bpct = bp.total > 0 ? Math.round(bp.done / bp.total * 100) : 0;
+        const title = LANG === 'ru' ? b.title_ru : b.title_en;
+        return `<div class="block-progress-row">
+          <span class="block-lbl" style="color:${COLORS[i]}">${b.letter}</span>
+          <span class="block-name">${title}</span>
+          <div style="flex:1;background:var(--border);border-radius:4px;height:4px">
+            <div style="width:${bpct}%;height:4px;border-radius:4px;background:${COLORS[i]}"></div>
+          </div>
+          <span class="block-pct">${bpct}%</span>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="detail-block">
+      <h4>${LANG === 'ru' ? 'Информация' : 'Info'}</h4>
+      <div style="font-size:13px;color:var(--text2);display:flex;flex-wrap:wrap;gap:12px">
+        <span>📍 ${s.location_name || t.noLocation}</span>
+        <span>📖 ${verseCount || 0} ${LANG === 'ru' ? 'стихов выучено' : 'verses memorized'}</span>
+        <span>📅 ${LANG === 'ru' ? 'Зарегистрирован' : 'Joined'}: ${fmtDate(s.created_at)}</span>
+        ${s.interests ? `<span>✨ ${s.interests}</span>` : ''}
+      </div>
+    </div>
+
+    <div class="detail-block">
+      <h4>${LANG === 'ru' ? 'Записи дневника' : 'Journal Entries'}</h4>
+      ${(journals || []).length === 0 ? `<p style="color:var(--text2);font-size:13px">${LANG === 'ru' ? 'Записей нет' : 'No entries'}</p>` : ''}
+      ${(journals || []).map(j => {
+        const blockName = LANG === 'ru' ? j.blocks?.title_ru : j.blocks?.title_en;
+        const preview   = (j.content || '').slice(0, 150);
+        return `<div class="journal-preview">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:4px">
+                ${blockName || (LANG==='ru'?'Блок':'Block')} · ${fmtDate(j.updated_at)}
+                ${j.submitted_to_leader ? ` · <span style="color:var(--green)">${LANG === 'ru' ? 'Отправлено' : 'Submitted'}</span>` : ''}
+              </div>
+              ${preview}${(j.content||'').length > 150 ? '...' : ''}
+              ${j.leader_feedback ? `<div style="margin-top:6px;font-size:12px;color:var(--blue)">💬 ${j.leader_feedback}</div>` : ''}
+            </div>
+            ${j.submitted_to_leader && j.block_id ? `
+              <button class="btn-sm btn-primary" style="flex-shrink:0;white-space:nowrap"
+                onclick="event.stopPropagation();approveBlock('${s.id}', ${j.block_id}, this)">
+                ✓ ${LANG==='ru'?'Одобрить':'Approve'}
+              </button>` : ''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  document.getElementById('modal-student-info').innerHTML = html;
+
+  // Unlock controls
+  const unlocked = s.blocks_unlocked || 1;
+  const canUnlock = unlocked < allBlocks.length;
+  const canLock   = unlocked > 1;
+
+  const blockStatusHTML = allBlocks.map((b, i) => {
+    const isOpen = b.order_num <= unlocked;
+    const color  = BLOCK_COLORS[i];
+    const title  = LANG === 'ru' ? b.title_ru : b.title_en;
+    return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;
+      padding:4px 10px;border-radius:20px;background:${isOpen ? color+'22' : '#f0f0f0'};
+      color:${isOpen ? color : '#aeaeb2'}">
+      ${isOpen ? '🔓' : '🔒'} ${b.letter}
+    </span>`;
+  }).join('');
+
+  // Actions
+  const isAdmin = s.role === 'admin';
+  document.getElementById('modal-actions').innerHTML = `
+    <div style="width:100%;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">
+        ${LANG==='ru'?'Доступ к блокам:':'Block access:'}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${blockStatusHTML}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${canUnlock ? `<button class="btn btn-primary" onclick="unlockNextBlock('${s.id}', ${unlocked})">
+          🔓 ${LANG==='ru'?'Открыть блок '+(unlocked+1):'Unlock block '+(unlocked+1)}
+        </button>` : `<span style="font-size:13px;color:var(--green);font-weight:600">✓ ${LANG==='ru'?'Все блоки открыты':'All blocks unlocked'}</span>`}
+        ${canLock ? `<button class="btn btn-outline" onclick="lockBlock('${s.id}', ${unlocked})">
+          🔒 ${LANG==='ru'?'Закрыть блок '+unlocked:'Lock block '+unlocked}
+        </button>` : ''}
+      </div>
+    </div>
+    <button class="btn ${isAdmin ? 'btn-outline' : 'btn-primary'}" onclick="toggleAdmin('${s.id}', ${isAdmin})">
+      ${isAdmin ? t.revokeAdmin : t.grantAdmin}
+    </button>
+  `;
+
+  document.getElementById('student-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('student-modal').classList.remove('open');
+  selectedStudent = null;
+}
+
+async function unlockNextBlock(userId, currentUnlocked) {
+  const newVal = currentUnlocked + 1;
+  const { error } = await _supabase
+    .from('profiles')
+    .update({ blocks_unlocked: newVal })
+    .eq('id', userId);
+  if (!error) {
+    toast((LANG==='ru'?'Блок '+newVal+' открыт!':'Block '+newVal+' unlocked!'), 'success');
+    closeModal();
+    await loadStudents();
+  }
+}
+
+async function lockBlock(userId, currentUnlocked) {
+  const newVal = currentUnlocked - 1;
+  const { error } = await _supabase
+    .from('profiles')
+    .update({ blocks_unlocked: newVal })
+    .eq('id', userId);
+  if (!error) {
+    toast((LANG==='ru'?'Блок '+currentUnlocked+' закрыт':'Block '+currentUnlocked+' locked'), 'success');
+    closeModal();
+    await loadStudents();
+  }
+}
+
+async function approveBlock(userId, blockId, btn) {
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  const { error } = await _supabase
+    .from('student_progress')
+    .update({ admin_approved: true, completed: true })
+    .eq('user_id', userId)
+    .eq('block_id', blockId)
+    .is('lesson_id', null);
+
+  if (error) {
+    toast(LANG==='ru'?'Ошибка одобрения':'Approval error', 'error');
+    btn.disabled = false;
+    btn.textContent = LANG==='ru'?'Одобрить':'Approve';
+    return;
+  }
+
+  btn.textContent = '✓ ' + (LANG==='ru'?'Одобрено':'Approved');
+  btn.style.background = 'var(--green,#34c759)';
+  btn.style.borderColor = 'var(--green,#34c759)';
+  toast(LANG==='ru'?'Блок одобрен! Студент увидит следующий урок.':'Block approved! Student can proceed.', 'success');
+
+  // Notify student in Telegram if they have chat_id saved
+  const student = selectedStudent;
+  if (student?.telegram_chat_id) {
+    const block = allBlocks.find(b => b.id === blockId);
+    const blockTitle = LANG === 'ru' ? block?.title_ru : block?.title_en;
+    sendTelegramMsg(
+      student.telegram_chat_id,
+      `✅ Лидер одобрил твой ответ по блоку «${blockTitle}»!\n\nСледующий блок разблокирован. Заходи в КРЕСТ и продолжай путь. 🙏`
+    );
+  }
+}
+
+async function toggleAdmin(userId, isCurrentlyAdmin) {
+  const ok = await grantAdmin(userId, !isCurrentlyAdmin);
+  if (ok) {
+    toast(isCurrentlyAdmin
+      ? (LANG === 'ru' ? 'Права лидера убраны' : 'Leader rights revoked')
+      : (LANG === 'ru' ? 'Права лидера выданы' : 'Leader rights granted'),
+      'success');
+    closeModal();
+    await loadStudents();
+  }
+}
+
+init();
+</script>
+</body>
+</html>

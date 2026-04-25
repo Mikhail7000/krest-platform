@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CREST — Вход</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">CREST</div>
+    <div class="login-title" id="login-title">Вход в платформу</div>
+    <div class="login-sub" id="login-sub">Введите email и пароль</div>
+
+    <div class="login-error" id="login-error"></div>
+
+    <div class="form-group">
+      <label class="form-label" id="lbl-email">Email</label>
+      <input class="form-input" type="email" id="email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="lbl-pass">Пароль</label>
+      <input class="form-input" type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" id="btn-login" onclick="doLogin()">
+      Войти в аккаунт
+    </button>
+
+    <div style="text-align:center;margin-top:20px">
+      <a href="index.html" style="font-size:13px;color:var(--text2);text-decoration:none">← На главную</a>
+      <span style="margin:0 8px;color:var(--border)">|</span>
+      <button onclick="setLang(LANG==='ru'?'en':'ru')" style="font-size:13px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:inherit" id="lang-switch">EN</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script>
+// Apply translations
+document.getElementById('login-title').textContent = LANG === 'ru' ? 'Вход в платформу' : 'Sign In';
+document.getElementById('login-sub').textContent   = LANG === 'ru' ? 'Введите email и пароль' : 'Enter your email and password';
+document.getElementById('lbl-email').textContent   = t.email;
+document.getElementById('lbl-pass').textContent    = t.password;
+document.getElementById('btn-login').textContent   = t.loginBtn;
+document.getElementById('lang-switch').textContent = t.lang;
+
+// Allow Enter key
+document.getElementById('password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+async function doLogin() {
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errEl    = document.getElementById('login-error');
+  const btn      = document.getElementById('btn-login');
+
+  if (!email || !password) {
+    errEl.textContent = LANG === 'ru' ? 'Введите email и пароль' : 'Please enter email and password';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = LANG === 'ru' ? 'Вхожу...' : 'Signing in...';
+  errEl.style.display = 'none';
+
+  const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    errEl.textContent = t.loginError;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = t.loginBtn;
+    return;
+  }
+
+  // Get role and redirect
+  const { data: profile } = await _supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', data.user.id)
+    .single();
+
+  if (profile?.role === 'admin') {
+    location.href = 'admin/index.html';
+  } else {
+    location.href = 'student/index.html';
+  }
+}
+
+// If already logged in
+async function checkSession() {
+  const { data: { user } } = await _supabase.auth.getUser();
+  if (!user) return;
+  const { data: p } = await _supabase.from('profiles').select('role').eq('id', user.id).single();
+  location.href = p?.role === 'admin' ? 'admin/index.html' : 'student/index.html';
+}
+checkSession();
+</script>
+</body>
+</html>
