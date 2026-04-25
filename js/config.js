@@ -1,6 +1,6 @@
 // Supabase + Telegram Mini App initialization
 const SUPABASE_URL = 'https://aejhlmoydnhgedgfndql.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlamhsbW95ZG5oZ2VkZ2ZuZHFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1MTU3MzcsImV4cCI6MjA2MTA5MTczN30.KGgNp2RVqoV5GdXhZEByukKT6gvdCGqAzh0e0R6NKHI';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlamhsbW95ZG5oZ2VkZ2ZuZHFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1OTkxNjEsImV4cCI6MjA5MjE3NTE2MX0.OhWK6etLZPw6_uWUNxJExCNEBdKg_JGWe50s4n0JCyw';
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
