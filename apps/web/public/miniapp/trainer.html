@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="КРЕСТ — тренажёр стихов Библии" />
+  <title>Тренажёр стихов | КРЕСТ</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .verse-card {
+      background: var(--tg-secondary);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      margin: 16px;
+      min-height: 240px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .verse-reference {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+    .verse-text {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--tg-text);
+      margin-bottom: 20px;
+      display: none;
+    }
+    .verse-text.revealed { display: block; }
+    .verse-actions {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      max-width: 400px;
+      padding: 0 16px;
+    }
+    .verse-actions .btn {
+      flex: 1;
+    }
+    .progress-indicator {
+      text-align: center;
+      font-size: 14px;
+      color: var(--tg-hint);
+      padding: 12px 0;
+      font-weight: 500;
+    }
+    .completion-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 32px 20px;
+      text-align: center;
+    }
+    .completion-screen .icon {
+      font-size: 72px;
+      margin-bottom: 16px;
+    }
+    .completion-screen h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .completion-screen p {
+      font-size: 15px;
+      color: var(--tg-hint);
+      margin-bottom: 24px;
+    }
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 32px 20px;
+      text-align: center;
+      color: var(--tg-hint);
+    }
+    .empty-state .icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-state p { font-size: 15px; }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Загрузка...</span>
+</div>
+
+<div id="trainerView" style="display:none">
+  <div class="page-header">
+    <h1>✦ Тренажёр стихов</h1>
+    <p id="trainerSubtitle">Учите стихи Библии</p>
+  </div>
+
+  <div class="progress-indicator" id="progressIndicator"></div>
+
+  <div id="verseContent"></div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let verses = [];
+let currentIndex = 0;
+let knownVerses = [];
+let isRevealed = false;
+
+async function init() {
+  const auth = await requireAuth();
+  if (!auth) return;
+  const { user, profile } = auth;
+
+  const blocksUnlocked = profile.blocks_unlocked || 1;
+
+  // Load all verses for blocks 1 through blocksUnlocked
+  const { data, error } = await _supabase
+    .from('bible_verses')
+    .select('*')
+    .lte('block_id', blocksUnlocked)
+    .order('block_id')
+    .order('order_num');
+
+  if (error) {
+    console.error(error);
+    toast('Ошибка загрузки стихов', 'error');
+    showLoading(false);
+    return;
+  }
+
+  verses = data || [];
+
+  showLoading(false);
+  document.getElementById('trainerView').style.display = 'block';
+
+  if (verses.length === 0) {
+    showEmptyState();
+  } else {
+    showVerse();
+  }
+
+  // Telegram back button
+  if (tg?.BackButton) {
+    tg.BackButton.show();
+    tg.BackButton.onClick(() => {
+      window.location.href = './index.html';
+    });
+  }
+}
+
+function showEmptyState() {
+  const content = document.getElementById('verseContent');
+  content.innerHTML = `
+    <div class="empty-state">
+      <div class="icon">📖</div>
+      <p>Стихи появятся после открытия блоков</p>
+    </div>
+  `;
+  document.getElementById('progressIndicator').textContent = '';
+}
+
+function showVerse() {
+  if (currentIndex >= verses.length) {
+    showCompletion();
+    return;
+  }
+
+  isRevealed = false;
+  const verse = verses[currentIndex];
+  const content = document.getElementById('verseContent');
+
+  content.innerHTML = `
+    <div class="verse-card">
+      <div class="verse-reference">${verse.reference}</div>
+      <div class="verse-text" id="verseText">${verse.text_ru}</div>
+    </div>
+    <div class="verse-actions">
+      <button class="btn" id="revealBtn" onclick="revealVerse()">Показать</button>
+    </div>
+  `;
+
+  updateProgress();
+}
+
+function revealVerse() {
+  if (isRevealed) return;
+
+  isRevealed = true;
+  const textEl = document.getElementById('verseText');
+  textEl.classList.add('revealed');
+
+  const actionsEl = document.querySelector('.verse-actions');
+  actionsEl.innerHTML = `
+    <button class="btn btn-secondary" onclick="tryAgain()">Ещё раз ↩</button>
+    <button class="btn" onclick="markKnown()">Знаю ✓</button>
+  `;
+
+  if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+}
+
+function markKnown() {
+  if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+  knownVerses.push(verses[currentIndex]);
+  verses.splice(currentIndex, 1);
+
+  if (verses.length === 0) {
+    showCompletion();
+  } else {
+    if (currentIndex >= verses.length) currentIndex = 0;
+    showVerse();
+  }
+}
+
+function tryAgain() {
+  if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+
+  // Move current verse to end of queue
+  const verse = verses[currentIndex];
+  verses.splice(currentIndex, 1);
+  verses.push(verse);
+
+  if (currentIndex >= verses.length) currentIndex = 0;
+  showVerse();
+}
+
+function updateProgress() {
+  const total = verses.length + knownVerses.length;
+  const known = knownVerses.length;
+  document.getElementById('progressIndicator').textContent = `${known} / ${total} стихов`;
+}
+
+function showCompletion() {
+  const content = document.getElementById('verseContent');
+  content.innerHTML = `
+    <div class="completion-screen">
+      <div class="icon">🎉</div>
+      <h2>Все стихи выучены!</h2>
+      <p>Отличная работа! Вы повторили ${knownVerses.length} ${knownVerses.length === 1 ? 'стих' : 'стихов'}.</p>
+      <button class="btn" onclick="restart()">Повторить снова</button>
+    </div>
+  `;
+  document.getElementById('progressIndicator').textContent = '';
+
+  if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+}
+
+function restart() {
+  verses = [...knownVerses];
+  knownVerses = [];
+  currentIndex = 0;
+  showVerse();
+}
+
+init();
+</script>
+</body>
+</html>

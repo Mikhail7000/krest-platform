@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Лидер — КРЕСТ</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .student-card {
+      background: var(--tg-secondary);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .student-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .student-name { font-weight: 600; font-size: 15px; }
+    .student-email { font-size: 12px; color: var(--tg-hint); margin-top: 2px; }
+    .pending-list { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .pending-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--tg-bg);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .pending-row-info { font-size: 14px; }
+    .pending-row-sub { font-size: 12px; color: var(--tg-hint); margin-top: 2px; }
+    .approve-btn {
+      background: #34C759;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+    .approve-btn:active { opacity: 0.7; }
+    .approve-btn:disabled { background: #ddd; color: #999; cursor: default; }
+    .approved-tag {
+      font-size: 12px;
+      color: #34C759;
+      font-weight: 600;
+    }
+    .journal-toggle {
+      font-size: 12px;
+      color: var(--tg-link);
+      cursor: pointer;
+      margin-top: 6px;
+      display: inline-block;
+    }
+    .journal-text {
+      background: var(--tg-bg);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 6px;
+      color: var(--tg-text);
+      display: none;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--tg-hint);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .tab-bar {
+      display: flex;
+      background: var(--tg-secondary);
+      border-radius: var(--radius);
+      padding: 4px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      flex: 1;
+      padding: 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--tg-hint);
+      transition: all 0.15s;
+    }
+    .tab.active {
+      background: var(--tg-bg);
+      color: var(--tg-text);
+      font-weight: 600;
+    }
+    .badge {
+      display: inline-block;
+      background: #FF3B30;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 1px 5px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Загрузка...</span>
+</div>
+
+<div id="adminView" style="display:none">
+  <div class="page-header">
+    <h1>✝️ КРЕСТ — Лидер</h1>
+    <p id="leaderName"></p>
+  </div>
+
+  <div class="section">
+    <div class="tab-bar">
+      <div class="tab active" id="tabPending" onclick="switchTab('pending')">
+        Ожидают <span class="badge" id="pendingBadge" style="display:none">0</span>
+      </div>
+      <div class="tab" id="tabAll" onclick="switchTab('all')">Все студенты</div>
+    </div>
+
+    <div id="pendingView">
+      <div id="pendingList"></div>
+    </div>
+    <div id="allView" style="display:none">
+      <div id="allList"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+let allStudents = [];
+let pendingItems = [];
+
+async function init() {
+  const result = await requireAdmin();
+  if (!result) return;
+
+  if (tg?.BackButton) tg.BackButton.hide();
+
+  document.getElementById('leaderName').textContent = result.profile.full_name || result.user.email;
+
+  await loadData();
+  showLoading(false);
+  document.getElementById('adminView').style.display = 'block';
+}
+
+async function loadData() {
+  // All students
+  const { data: students } = await _supabase
+    .from('profiles')
+    .select('id, full_name, email, blocks_unlocked')
+    .eq('role', 'student')
+    .order('full_name');
+
+  // All student_progress with lesson_id IS NULL
+  const { data: progresses } = await _supabase
+    .from('student_progress')
+    .select('id, user_id, block_id, admin_approved')
+    .is('lesson_id', null);
+
+  // All blocks for names
+  const { data: blocks } = await _supabase
+    .from('blocks')
+    .select('id, order_num, title_ru')
+    .order('order_num');
+
+  // All journal entries for reading answers
+  const { data: journals } = await _supabase
+    .from('journal_entries')
+    .select('user_id, block_id, content')
+    .is('lesson_id', null);
+
+  const blockMap = {};
+  (blocks || []).forEach(b => { blockMap[b.id] = b; });
+
+  const journalMap = {};
+  (journals || []).forEach(j => { journalMap[`${j.user_id}_${j.block_id}`] = j.content; });
+
+  const progressMap = {};
+  (progresses || []).forEach(p => {
+    if (!progressMap[p.user_id]) progressMap[p.user_id] = {};
+    progressMap[p.user_id][p.block_id] = { id: p.id, approved: p.admin_approved };
+  });
+
+  allStudents = (students || []).map(s => ({
+    ...s,
+    progresses: progressMap[s.id] || {},
+    journalMap,
+  }));
+
+  // Build pending items
+  pendingItems = [];
+  allStudents.forEach(student => {
+    Object.entries(student.progresses).forEach(([blockId, prog]) => {
+      if (prog.approved === false) {
+        pendingItems.push({
+          student,
+          block: blockMap[blockId],
+          progressId: prog.id,
+          blockId: parseInt(blockId),
+          journalContent: journalMap[`${student.id}_${blockId}`] || '',
+        });
+      }
+    });
+  });
+
+  renderPending();
+  renderAll(blockMap);
+
+  // Badge
+  const badge = document.getElementById('pendingBadge');
+  if (pendingItems.length > 0) {
+    badge.textContent = pendingItems.length;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderPending() {
+  const list = document.getElementById('pendingList');
+  if (pendingItems.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>Нет ожидающих одобрения</p></div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  pendingItems.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'student-card';
+    div.innerHTML = `
+      <div class="student-name">${item.student.full_name || item.student.email}</div>
+      <div style="font-size:13px;color:var(--tg-hint);margin-top:2px">Блок ${item.block?.order_num}: ${item.block?.title_ru}</div>
+      ${item.journalContent ? `
+        <span class="journal-toggle" onclick="toggleJournal(this)">📝 Читать ответ</span>
+        <div class="journal-text">${item.journalContent}</div>
+      ` : ''}
+      <div style="margin-top:10px">
+        <button class="approve-btn" id="appBtn_${idx}" onclick="approveBlock(${idx})">✅ Одобрить</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function renderAll(blockMap) {
+  const list = document.getElementById('allList');
+  if (allStudents.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">👥</div><p>Нет студентов</p></div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  allStudents.forEach(student => {
+    const approvedCount = Object.values(student.progresses).filter(p => p.approved).length;
+    const pendingCount = Object.values(student.progresses).filter(p => p.approved === false).length;
+
+    const card = document.createElement('div');
+    card.className = 'student-card';
+
+    const progressPct = Math.round(approvedCount / 6 * 100);
+
+    card.innerHTML = `
+      <div class="student-header">
+        <div>
+          <div class="student-name">${student.full_name || '—'}</div>
+          <div class="student-email">${student.email || ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:600">${approvedCount}/6</div>
+          ${pendingCount > 0 ? `<div style="font-size:11px;color:var(--gold);margin-top:2px">⏳ ${pendingCount} ожидает</div>` : ''}
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${progressPct}%"></div></div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+async function approveBlock(idx) {
+  const item = pendingItems[idx];
+  const btn = document.getElementById(`appBtn_${idx}`);
+  btn.disabled = true;
+  btn.textContent = 'Сохраняем...';
+
+  // UPDATE admin_approved
+  const { error: e1 } = await _supabase
+    .from('student_progress')
+    .update({ admin_approved: true })
+    .eq('id', item.progressId);
+
+  if (e1) {
+    toast('Ошибка одобрения', 'error');
+    btn.disabled = false;
+    btn.textContent = '✅ Одобрить';
+    return;
+  }
+
+  // Increment blocks_unlocked (max 6)
+  const { error: e2 } = await _supabase
+    .from('profiles')
+    .update({ blocks_unlocked: Math.min((item.student.blocks_unlocked || 1) + 1, 6) })
+    .eq('id', item.student.id);
+
+  if (e2) {
+    toast('Прогресс не обновлён', 'error');
+  }
+
+  btn.textContent = '✅ Одобрено';
+  toast(`${item.student.full_name || 'Студент'} — Блок ${item.block?.order_num} одобрен`, 'success');
+  if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+  // Remove from pending list
+  pendingItems.splice(idx, 1);
+  setTimeout(() => loadData(), 500);
+}
+
+function toggleJournal(el) {
+  const text = el.nextElementSibling;
+  const shown = text.style.display === 'block';
+  text.style.display = shown ? 'none' : 'block';
+  el.textContent = shown ? '📝 Читать ответ' : '🔼 Скрыть';
+}
+
+function switchTab(tab) {
+  document.getElementById('tabPending').classList.toggle('active', tab === 'pending');
+  document.getElementById('tabAll').classList.toggle('active', tab === 'all');
+  document.getElementById('pendingView').style.display = tab === 'pending' ? 'block' : 'none';
+  document.getElementById('allView').style.display = tab === 'all' ? 'block' : 'none';
+}
+
+init();
+</script>
+</body>
+</html>

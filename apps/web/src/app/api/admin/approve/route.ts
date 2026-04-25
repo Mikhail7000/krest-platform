@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase-server'
 import type { Profile } from '@/lib/supabase-server'
 
-const MINIAPP_URL = 'https://mikhail7000.github.io/krest-platform/'
+const MINIAPP_URL = 'https://krest-platform-web.vercel.app/miniapp/index.html'
 
 async function sendTelegram(chatId: number, text: string, blockNum: number | string) {
   const token = process.env.TELEGRAM_BOT_TOKEN
