@@ -2,13 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase-server'
 import type { Profile } from '@/lib/supabase-server'
 
-async function sendTelegram(chatId: number, text: string) {
+const MINIAPP_URL = 'https://mikhail7000.github.io/krest-platform/'
+
+async function sendTelegram(chatId: number, text: string, blockNum: number | string) {
   const token = process.env.TELEGRAM_BOT_TOKEN
   if (!token || !chatId) return
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [[{
+          text: `✝️ Открыть КРЕСТ — Блок ${blockNum}`,
+          web_app: { url: MINIAPP_URL },
+        }]],
+      },
+    }),
   })
 }
 
@@ -75,7 +87,8 @@ export async function POST(request: NextRequest) {
     const blockNum = block?.order_num ?? '?'
     await sendTelegram(
       student.telegram_chat_id,
-      `✅ <b>Блок ${blockNum} одобрен!</b>\n\nЛидер проверил ваш ответ. Следующий блок открыт.`
+      `✅ <b>Блок ${blockNum} одобрен!</b>\n\nЛидер проверил ваш ответ. Следующий блок открыт. Нажмите кнопку ниже чтобы продолжить.`,
+      blockNum,
     )
   }
 
