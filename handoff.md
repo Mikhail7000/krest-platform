@@ -1,17 +1,18 @@
 # Session Handoff — КРЕСТ
-> Дата: 2026-04-25 | Сессия: Фазы 2–6 завершены, деплой на Vercel следующий
+> Дата: 2026-04-25 | Сессия: Фазы 0–6 + деплой на Vercel завершены
 
 ---
 
 ## Статус платформы
 
-- ✅ Next.js 16.2.4 работает (localhost:3000)
+- ✅ Next.js 16.2.4 задеплоен: https://krest-platform-web.vercel.app
 - ✅ Supabase подключён (aejhlmoydnhgedgfndql)
-- ✅ TypeScript 0 ошибок (npx tsc --noEmit чистый)
+- ✅ TypeScript 0 ошибок
 - ✅ Turborepo monorepo: apps/web + packages/supabase
-- ✅ Git репозиторий: ветка main (3 коммита)
-- ⏳ Vercel деплой — следующий шаг
-- ⏳ GitHub репозиторий — нужно создать перед Vercel
+- ✅ GitHub: github.com/Mikhail7000/krest-platform (public)
+- ✅ Vercel: krest-platform-web (Hobby team)
+- ✅ GitHub Actions: автодеплой через Deploy Hook при пуше в main
+- ⏳ Фаза 7 — Telegram Mini App (apps/miniapp/)
 
 ---
 
