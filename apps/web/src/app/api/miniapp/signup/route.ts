@@ -56,8 +56,9 @@ export async function POST(request: NextRequest) {
         : 'SIGNUP_FAILED'
       const userMessage = code === 'EMAIL_EXISTS'
         ? 'Этот email уже зарегистрирован. Войдите в аккаунт.'
-        : 'Ошибка регистрации. Попробуйте ещё раз.'
-      return NextResponse.json({ error: { code, message: userMessage } }, { status: 400 })
+        : `Ошибка регистрации: ${msg}`
+      console.error('signup admin createUser error:', signupError)
+      return NextResponse.json({ error: { code, message: userMessage, debug: msg } }, { status: 400 })
     }
 
     const userId = created.user.id
