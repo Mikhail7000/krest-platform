@@ -240,53 +240,63 @@ async function doRegister() {
     return;
   }
 
-  const { data: signUpData, error } = await _supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: name },
-      emailRedirectTo: 'https://krest-platform-web.vercel.app/miniapp/index.html'
-    }
-  });
+  // Получаем ref-token из URL (если студент пришёл по ссылке церкви)
+  const urlParams = new URLSearchParams(window.location.search);
+  const ref = urlParams.get('ref');
 
-  if (error) {
-    err.textContent = error.message === 'User already registered'
-      ? 'Этот email уже зарегистрирован. Войдите в аккаунт.'
-      : 'Ошибка регистрации. Попробуйте ещё раз.';
+  // Регистрация через серверный endpoint (обход email rate limit Resend)
+  let signupResult;
+  try {
+    const res = await fetch('https://krest-platform-web.vercel.app/api/miniapp/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password,
+        full_name: name,
+        contact_info: contact,
+        referral_source: referralSource,
+        referral_detail: referralDetail,
+        ref
+      })
+    });
+    signupResult = await res.json();
+    if (!res.ok) {
+      err.textContent = signupResult.error?.message || 'Ошибка регистрации. Попробуйте ещё раз.';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Создать аккаунт';
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+      return;
+    }
+  } catch (e) {
+    err.textContent = 'Сетевая ошибка. Проверьте интернет.';
     err.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'Создать аккаунт';
-    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
     return;
   }
 
   if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
 
-  // Save extra registration fields to profile
-  if (signUpData.user) {
-    await _supabase.from('profiles').update({
-      contact_info: contact || null,
-      referral_source: referralSource || null,
-      referral_detail: referralDetail || null,
-    }).eq('id', signUpData.user.id);
+  // Логин после успешной регистрации (email_confirm=true в /api/miniapp/signup)
+  const { data: loginData, error: loginError } = await _supabase.auth.signInWithPassword({ email, password });
 
-    // Notify all admins via Telegram
-    notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail });
-  }
-
-  // If session exists — email confirmation is OFF, log in immediately
-  if (signUpData.session) {
-    document.getElementById('loginView').style.display = 'none';
-    showLoading(true);
-    await loadDashboard(signUpData.user);
+  if (loginError || !loginData?.user) {
+    err.textContent = 'Аккаунт создан, но не удалось войти. Попробуйте на странице входа.';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Создать аккаунт';
     return;
   }
 
-  // Otherwise show "check your email" screen
-  document.getElementById('registerMode').style.display = 'none';
-  document.getElementById('confirmEmail').textContent = email;
-  document.getElementById('confirmMode').style.display = 'block';
-  document.getElementById('authSubtitle').textContent = 'Почти готово!';
+  // Уведомление всех admin о новом студенте
+  notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail });
+
+  // Сразу попадаем на дашборд
+  document.getElementById('loginView').style.display = 'none';
+  showLoading(true);
+  await loadDashboard(loginData.user);
 }
 
 async function notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail }) {
