@@ -306,8 +306,9 @@ async function loadDashboard(user) {
     .single();
 
   if (pe || !profile) {
+    await _supabase.auth.signOut();
     showLoading(false);
-    toast('Ошибка загрузки профиля', 'error');
+    document.getElementById('loginView').style.display = 'block';
     return;
   }
 
