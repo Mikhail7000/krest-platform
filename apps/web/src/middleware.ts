@@ -38,10 +38,15 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Public routes (no auth required)
-  if (pathname === '/login' || pathname === '/' || pathname === '/register-church') {
-    if (user && pathname !== '/register-church') {
+  if (pathname === '/login' || pathname === '/register-church') {
+    if (user) {
       return NextResponse.redirect(new URL('/student', request.url))
     }
+    return supabaseResponse
+  }
+
+  // Landing page — public for all (logged-in users see it too if they go to /)
+  if (pathname === '/') {
     return supabaseResponse
   }
 
