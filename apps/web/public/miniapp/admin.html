@@ -54,7 +54,13 @@
       margin-top: 3px;
       font-weight: 500;
     }
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
     .approve-btn {
+      flex: 1;
       background: linear-gradient(135deg, #34C759 0%, #2EA04F 100%);
       color: #fff;
       border: none;
@@ -64,21 +70,105 @@
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
-      flex-shrink: 0;
       transition: all 0.2s;
       box-shadow: 0 3px 10px rgba(52,199,89,0.3);
       letter-spacing: 0.3px;
     }
-    .approve-btn:active {
-      transform: scale(0.96);
-      opacity: 0.9;
-    }
+    .approve-btn:active { transform: scale(0.96); opacity: 0.9; }
     .approve-btn:disabled {
       background: rgba(255,255,255,0.1);
       color: rgba(255,255,255,0.4);
       cursor: default;
       box-shadow: none;
       transform: none;
+    }
+    .reject-btn {
+      flex: 1;
+      background: linear-gradient(135deg, #FF3B30 0%, #CC2A20 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      box-shadow: 0 3px 10px rgba(255,59,48,0.3);
+      letter-spacing: 0.3px;
+    }
+    .reject-btn:active { transform: scale(0.96); opacity: 0.9; }
+    .reject-btn:disabled {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.4);
+      cursor: default;
+      box-shadow: none;
+      transform: none;
+    }
+    .reject-form {
+      margin-top: 12px;
+      background: rgba(255,59,48,0.06);
+      border: 1px solid rgba(255,59,48,0.2);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .reject-form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #FF6B60;
+      letter-spacing: 0.3px;
+      margin-bottom: 8px;
+    }
+    .reject-form textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,59,48,0.25);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      color: var(--tg-text);
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      box-sizing: border-box;
+      line-height: 1.5;
+    }
+    .reject-form textarea:focus { border-color: #FF3B30; }
+    .reject-form textarea::placeholder { color: var(--tg-hint); font-size: 13px; }
+    .reject-form-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .cancel-reject-btn {
+      flex: 1;
+      background: rgba(255,255,255,0.08);
+      color: var(--tg-hint);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .send-reject-btn {
+      flex: 2;
+      background: linear-gradient(135deg, #FF3B30 0%, #CC2A20 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 3px 10px rgba(255,59,48,0.3);
+    }
+    .send-reject-btn:disabled {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.4);
+      cursor: default;
+      box-shadow: none;
     }
     .approved-tag {
       font-size: 12px;
@@ -305,8 +395,17 @@ function renderPending() {
         <span class="journal-toggle" onclick="toggleJournal(this)">📝 Читать ответ</span>
         <div class="journal-text">${item.journalContent}</div>
       ` : ''}
-      <div style="margin-top:10px">
+      <div class="action-row" id="actionRow_${idx}">
         <button class="approve-btn" id="appBtn_${idx}" onclick="approveBlock(${idx})">✅ Одобрить</button>
+        <button class="reject-btn" id="rejBtn_${idx}" onclick="showRejectForm(${idx})">❌ Не одобрить</button>
+      </div>
+      <div class="reject-form" id="rejForm_${idx}" style="display:none">
+        <div class="reject-form-label">💬 Комментарий студенту (обязателен)</div>
+        <textarea id="rejComment_${idx}" placeholder="Напишите, что именно нужно доработать..."></textarea>
+        <div class="reject-form-actions">
+          <button class="cancel-reject-btn" onclick="cancelReject(${idx})">Отмена</button>
+          <button class="send-reject-btn" id="sendRejBtn_${idx}" onclick="submitReject(${idx})">Отправить отказ</button>
+        </div>
       </div>
     `;
     list.appendChild(div);
@@ -382,6 +481,56 @@ async function approveBlock(idx) {
 
   // Remove from pending list
   pendingItems.splice(idx, 1);
+  setTimeout(() => loadData(), 500);
+}
+
+function showRejectForm(idx) {
+  document.getElementById(`actionRow_${idx}`).style.display = 'none';
+  document.getElementById(`rejForm_${idx}`).style.display = 'block';
+  document.getElementById(`rejComment_${idx}`).focus();
+}
+
+function cancelReject(idx) {
+  document.getElementById(`rejForm_${idx}`).style.display = 'none';
+  document.getElementById(`actionRow_${idx}`).style.display = 'flex';
+}
+
+async function submitReject(idx) {
+  const item = pendingItems[idx];
+  const comment = document.getElementById(`rejComment_${idx}`).value.trim();
+  if (!comment) {
+    toast('Напишите комментарий для студента', 'error');
+    return;
+  }
+
+  const sendBtn = document.getElementById(`sendRejBtn_${idx}`);
+  sendBtn.disabled = true;
+  sendBtn.textContent = 'Отправка...';
+
+  const { data: { session } } = await _supabase.auth.getSession();
+
+  const res = await fetch('https://krest-platform-web.vercel.app/api/miniapp/notify-rejection', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      access_token: session?.access_token,
+      student_id: item.student.id,
+      block_id: item.blockId,
+      block_num: item.block?.order_num,
+      block_name: item.block?.title_ru,
+      comment
+    })
+  });
+
+  if (!res.ok) {
+    toast('Ошибка при отклонении', 'error');
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Отправить отказ';
+    return;
+  }
+
+  toast(`Блок ${item.block?.order_num} отклонён. Студент может пересдать.`, 'info');
+  if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
   setTimeout(() => loadData(), 500);
 }
 
