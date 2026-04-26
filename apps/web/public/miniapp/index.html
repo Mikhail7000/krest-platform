@@ -188,7 +188,7 @@ async function doRegister() {
     return;
   }
 
-  const { error } = await _supabase.auth.signUp({
+  const { data: signUpData, error } = await _supabase.auth.signUp({
     email,
     password,
     options: {
@@ -208,12 +208,21 @@ async function doRegister() {
     return;
   }
 
-  // Show confirmation screen
+  if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+  // If session exists — email confirmation is OFF, log in immediately
+  if (signUpData.session) {
+    document.getElementById('loginView').style.display = 'none';
+    showLoading(true);
+    await loadDashboard(signUpData.user);
+    return;
+  }
+
+  // Otherwise show "check your email" screen
   document.getElementById('registerMode').style.display = 'none';
   document.getElementById('confirmEmail').textContent = email;
   document.getElementById('confirmMode').style.display = 'block';
   document.getElementById('authSubtitle').textContent = 'Почти готово!';
-  if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
 }
 
 async function loadDashboard(user) {
