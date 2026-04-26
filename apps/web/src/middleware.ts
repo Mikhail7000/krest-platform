@@ -28,6 +28,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // API routes — handle their own auth (or operate with service role)
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
   const { supabase, supabaseResponse } = createMiddlewareSupabase(request)
 
   const { data: { user } } = await supabase.auth.getUser()

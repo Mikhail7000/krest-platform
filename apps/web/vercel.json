@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/reset-streaks",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/archive-cohorts",
+      "schedule": "0 1 * * *"
+    }
+  ]
+}
