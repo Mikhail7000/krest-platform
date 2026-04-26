@@ -111,6 +111,12 @@
   <div class="page-header">
     <h1>✝️ КРЕСТ</h1>
     <p id="studentName"></p>
+    <div id="streakBadge" style="display:none;margin-top:12px;background:rgba(201,169,97,0.15);border:1px solid rgba(201,169,97,0.4);color:#C9A961;font-size:13px;font-weight:700;padding:6px 14px;border-radius:20px;display:inline-block;letter-spacing:0.3px;">
+      <span id="streakIcon">🔥</span> <span id="streakText">0</span>
+    </div>
+    <div id="catchMeUp" style="display:none;margin-top:10px;background:rgba(255,159,10,0.1);border:1px solid rgba(255,159,10,0.3);color:#FF9F0A;font-size:12px;font-weight:600;padding:8px 14px;border-radius:10px;text-align:center;">
+      🔄 Догоним вместе! Серия не сброшена.
+    </div>
   </div>
 
   <div class="section">
@@ -345,6 +351,9 @@ async function loadDashboard(user) {
   document.getElementById('progressText').textContent = `${approvedCount} / 6`;
   document.getElementById('progressFill').style.width = `${Math.round(approvedCount / 6 * 100)}%`;
 
+  // Streak: пишем активность 'login' и обновляем счётчик
+  logStreak(user.id);
+
   const list = document.getElementById('blocksList');
   list.innerHTML = '';
 
@@ -379,6 +388,31 @@ async function loadDashboard(user) {
 
   showLoading(false);
   document.getElementById('dashView').style.display = 'block';
+}
+
+async function logStreak(userId) {
+  try {
+    const res = await fetch('https://krest-platform-web.vercel.app/api/miniapp/streak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, activity: 'login' })
+    });
+    if (!res.ok) return;
+    const { data } = await res.json();
+    if (!data) return;
+
+    const badge = document.getElementById('streakBadge');
+    const text = document.getElementById('streakText');
+    if (data.streak_count > 0) {
+      text.textContent = `${data.streak_count} ${data.streak_count === 1 ? 'день' : (data.streak_count < 5 ? 'дня' : 'дней')}`;
+      badge.style.display = 'inline-block';
+    }
+    if (data.catch_me_up_available) {
+      document.getElementById('catchMeUp').style.display = 'block';
+    }
+  } catch (e) {
+    console.error('streak log failed', e);
+  }
 }
 
 init();

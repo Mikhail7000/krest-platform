@@ -1,116 +1,118 @@
-# CLAUDE.md — Инструкции для Claude Code
-> Проект: КРЕСТ | Версия: 1.2 | Дата: 2026-04-23
+# КРЕСТ — Платформа управляемого ученичества
 
----
+## Обзор
+КРЕСТ — Telegram Mini App + Next.js веб-админка для евангельских церквей. Проводит ищущего через 6 блоков знакомства с христианством под наставничеством пастора. Подробности в `PROJECT_IDEA.md` и `SPEC.md`.
 
-## Что это
+**Источники истины:** `SPEC.md` (что строим) и `PROJECT_IDEA.md` (зачем). При конфликте кода и спеки — сообщить пользователю, не править молча.
 
-КРЕСТ — веб-платформа управляемого ученичества для русскоязычных церквей.
-Лидер ведёт студентов через 6 блоков: no-skip видео → форум → одобрение → следующий блок.
+## Стек
 
-## Источники истины
+- **Веб-админка пастора:** Next.js 16 (App Router) + TS strict + React 19 + Tailwind v4 + shadcn/ui. Server Components по умолчанию.
+- **Telegram Mini App студента:** Vanilla HTML5/CSS3/JS ES6+ + Telegram Web App SDK + Supabase JS SDK напрямую (требование Telegram WebView)
+- **Backend:** Supabase (PostgreSQL 15, Auth, RLS, Storage) + Next.js API Routes
+- **Интеграции:** YouTube IFrame API, Telegram Bot API, Resend SMTP, ЮKassa (post-MVP), Anthropic API (post-MVP)
+- **Деплой:** Vercel + Supabase Cloud
 
-**SPEC.md и PROJECT_IDEA.md — источники истины.**
-При конфликте кода и спеки — не исправлять молча. Сообщить пользователю.
+**НЕ использовать:** Cursor, Lovable, n8n, Edge Functions, Stripe, OpenAI.
 
----
-
-## Стек (не менять)
-
-```
-Frontend:  Vanilla HTML5 + CSS3 + JavaScript (ES6+)
-Backend:   Supabase (PostgreSQL, Auth, RLS) — JS SDK напрямую из браузера
-Видео:     YouTube IFrame API
-Деплой:    Vercel (static) или Beget VPS + nginx
-```
-
-НЕ использовать: React, Next.js, npm, Node.js сервер, TypeScript,
-Tailwind, n8n, Edge Functions, Stripe, OpenAI.
-
----
-
-## Структура файлов
+## Архитектура
 
 ```
-/login.html              → вход
-/student/index.html      → дашборд студента
-/student/lesson.html     → урок (видео + форум + конспект)
-/student/trainer.html    → тренажёр стихов
-/admin/index.html        → дашборд лидера
-/admin/students.html     → студенты + одобрение
-/admin/editor.html       → редактор блоков
-/css/styles.css          → все стили
-/js/config.js            → Supabase init + i18n
-/js/auth.js              → helpers: requireAuth, requireAdmin, renderNav, toast
+apps/web/
+├── public/miniapp/              # Vanilla Telegram Mini App
+│   ├── index.html               # Дашборд / регистрация
+│   ├── lesson.html              # Видео + форум + конспект
+│   ├── admin.html               # Панель лидера в Telegram
+│   ├── trainer.html, profile.html, setup.html
+│   ├── css/styles.css           # Все стили miniapp
+│   └── js/
+│       ├── config.js            # Supabase init + i18n (НЕ ТРОГАТЬ ключи)
+│       └── auth.js              # requireAuth, toast, renderNav
+│
+├── src/                         # Next.js
+│   ├── app/
+│   │   ├── (admin)/admin/       # Админка лидера
+│   │   ├── student/             # Дашборд студента (legacy веб)
+│   │   ├── login/, page.tsx     # Лендинг + вход
+│   │   └── api/
+│   │       ├── miniapp/notify/, notify-rejection/, notify-registration/
+│   │       ├── admin/approve/
+│   │       ├── student/journal/
+│   │       ├── telegram/webhook/
+│   │       └── auth/logout/
+│   ├── lib/                     # supabase clients, helpers
+│   ├── hooks/, types/
+│   └── middleware.ts            # Пропускает /miniapp/* без auth
+
+supabase/
+├── migrations/                  # Инкрементальные миграции (target)
+├── schema.sql                   # Legacy (разбиваем на миграции)
+└── content.sql                  # Seed контента блоков
+
+docs/spec-first/                 # Артефакты Spec-First Pipeline
+└── 01-reverse-engineering.md, 02-problem-discovery.md
 ```
 
----
+## Доменные правила (критично)
 
-## Доменные правила
-
-**Защита страниц:** каждый `init()` начинается с `requireAuth()` или `requireAdmin()`.
-
-**Flow урока (строго по порядку):**
+**Flow урока (строго по порядку, нарушение = баг):**
 1. Проверить `blocks_unlocked >= block.order_num` → иначе редирект
-2. Показать видео (конспект скрыт)
-3. YouTube no-skip: polling 500мс, если `currentTime > maxWatched + 2` → seekTo
-4. При `watched >= 95%` → активировать кнопку
-5. Кнопка → форум (мин. 20 символов) → сохранить в `journal_entries`
-6. Сохранить в `student_progress` (admin_approved: false)
-7. Показать конспект + кнопка «Следующий» (🔒 до admin_approved = true)
+2. Видео (конспект скрыт)
+3. YouTube no-skip: polling 500ms, `currentTime > maxWatched + 2` → `seekTo(maxWatched)`
+4. При `watched ≥ 95%` → активировать форум
+5. Форум (3 вопроса × мин. 100 символов) → `journal_entries`
+6. `student_progress` (`admin_approved=false`)
+7. Конспект + кнопка "Следующий" (🔒 до `admin_approved=true`)
 
-**Одобрение лидера:**
-`UPDATE student_progress SET admin_approved=true WHERE user_id=? AND block_id=? AND lesson_id IS NULL`
+**Одобрение лидером:**
+`UPDATE student_progress SET admin_approved=true WHERE user_id=? AND block_id=?`
 
-**Разблокировка блоков:**
-`UPDATE profiles SET blocks_unlocked = blocks_unlocked + 1` (максимум 6, только +1)
+**Разблокировка:**
+`UPDATE profiles SET blocks_unlocked = blocks_unlocked + 1` (max 6, только +1)
 
-**RLS:** включён на всех таблицах. Не использовать service_role в браузере.
+**Отклонение блока (новое):** `DELETE journal_entry + DELETE student_progress` → студент пересдаёт.
 
-**HTML контент:** `content_ru/content_en` вставляется через `innerHTML` — только лидер создаёт, доверяем. Ввод студентов — только через `textContent`.
+## Правила БД (Supabase)
+
+- Изменения схемы — ТОЛЬКО через миграции в `supabase/migrations/`
+- RLS обязательна на каждой таблице
+- `IF NOT EXISTS` на всех `CREATE TABLE` / `ADD COLUMN`
+- Не использовать `service_role` в браузере — только anon
+- snake_case для таблиц и колонок
+- Деньги хранить в INTEGER (копейки)
+- Подробности — `.claude/rules/database.md`
+
+## Правила кодирования
+
+- **Next.js:** TS strict без `any`, camelCase/PascalCase, max 200 строк/файл, импорты через `@/`
+- **Vanilla miniapp:** ввод студента → `textContent` (XSS), контент лидера → `innerHTML`, только `toast()` (не `alert()`), строки через `T[LANG]` из `config.js`
+
+## MCP
+
+- **Context7** (всегда): `use context7` перед кодом любой внешней библиотеки
+- **Supabase** (для SQL): `project_ref=aejhlmoydnhgedgfndql`
+- **GitHub** (PRs, issues)
+
+## Субагенты
+
+| Агент | Модель | Зона |
+|-------|--------|------|
+| `database-architect` | Opus | schema.sql, миграции, RLS |
+| `backend-engineer` 🆕 | Sonnet | Next.js API routes, Server Actions, интеграции |
+| `frontend-developer` | Sonnet | HTML/CSS/JS miniapp + Next.js admin UI |
+| `content-manager` | Sonnet | editor.html, контент блоков (RU/EN) |
+| `qa-reviewer` | Sonnet | Проверка lesson flow, RLS, no-skip (БЕЗ Write) |
+| `ai-agent-architect` 🆕 | Opus | Продакшн AI-агенты для платформы (post-MVP) |
+
+Скиллы: `/add-new-block`, `/run-migration`, `/run-qa-review`, `/deploy` 🆕, `/handoff` 🆕, `/feature-spec` 🆕
+
+## Команды
+
+- `npm --workspace=@krest/web run dev` — Next.js разработка
+- `npm --workspace=@krest/web run build` — продакшн сборка
+- `npm --workspace=@krest/web run lint` — линтер
+- `npx supabase db push` — применить миграции
 
 ---
 
-## Запреты (никогда)
-
-- ❌ Не добавлять фреймворки, npm, серверный код
-- ❌ Не трогать `js/config.js` без явной команды (там Supabase keys)
-- ❌ Не убирать `requireAuth()` / `requireAdmin()` со страниц
-- ❌ Не показывать конспект до отправки форума
-- ❌ Не разблокировать следующий блок без `admin_approved = true`
-- ❌ Не делать перемотку видео возможной
-- ❌ Не использовать `alert()` — только `toast()` из auth.js
-- ❌ Не создавать таблицы без `IF NOT EXISTS`
-
----
-
-## Переиспользуемые компоненты (из auth.js)
-
-`renderNav(profile, isAdmin)` → топ-навигация в `#topnav`
-`toast(msg, type)` → уведомления ('success'|'error'|'info')
-`requireAuth()` / `requireAdmin()` → защита страниц, возвращает `{user, profile}`
-`fmtDate(d)` / `ytId(url)` / `ytEmbed(url)` → утилиты
-
----
-
-## Субагенты — когда кого вызывать
-
-| Субагент | Модель | Задачи |
-|----------|--------|--------|
-| Database Architect | Opus | schema.sql, RLS, миграции, SQL запросы |
-| Frontend Developer | Sonnet | HTML/CSS/JS страницы, YouTube IFrame API |
-| Content Manager | Sonnet | editor.html, контент блоков/уроков, content.sql |
-| QA Reviewer | Sonnet | проверка после изменений в lesson flow |
-| Agent-Architect | Opus | деплой, координация, сложные задачи |
-
-Скиллы: `/add-new-block`, `/run-migration`, `/run-qa-review`
-
----
-
-## Следующие шаги (приоритет)
-
-1. Запустить SQL-миграции в Supabase:
-   `ALTER TABLE student_progress ADD COLUMN IF NOT EXISTS admin_approved BOOLEAN DEFAULT FALSE;`
-   `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS blocks_unlocked INTEGER DEFAULT 1;`
-2. Задеплоить на Vercel (сейчас только localhost:5500)
-3. Добавить email-уведомление студенту при одобрении
+*Версия 2.0 | Дата: 2026-04-26 | 110 строк | Соответствует Spec-First Pipeline методологии*

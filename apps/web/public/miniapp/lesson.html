@@ -262,6 +262,9 @@
   <div class="lesson-header">
     <div class="lesson-block-badge" id="blockBadge"></div>
     <div class="lesson-title" id="lessonTitle"></div>
+    <div id="cohortBadge" style="display:none;margin-top:8px;background:rgba(79,70,229,0.1);border:1px solid rgba(79,70,229,0.3);color:#818cf8;font-size:12px;font-weight:600;padding:5px 12px;border-radius:14px;display:inline-block;">
+      👥 <span id="cohortText">Малая группа: 1 человек</span>
+    </div>
   </div>
 
   <!-- Video -->
@@ -411,6 +414,31 @@ async function init() {
 
   showLoading(false);
   document.getElementById('lessonView').style.display = 'block';
+
+  // Auto-cohort: подключаем студента к малой группе этого блока
+  joinCohort(currentUser.id, blockId);
+}
+
+async function joinCohort(userId, blockId) {
+  try {
+    const res = await fetch('https://krest-platform-web.vercel.app/api/miniapp/cohort', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, block_id: blockId })
+    });
+    if (!res.ok) return;
+    const { data } = await res.json();
+    if (!data) return;
+
+    const badge = document.getElementById('cohortBadge');
+    const text = document.getElementById('cohortText');
+    const count = data.member_count || 1;
+    const word = count === 1 ? 'человек' : (count < 5 ? 'человека' : 'человек');
+    text.textContent = `Малая группа: ${count} ${word}`;
+    badge.style.display = 'inline-block';
+  } catch (e) {
+    console.error('cohort join failed', e);
+  }
 }
 
 function loadYouTube(url, skipToForum) {
