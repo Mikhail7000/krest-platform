@@ -8,27 +8,19 @@ export async function POST(request: NextRequest) {
   )
 
   try {
-    const { access_token, student_id, block_id, block_num, block_name, comment } =
+    const { student_id, block_id, block_num, block_name, comment, leader_name } =
       await request.json() as {
-        access_token: string
         student_id: string
         block_id: number
         block_num: number
         block_name: string
         comment: string
+        leader_name: string
       }
 
-    // Verify caller is admin
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(access_token)
-    if (authError || !user) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
-
-    const { data: caller } = await supabaseAdmin
-      .from('profiles')
-      .select('role, full_name')
-      .eq('id', user.id)
-      .single()
-
-    if (caller?.role !== 'admin') return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+    if (!student_id || !block_id || !comment) {
+      return NextResponse.json({ error: 'BAD_REQUEST' }, { status: 400 })
+    }
 
     // Delete forum answers and progress so student can resubmit
     await supabaseAdmin
@@ -54,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (student?.telegram_chat_id) {
       const token = process.env.TELEGRAM_BOT_TOKEN
-      const leaderName = caller?.full_name || 'Лидер'
+      const leaderName = leader_name || 'Лидер'
       const text =
         `🔄 <b>Блок требует доработки</b>\n\n` +
         `Блок ${block_num}: <b>${block_name}</b>\n\n` +

@@ -290,6 +290,7 @@
 <script>
 let allStudents = [];
 let pendingItems = [];
+let currentLeaderName = '';
 
 async function init() {
   const result = await requireAdmin();
@@ -297,7 +298,8 @@ async function init() {
 
   if (tg?.BackButton) tg.BackButton.hide();
 
-  document.getElementById('leaderName').textContent = result.profile.full_name || result.user.email;
+  currentLeaderName = result.profile.full_name || result.user.email;
+  document.getElementById('leaderName').textContent = currentLeaderName;
 
   await loadData();
   showLoading(false);
@@ -507,17 +509,15 @@ async function submitReject(idx) {
   sendBtn.disabled = true;
   sendBtn.textContent = 'Отправка...';
 
-  const { data: { session } } = await _supabase.auth.getSession();
-
   const res = await fetch('https://krest-platform-web.vercel.app/api/miniapp/notify-rejection', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      access_token: session?.access_token,
       student_id: item.student.id,
       block_id: item.blockId,
       block_num: item.block?.order_num,
       block_name: item.block?.title_ru,
+      leader_name: currentLeaderName,
       comment
     })
   });
@@ -529,7 +529,7 @@ async function submitReject(idx) {
     return;
   }
 
-  toast(`Блок ${item.block?.order_num} отклонён. Студент может пересдать.`, 'info');
+  toast(`Блок ${item.block?.order_num} отклонён. Студент может пересдать.`, 'success');
   if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
   setTimeout(() => loadData(), 500);
 }
