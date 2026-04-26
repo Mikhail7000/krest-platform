@@ -37,9 +37,9 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Public routes
-  if (pathname === '/login' || pathname === '/') {
-    if (user) {
+  // Public routes (no auth required)
+  if (pathname === '/login' || pathname === '/' || pathname === '/register-church') {
+    if (user && pathname !== '/register-church') {
       return NextResponse.redirect(new URL('/student', request.url))
     }
     return supabaseResponse
