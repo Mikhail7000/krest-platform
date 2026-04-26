@@ -25,6 +25,19 @@
       <p id="authSubtitle">Платформа ученичества</p>
     </div>
 
+    <!-- Telegram quick login (главный путь, виден только в Telegram WebApp) -->
+    <div id="telegramAuthBlock" style="display:none;margin-bottom:20px">
+      <button class="btn" id="telegramAuthBtn" onclick="doTelegramAuth()" style="background:linear-gradient(135deg,#229ED9,#1B7BAB);color:#fff;width:100%">
+        ✈️ Войти через Telegram
+      </button>
+      <p id="telegramAuthError" style="color:#FF3B30;font-size:13px;margin-top:10px;display:none;text-align:center"></p>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0;color:var(--tg-hint);font-size:12px">
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+        <span>или</span>
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+      </div>
+    </div>
+
     <!-- Login mode -->
     <div id="loginMode">
       <div class="form-group">
@@ -143,9 +156,80 @@ async function init() {
   if (!session) {
     showLoading(false);
     document.getElementById('loginView').style.display = 'block';
+    // Если открыто из Telegram WebApp — показать кнопку Telegram-входа
+    if (typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0) {
+      document.getElementById('telegramAuthBlock').style.display = 'block';
+    }
     return;
   }
   await loadDashboard(session.user);
+}
+
+async function doTelegramAuth() {
+  const btn = document.getElementById('telegramAuthBtn');
+  const err = document.getElementById('telegramAuthError');
+  btn.disabled = true;
+  btn.textContent = 'Входим через Telegram...';
+  err.style.display = 'none';
+
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref') || (tg?.initDataUnsafe?.start_param?.startsWith('ref_') ? tg.initDataUnsafe.start_param.slice(4) : null);
+
+    const res = await fetch('https://krest-platform-web.vercel.app/api/miniapp/telegram-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: tg.initData, ref }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.ok) {
+      err.textContent = json.error?.message || 'Не удалось войти через Telegram';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '✈️ Войти через Telegram';
+      return;
+    }
+
+    if (json.data.access_token && json.data.refresh_token) {
+      const { data: setData, error: setErr } = await _supabase.auth.setSession({
+        access_token: json.data.access_token,
+        refresh_token: json.data.refresh_token,
+      });
+      if (setErr || !setData?.user) {
+        err.textContent = 'Сессия не установилась. Попробуйте ещё раз.';
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '✈️ Войти через Telegram';
+        return;
+      }
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+      // Если новый — уведомить admin
+      if (json.data.is_new) {
+        const u = tg.initDataUnsafe?.user || {};
+        notifyAdminsNewStudent({
+          name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'Telegram User',
+          email: setData.user.email || `tg${u.id}@krest.local`,
+          contact: u.username ? `@${u.username}` : '',
+          referralSource: 'telegram',
+          referralDetail: ''
+        });
+      }
+      document.getElementById('loginView').style.display = 'none';
+      showLoading(true);
+      await loadDashboard(setData.user);
+      return;
+    }
+
+    err.textContent = 'Неожиданный ответ сервера';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '✈️ Войти через Telegram';
+  } catch (e) {
+    err.textContent = 'Сетевая ошибка. Попробуйте ещё раз.';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '✈️ Войти через Telegram';
+  }
 }
 
 const SOURCE_LABELS = {
@@ -240,63 +324,71 @@ async function doRegister() {
     return;
   }
 
-  // Получаем ref-token из URL (если студент пришёл по ссылке церкви)
-  const urlParams = new URLSearchParams(window.location.search);
-  const ref = urlParams.get('ref');
+  // Регистрация через стандартный Supabase Auth (mailer_autoconfirm=true,
+  // поэтому письмо не отправляется и rate limit не задействуется).
+  const { data: signUpData, error } = await _supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: name } }
+  });
 
-  // Регистрация через серверный endpoint (обход email rate limit Resend)
-  let signupResult;
-  try {
-    const res = await fetch('https://krest-platform-web.vercel.app/api/miniapp/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password,
-        full_name: name,
-        contact_info: contact,
-        referral_source: referralSource,
-        referral_detail: referralDetail,
-        ref
-      })
-    });
-    signupResult = await res.json();
-    if (!res.ok) {
-      err.textContent = signupResult.error?.message || 'Ошибка регистрации. Попробуйте ещё раз.';
-      err.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Создать аккаунт';
-      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-      return;
-    }
-  } catch (e) {
-    err.textContent = 'Сетевая ошибка. Проверьте интернет.';
+  if (error) {
+    const m = (error.message || '').toLowerCase();
+    err.textContent = m.includes('already') || m.includes('exists') || m.includes('registered')
+      ? 'Этот email уже зарегистрирован. Войдите в аккаунт.'
+      : `Ошибка регистрации: ${error.message}`;
     err.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'Создать аккаунт';
+    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
     return;
   }
 
   if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
 
-  // Логин после успешной регистрации (email_confirm=true в /api/miniapp/signup)
-  const { data: loginData, error: loginError } = await _supabase.auth.signInWithPassword({ email, password });
+  // Привязка к церкви по ref-токену + сохранение доп. полей профиля
+  const urlParams = new URLSearchParams(window.location.search);
+  const ref = urlParams.get('ref');
+  let churchId = null, nastavnikId = null;
+  if (ref) {
+    const { data: church } = await _supabase.from('churches').select('id, pastor_id').eq('invite_token', ref).single();
+    if (church) { churchId = church.id; nastavnikId = church.pastor_id; }
+  }
 
-  if (loginError || !loginData?.user) {
-    err.textContent = 'Аккаунт создан, но не удалось войти. Попробуйте на странице входа.';
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Создать аккаунт';
+  if (signUpData.user) {
+    await _supabase.from('profiles').update({
+      contact_info: contact || null,
+      referral_source: referralSource || null,
+      referral_detail: referralDetail || null,
+      church_id: churchId,
+      nastavnik_id: nastavnikId,
+    }).eq('id', signUpData.user.id);
+
+    notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail });
+  }
+
+  // Если session есть (mailer_autoconfirm=true) — сразу на дашборд
+  if (signUpData.session) {
+    document.getElementById('loginView').style.display = 'none';
+    showLoading(true);
+    await loadDashboard(signUpData.user);
     return;
   }
 
-  // Уведомление всех admin о новом студенте
-  notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail });
+  // Fallback (если confirmation вернётся): попробовать ручной логин
+  const { data: loginData } = await _supabase.auth.signInWithPassword({ email, password });
+  if (loginData?.user) {
+    document.getElementById('loginView').style.display = 'none';
+    showLoading(true);
+    await loadDashboard(loginData.user);
+    return;
+  }
 
-  // Сразу попадаем на дашборд
-  document.getElementById('loginView').style.display = 'none';
-  showLoading(true);
-  await loadDashboard(loginData.user);
+  // Final fallback — экран "проверьте email"
+  document.getElementById('registerMode').style.display = 'none';
+  document.getElementById('confirmEmail').textContent = email;
+  document.getElementById('confirmMode').style.display = 'block';
+  document.getElementById('authSubtitle').textContent = 'Почти готово!';
 }
 
 async function notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail }) {
