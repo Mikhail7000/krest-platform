@@ -335,6 +335,7 @@ let currentProgress = null;
 
 const params = new URLSearchParams(location.search);
 const blockId = parseInt(params.get('blockId'));
+const TEST_MODE = params.get('test') === '1';
 
 async function init() {
   if (!blockId) { window.location.href = 'index.html'; return; }
@@ -388,6 +389,12 @@ async function init() {
   const isApproved = progress?.admin_approved === true;
 
   document.title = block.title_ru + ' — КРЕСТ';
+  if (TEST_MODE) {
+    const badge = document.createElement('div');
+    badge.style.cssText = 'background:#ff3b30;color:#fff;font-size:11px;font-weight:700;text-align:center;padding:4px;letter-spacing:1px;';
+    badge.textContent = '⚡ TEST MODE — 2x speed, 5% threshold';
+    document.body.insertBefore(badge, document.getElementById('loading'));
+  }
   document.getElementById('blockBadge').textContent = `Блок ${block.order_num}`;
   document.getElementById('lessonTitle').textContent = block.title_ru;
 
@@ -423,7 +430,10 @@ function loadYouTube(url, skipToForum) {
       playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
       events: {
         onReady: () => {
-          if (!skipToForum) startPolling();
+          if (!skipToForum) {
+            if (TEST_MODE) ytPlayer.setPlaybackRate(2);
+            startPolling();
+          }
         }
       }
     });
@@ -442,7 +452,8 @@ function startPolling() {
       maxWatched = Math.max(maxWatched, current);
     }
 
-    if (duration > 0 && maxWatched / duration >= 0.95 && !videoComplete) {
+    const threshold = TEST_MODE ? 0.05 : 0.95;
+    if (duration > 0 && maxWatched / duration >= threshold && !videoComplete) {
       videoComplete = true;
       clearInterval(pollInterval);
       showForum();
@@ -457,15 +468,17 @@ function showForum() {
 }
 
 function updateCount(n) {
+  const min = TEST_MODE ? 5 : 100;
   const len = document.getElementById('q' + n).value.length;
   const el = document.getElementById('cnt' + n);
-  el.textContent = len + ' / 100';
-  el.classList.toggle('done', len >= 100);
+  el.textContent = len + ' / ' + min;
+  el.classList.toggle('done', len >= min);
   checkForumReady();
 }
 
 function checkForumReady() {
-  const ok = [1,2,3].every(n => document.getElementById('q' + n).value.length >= 100);
+  const min = TEST_MODE ? 5 : 100;
+  const ok = [1,2,3].every(n => document.getElementById('q' + n).value.length >= min);
   document.getElementById('forumBtn').disabled = !ok;
 }
 
@@ -474,8 +487,9 @@ async function submitForum() {
   const q2 = document.getElementById('q2').value.trim();
   const q3 = document.getElementById('q3').value.trim();
 
-  if ([q1,q2,q3].some(q => q.length < 100)) {
-    toast('Минимум 100 символов в каждом ответе', 'error');
+  const minLen = TEST_MODE ? 5 : 100;
+  if ([q1,q2,q3].some(q => q.length < minLen)) {
+    toast(`Минимум ${minLen} символов в каждом ответе`, 'error');
     return;
   }
 
