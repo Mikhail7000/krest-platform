@@ -245,6 +245,11 @@ async function doTelegramAuth() {
   }
 }
 
+function exitPreview() {
+  localStorage.removeItem('crest_student_preview');
+  window.location.href = 'admin.html';
+}
+
 async function notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail }) {
   try {
     const sourceMap = { instagram:'Instagram', tiktok:'TikTok', telegram:'Telegram', friend:'От друга', youtube:'YouTube', other:'Другое' };
@@ -284,10 +289,24 @@ async function loadDashboard(user) {
     return;
   }
 
-  if (profile.role === 'admin') {
+  // Preview mode: админ хочет увидеть студенческий вид
+  const previewMode = localStorage.getItem('crest_student_preview') === '1';
+
+  if (profile.role === 'admin' && !previewMode) {
     clearTimeout(dashFailsafe);
     window.location.href = 'admin.html';
     return;
+  }
+
+  // Показать плашку режима просмотра для админа
+  if (profile.role === 'admin' && previewMode) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:sticky;top:0;z-index:100;background:rgba(79,70,229,0.95);color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:10px';
+    banner.innerHTML = `
+      <span>👁 Режим просмотра: студент</span>
+      <button onclick="exitPreview()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer">Назад в админку</button>
+    `;
+    document.body.insertBefore(banner, document.body.firstChild);
   }
 
   if (!profile.onboarding_done) {

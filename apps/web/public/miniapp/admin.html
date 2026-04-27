@@ -265,7 +265,10 @@
   <div class="page-header">
     <h1>✝️ КРЕСТ — Лидер</h1>
     <p id="leaderName"></p>
-    <button onclick="doLogout()" style="margin-top:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:var(--tg-hint);font-size:13px;font-weight:600;padding:8px 20px;border-radius:20px;cursor:pointer;letter-spacing:0.3px;">Выйти из аккаунта</button>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <button onclick="previewAsStudent()" style="background:rgba(79,70,229,0.15);border:1px solid rgba(79,70,229,0.3);color:#818cf8;font-size:13px;font-weight:600;padding:8px 16px;border-radius:20px;cursor:pointer;letter-spacing:0.3px;">👁 Как студент</button>
+      <button onclick="doLogout()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:var(--tg-hint);font-size:13px;font-weight:600;padding:8px 16px;border-radius:20px;cursor:pointer;letter-spacing:0.3px;">Выйти</button>
+    </div>
   </div>
 
   <div class="section">
@@ -546,6 +549,11 @@ function switchTab(tab) {
   document.getElementById('tabAll').classList.toggle('active', tab === 'all');
   document.getElementById('pendingView').style.display = tab === 'pending' ? 'block' : 'none';
   document.getElementById('allView').style.display = tab === 'all' ? 'block' : 'none';
+}
+
+function previewAsStudent() {
+  localStorage.setItem('crest_student_preview', '1');
+  window.location.href = 'index.html';
 }
 
 async function doLogout() {
