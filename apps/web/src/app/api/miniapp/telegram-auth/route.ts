@@ -107,18 +107,34 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Не найден → signUp
+    // Не найден по telegram_chat_id → попытка signUp с тех. email
     const password = createHmac('sha256', BOT_TOKEN).update(`tg-pwd-${tgId}`).digest('hex').slice(0, 32)
-    const { data: signUpData, error: signUpErr } = await supa.auth.signUp({
+    const signUpRes = await supa.auth.signUp({
       email: techEmail,
       password,
       options: { data: { full_name: fullName } },
     })
 
-    if (signUpErr || !signUpData.user) {
-      return NextResponse.json({
-        error: { code: 'SIGNUP_FAILED', message: signUpErr?.message || 'Не удалось зарегистрироваться' },
-      }, { status: 500 })
+    let userId = signUpRes.data?.user?.id
+    let session = signUpRes.data?.session
+
+    // Если signUp упал с "already registered" — fallback на signInWithPassword
+    if (!userId || !session) {
+      const { data: loginData, error: loginErr } = await supa.auth.signInWithPassword({
+        email: techEmail,
+        password,
+      })
+      if (loginErr || !loginData?.user || !loginData?.session) {
+        return NextResponse.json({
+          error: {
+            code: 'AUTH_FAILED',
+            message: 'Не удалось войти через Telegram. Обратитесь к лидеру.',
+            debug: loginErr?.message,
+          },
+        }, { status: 500 })
+      }
+      userId = loginData.user.id
+      session = loginData.session
     }
 
     // Привязка к церкви по ref-токену
@@ -136,35 +152,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Обновляем профиль (под анонимной ролью пока нет session — можем upsert через RLS если есть)
-    // Лучше через session — у нас она есть в signUpData
-    if (signUpData.session) {
-      const supaWithSession = createClient(SUPA_URL, SERVICE_KEY, {
-        global: { headers: { Authorization: `Bearer ${signUpData.session.access_token}` } },
+    // Обновляем профиль с telegram_chat_id и доп. полями (RLS требует session=своего юзера)
+    const supaWithSession = createClient(SUPA_URL, SERVICE_KEY, {
+      global: { headers: { Authorization: `Bearer ${session.access_token}` } },
+    })
+    const { error: updateErr } = await supaWithSession
+      .from('profiles')
+      .update({
+        full_name: fullName,
+        telegram_chat_id: tgId,
+        church_id: churchId,
+        nastavnik_id: nastavnikId,
+        referral_source: 'telegram',
+        contact_info: tgUser.username ? `@${tgUser.username}` : null,
+        onboarding_done: true,
       })
-      await supaWithSession
-        .from('profiles')
-        .update({
-          full_name: fullName,
-          telegram_chat_id: tgId,
-          church_id: churchId,
-          nastavnik_id: nastavnikId,
-          referral_source: 'telegram',
-          contact_info: tgUser.username ? `@${tgUser.username}` : null,
-          onboarding_done: true,  // пропускаем setup.html для Telegram-пользователей
-        })
-        .eq('id', signUpData.user.id)
+      .eq('id', userId)
+    if (updateErr) {
+      console.error('profile update failed:', updateErr)
     }
 
     return NextResponse.json({
       ok: true,
-      data: signUpData.session
-        ? {
-            access_token: signUpData.session.access_token,
-            refresh_token: signUpData.session.refresh_token,
-            is_new: true,
-          }
-        : { is_new: true, needs_login: true },
+      data: {
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        is_new: true,
+      },
     })
   } catch (e) {
     console.error('telegram-auth error', e)
