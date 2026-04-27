@@ -152,17 +152,102 @@
 <script src="js/auth.js"></script>
 <script>
 async function init() {
-  const { data: { session } } = await _supabase.auth.getSession();
-  if (!session) {
+  // Failsafe: если init не справится за 10 сек — показываем login чтобы не висеть вечно
+  const failsafe = setTimeout(() => {
+    console.error('init failsafe triggered (10s)');
     showLoading(false);
     document.getElementById('loginView').style.display = 'block';
-    // Если открыто из Telegram WebApp — показать кнопку Telegram-входа
     if (typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0) {
       document.getElementById('telegramAuthBlock').style.display = 'block';
     }
-    return;
+    const err = document.getElementById('loginError');
+    if (err) {
+      err.textContent = 'Долгая загрузка. Попробуйте войти через Telegram.';
+      err.style.display = 'block';
+    }
+  }, 10000);
+
+  try {
+    // 1. Существующая сессия?
+    const { data: { session } } = await _supabase.auth.getSession();
+    if (session) {
+      clearTimeout(failsafe);
+      await loadDashboard(session.user);
+      return;
+    }
+
+    // 2. Открыто из Telegram WebApp с валидным initData → автоматический вход/регистрация
+    const inTelegram = typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0;
+    if (inTelegram) {
+      const ok = await autoTelegramAuth();
+      clearTimeout(failsafe);
+      if (ok) return;  // loadDashboard вызвался внутри
+      // если не получилось — показываем login + кнопку Telegram-входа как fallback
+      showLoading(false);
+      document.getElementById('loginView').style.display = 'block';
+      document.getElementById('telegramAuthBlock').style.display = 'block';
+      return;
+    }
+
+    // 3. Не Telegram WebApp — показываем обычный login
+    clearTimeout(failsafe);
+    showLoading(false);
+    document.getElementById('loginView').style.display = 'block';
+  } catch (e) {
+    clearTimeout(failsafe);
+    console.error('init exception:', e);
+    showLoading(false);
+    document.getElementById('loginView').style.display = 'block';
+    if (typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0) {
+      document.getElementById('telegramAuthBlock').style.display = 'block';
+    }
   }
-  await loadDashboard(session.user);
+}
+
+// Автоматический Telegram-вход — без кнопки, прямо при открытии из бота
+async function autoTelegramAuth() {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref') || (tg?.initDataUnsafe?.start_param?.startsWith('ref_') ? tg.initDataUnsafe.start_param.slice(4) : null);
+
+    const res = await fetch('https://krest-platform-web.vercel.app/api/miniapp/telegram-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: tg.initData, ref }),
+    });
+    if (!res.ok) {
+      console.error('autoTelegramAuth failed', await res.text());
+      return false;
+    }
+    const json = await res.json();
+    if (!json.ok || !json.data?.access_token) {
+      console.error('autoTelegramAuth bad response', json);
+      return false;
+    }
+    const { data: setData, error: setErr } = await _supabase.auth.setSession({
+      access_token: json.data.access_token,
+      refresh_token: json.data.refresh_token,
+    });
+    if (setErr || !setData?.user) {
+      console.error('setSession failed', setErr);
+      return false;
+    }
+    if (json.data.is_new) {
+      const u = tg.initDataUnsafe?.user || {};
+      notifyAdminsNewStudent({
+        name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'Telegram User',
+        email: setData.user.email || `tg${u.id}@krest.local`,
+        contact: u.username ? `@${u.username}` : '',
+        referralSource: 'telegram',
+        referralDetail: ''
+      });
+    }
+    await loadDashboard(setData.user);
+    return true;
+  } catch (e) {
+    console.error('autoTelegramAuth exception', e);
+    return false;
+  }
 }
 
 async function doTelegramAuth() {
@@ -407,16 +492,26 @@ async function notifyAdminsNewStudent({ name, email, contact, referralSource, re
 }
 
 async function loadDashboard(user) {
-  const { data: profile, error: pe } = await _supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  let profile = null;
+  try {
+    const { data, error } = await _supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    if (error) console.error('profile load error:', error);
+    profile = data;
+  } catch (e) {
+    console.error('profile load exception:', e);
+  }
 
-  if (pe || !profile) {
+  if (!profile) {
     await _supabase.auth.signOut();
     showLoading(false);
     document.getElementById('loginView').style.display = 'block';
+    if (typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0) {
+      document.getElementById('telegramAuthBlock').style.display = 'block';
+    }
     return;
   }
 
