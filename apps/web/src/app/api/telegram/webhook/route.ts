@@ -47,24 +47,47 @@ function createServiceSupabase() {
   })
 }
 
-// Send message back to Telegram
-async function sendTelegramMessage(chatId: number, text: string): Promise<void> {
+// Send message back to Telegram (optionally with inline keyboard / web_app button)
+async function sendTelegramMessage(
+  chatId: number,
+  text: string,
+  options?: { withMiniAppButton?: boolean; refToken?: string | null }
+): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   if (!token) {
     console.error('TELEGRAM_BOT_TOKEN not configured')
     return
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://krest-platform-web.vercel.app'
+  const miniAppUrl = options?.refToken
+    ? `${baseUrl}/miniapp/index.html?ref=${options.refToken}`
+    : `${baseUrl}/miniapp/index.html`
+
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+  }
+
+  if (options?.withMiniAppButton) {
+    body.reply_markup = {
+      inline_keyboard: [[
+        { text: '✝️ Открыть КРЕСТ', web_app: { url: miniAppUrl } }
+      ]]
+    }
+  }
+
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: 'HTML',
-      }),
+      body: JSON.stringify(body),
     })
+    if (!res.ok) {
+      const errText = await res.text()
+      console.error('Telegram sendMessage failed:', res.status, errText)
+    }
   } catch (error) {
     console.error('Failed to send Telegram message:', error)
   }
@@ -99,9 +122,17 @@ export async function POST(request: NextRequest) {
   // Handle /start command
   if (text.startsWith('/start')) {
     const parts = text.split(' ')
-    const emailArg = parts.length > 1 ? parts.slice(1).join(' ').trim() : null
+    const arg = parts.length > 1 ? parts.slice(1).join(' ').trim() : null
 
-    if (emailArg && emailArg.includes('@')) {
+    // /start ref_<token> — приглашение от церкви
+    let refToken: string | null = null
+    if (arg && arg.startsWith('ref_')) {
+      refToken = arg.slice(4)
+    }
+
+    const emailArg = arg && arg.includes('@') ? arg : null
+
+    if (emailArg) {
       // /start email@example.com — link account by email
       try {
         const supabase = createServiceSupabase()
@@ -157,11 +188,12 @@ export async function POST(request: NextRequest) {
         )
       }
     } else {
-      // /start without email — show welcome message
-      await sendTelegramMessage(
-        chatId,
-        `<b>Добро пожаловать в КРЕСТ!</b>\n\nЭто бот для уведомлений платформы ученичества КРЕСТ.\n\n<b>Как подключить аккаунт:</b>\n1. Зарегистрируйтесь на платформе КРЕСТ\n2. В личном кабинете скопируйте команду привязки\n3. Отправьте её сюда\n\nИли отправьте команду:\n<code>/start ваш@email.com</code>`
-      )
+      // /start без аргументов или с ref-токеном церкви → welcome + кнопка Mini App
+      const welcomeText = refToken
+        ? `<b>Добро пожаловать в КРЕСТ! ✝️</b>\n\nВас пригласила церковь-партнёр.\n\nОткройте приложение и пройдите 6 блоков знакомства с верой за 6-12 недель — с живым наставником и в кругу таких же ищущих.`
+        : `<b>Добро пожаловать в КРЕСТ! ✝️</b>\n\nПлатформа управляемого ученичества для русскоязычных церквей.\n\n<b>Что внутри:</b>\n• 6 блоков знакомства с христианством\n• Видео-уроки + живой наставник\n• Малая группа единомышленников\n\nНажмите кнопку ниже, чтобы открыть приложение.`
+
+      await sendTelegramMessage(chatId, welcomeText, { withMiniAppButton: true, refToken })
     }
 
     return NextResponse.json({ ok: true })
