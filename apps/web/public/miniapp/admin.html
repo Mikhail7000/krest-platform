@@ -549,7 +549,13 @@ function switchTab(tab) {
 }
 
 async function doLogout() {
-  await _supabase.auth.signOut();
+  await _supabase.auth.signOut().catch(() => {});
+  // Mini App в Telegram → закрываем приложение (выйти "по-настоящему" нельзя пока юзер сидит в боте)
+  if (typeof tg !== 'undefined' && tg?.close && tg?.initData) {
+    tg.close();
+    return;
+  }
+  // Веб-режим → редирект
   window.location.href = 'index.html';
 }
 

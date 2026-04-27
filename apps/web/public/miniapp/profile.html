@@ -251,10 +251,15 @@ async function doLogout() {
   btn.disabled = true;
   btn.textContent = '...';
 
-  await _supabase.auth.signOut();
+  await _supabase.auth.signOut().catch(() => {});
   toast(t.logoutConfirm, 'success');
 
   setTimeout(() => {
+    // В Telegram WebApp выход = закрыть Mini App (иначе автологин)
+    if (typeof tg !== 'undefined' && tg?.close && tg?.initData) {
+      tg.close();
+      return;
+    }
     window.location.href = './index.html';
   }, 1000);
 }
