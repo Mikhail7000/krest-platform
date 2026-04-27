@@ -354,8 +354,19 @@ async function loadDashboard(user) {
   const list = document.getElementById('blocksList');
   list.innerHTML = '';
 
+  // Видимый debug-инфо пока ловим проблему с пустым списком (только для админа)
+  if (profile.role === 'admin') {
+    const dbg = document.createElement('div');
+    dbg.style.cssText = 'background:rgba(255,255,255,0.05);padding:8px 12px;border-radius:8px;font-size:11px;color:var(--tg-hint);margin-bottom:10px;font-family:monospace';
+    dbg.textContent = `[debug] blocks=${blocks.length}, progresses=${progresses.length}, unlocked=${unlocked}, role=${profile.role}, preview=${previewMode}`;
+    list.appendChild(dbg);
+  }
+
   if (!blocks || blocks.length === 0) {
-    list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--tg-hint);font-size:14px;line-height:1.5">Не удалось загрузить блоки курса.<br>Обновите страницу или попробуйте позже.</div>';
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:30px 16px;text-align:center;color:var(--tg-hint);font-size:14px;line-height:1.5';
+    empty.innerHTML = 'Не удалось загрузить блоки курса.<br>Обновите страницу или попробуйте позже.';
+    list.appendChild(empty);
     return;
   }
 
