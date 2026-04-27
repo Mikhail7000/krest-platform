@@ -85,7 +85,12 @@
 <script>
 function showFatal(msg) {
   console.error('FATAL:', msg);
+  // Удалим preview-баннер если был
+  const oldBanner = document.getElementById('previewBanner');
+  if (oldBanner) oldBanner.remove();
+
   showLoading(false);
+  document.getElementById('dashView').style.display = 'none';
   document.getElementById('loginView').style.display = 'block';
   const inTg = typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0;
   if (inTg) {
@@ -266,9 +271,6 @@ async function notifyAdminsNewStudent({ name, email, contact, referralSource, re
 }
 
 async function loadDashboard(user) {
-  // Локальный failsafe для loadDashboard — 8 секунд
-  const dashFailsafe = setTimeout(() => showFatal('Не удалось загрузить дашборд.'), 8000);
-
   let profile = null;
   try {
     const { data, error } = await _supabase
@@ -283,36 +285,38 @@ async function loadDashboard(user) {
   }
 
   if (!profile) {
-    clearTimeout(dashFailsafe);
     await _supabase.auth.signOut().catch(() => {});
     showFatal('Профиль не найден. Войдите снова.');
     return;
   }
 
-  // Preview mode: админ хочет увидеть студенческий вид
   const previewMode = localStorage.getItem('crest_student_preview') === '1';
 
   if (profile.role === 'admin' && !previewMode) {
-    clearTimeout(dashFailsafe);
     window.location.href = 'admin.html';
     return;
   }
 
-  // Показать плашку режима просмотра для админа
-  if (profile.role === 'admin' && previewMode) {
+  if (!profile.onboarding_done) {
+    window.location.href = 'setup.html';
+    return;
+  }
+
+  // Показываем dashView СРАЗУ — с placeholder'ом, пока грузятся блоки
+  document.getElementById('loginView').style.display = 'none';
+  showLoading(false);
+  document.getElementById('dashView').style.display = 'block';
+
+  // Preview banner для админа (idempotent — добавляется только один раз)
+  if (profile.role === 'admin' && previewMode && !document.getElementById('previewBanner')) {
     const banner = document.createElement('div');
+    banner.id = 'previewBanner';
     banner.style.cssText = 'position:sticky;top:0;z-index:100;background:rgba(79,70,229,0.95);color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:10px';
     banner.innerHTML = `
       <span>👁 Режим просмотра: студент</span>
       <button onclick="exitPreview()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer">Назад в админку</button>
     `;
     document.body.insertBefore(banner, document.body.firstChild);
-  }
-
-  if (!profile.onboarding_done) {
-    clearTimeout(dashFailsafe);
-    window.location.href = 'setup.html';
-    return;
   }
 
   let blocks = [];
@@ -327,7 +331,6 @@ async function loadDashboard(user) {
   } catch (e) {
     console.error('blocks/progress load exception:', e);
   }
-  // блок ниже использует blocks/progresses вместо ожидания .data — защищено
 
   const progressMap = {};
   (progresses || []).forEach(p => { progressMap[p.block_id] = p.admin_approved; });
@@ -374,10 +377,7 @@ async function loadDashboard(user) {
     list.appendChild(card);
   });
 
-  clearTimeout(dashFailsafe);
-  document.getElementById('loginView').style.display = 'none';
-  showLoading(false);
-  document.getElementById('dashView').style.display = 'block';
+  // dashView уже показан в начале функции — повторно не нужно
 }
 
 async function logStreak(userId) {
