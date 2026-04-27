@@ -250,11 +250,6 @@ async function doTelegramAuth() {
   }
 }
 
-function exitPreview() {
-  localStorage.removeItem('crest_student_preview');
-  window.location.href = 'admin.html';
-}
-
 async function notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail }) {
   try {
     const sourceMap = { instagram:'Instagram', tiktok:'TikTok', telegram:'Telegram', friend:'От друга', youtube:'YouTube', other:'Другое' };
@@ -290,9 +285,7 @@ async function loadDashboard(user) {
     return;
   }
 
-  const previewMode = localStorage.getItem('crest_student_preview') === '1';
-
-  if (profile.role === 'admin' && !previewMode) {
+  if (profile.role === 'admin') {
     window.location.href = 'admin.html';
     return;
   }
@@ -302,22 +295,9 @@ async function loadDashboard(user) {
     return;
   }
 
-  // Показываем dashView СРАЗУ — с placeholder'ом, пока грузятся блоки
   document.getElementById('loginView').style.display = 'none';
   showLoading(false);
   document.getElementById('dashView').style.display = 'block';
-
-  // Preview banner для админа (idempotent — добавляется только один раз)
-  if (profile.role === 'admin' && previewMode && !document.getElementById('previewBanner')) {
-    const banner = document.createElement('div');
-    banner.id = 'previewBanner';
-    banner.style.cssText = 'position:sticky;top:0;z-index:100;background:rgba(79,70,229,0.95);color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:10px';
-    banner.innerHTML = `
-      <span>👁 Режим просмотра: студент</span>
-      <button onclick="exitPreview()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer">Назад в админку</button>
-    `;
-    document.body.insertBefore(banner, document.body.firstChild);
-  }
 
   let blocks = [];
   let progresses = [];
@@ -353,14 +333,6 @@ async function loadDashboard(user) {
 
   const list = document.getElementById('blocksList');
   list.innerHTML = '';
-
-  // Видимый debug-инфо пока ловим проблему с пустым списком (только для админа)
-  if (profile.role === 'admin') {
-    const dbg = document.createElement('div');
-    dbg.style.cssText = 'background:rgba(255,255,255,0.05);padding:8px 12px;border-radius:8px;font-size:11px;color:var(--tg-hint);margin-bottom:10px;font-family:monospace';
-    dbg.textContent = `[debug] blocks=${blocks.length}, progresses=${progresses.length}, unlocked=${unlocked}, role=${profile.role}, preview=${previewMode}`;
-    list.appendChild(dbg);
-  }
 
   if (!blocks || blocks.length === 0) {
     const empty = document.createElement('div');

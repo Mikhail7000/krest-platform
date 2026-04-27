@@ -265,10 +265,7 @@
   <div class="page-header">
     <h1>✝️ КРЕСТ — Лидер</h1>
     <p id="leaderName"></p>
-    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-      <button onclick="previewAsStudent()" style="background:rgba(79,70,229,0.15);border:1px solid rgba(79,70,229,0.3);color:#818cf8;font-size:13px;font-weight:600;padding:8px 16px;border-radius:20px;cursor:pointer;letter-spacing:0.3px;">👁 Как студент</button>
-      <button onclick="doLogout()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:var(--tg-hint);font-size:13px;font-weight:600;padding:8px 16px;border-radius:20px;cursor:pointer;letter-spacing:0.3px;">Выйти</button>
-    </div>
+    <button onclick="doLogout()" style="margin-top:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:var(--tg-hint);font-size:13px;font-weight:600;padding:8px 20px;border-radius:20px;cursor:pointer;letter-spacing:0.3px;">Выйти из аккаунта</button>
   </div>
 
   <div class="section">
@@ -276,7 +273,8 @@
       <div class="tab active" id="tabPending" onclick="switchTab('pending')">
         Ожидают <span class="badge" id="pendingBadge" style="display:none">0</span>
       </div>
-      <div class="tab" id="tabAll" onclick="switchTab('all')">Все студенты</div>
+      <div class="tab" id="tabAll" onclick="switchTab('all')">Студенты</div>
+      <div class="tab" id="tabContent" onclick="switchTab('content')">Контент</div>
     </div>
 
     <div id="pendingView">
@@ -285,8 +283,87 @@
     <div id="allView" style="display:none">
       <div id="allList"></div>
     </div>
+    <div id="contentView" style="display:none">
+      <div id="contentList"></div>
+    </div>
   </div>
 </div>
+
+<!-- Content Editor Modal -->
+<div id="editorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;overflow-y:auto;padding:16px">
+  <div style="max-width:600px;margin:20px auto;background:var(--tg-bg);border-radius:16px;border:1px solid rgba(201,169,97,0.25);overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid rgba(201,169,97,0.15);display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <div style="font-size:16px;font-weight:700;color:var(--gold)" id="editorTitle">Редактор блока</div>
+      <button onclick="closeEditor()" style="background:transparent;border:none;color:var(--tg-hint);font-size:24px;cursor:pointer;padding:4px 8px">×</button>
+    </div>
+    <form id="editorForm" onsubmit="saveBlock(event)" style="padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="editBlockId" />
+
+      <div>
+        <label class="ed-label">Порядок (1-6)</label>
+        <input type="number" id="editOrder" min="1" max="6" required class="ed-input" />
+      </div>
+      <div>
+        <label class="ed-label">Буква (C/R/E/S/T)</label>
+        <input type="text" id="editLetter" maxlength="1" class="ed-input" />
+      </div>
+      <div>
+        <label class="ed-label">Заголовок (RU)</label>
+        <input type="text" id="editTitleRu" required class="ed-input" />
+      </div>
+      <div>
+        <label class="ed-label">Заголовок (EN)</label>
+        <input type="text" id="editTitleEn" class="ed-input" />
+      </div>
+      <div>
+        <label class="ed-label">Подзаголовок-вопрос (RU)</label>
+        <input type="text" id="editSubtitleRu" placeholder="Кем Бог создал человека?" class="ed-input" />
+      </div>
+      <div>
+        <label class="ed-label">Подзаголовок-вопрос (EN)</label>
+        <input type="text" id="editSubtitleEn" class="ed-input" />
+      </div>
+      <div>
+        <label class="ed-label">Краткое описание (RU)</label>
+        <textarea id="editDescRu" rows="2" class="ed-input"></textarea>
+      </div>
+      <div>
+        <label class="ed-label">Краткое описание (EN)</label>
+        <textarea id="editDescEn" rows="2" class="ed-input"></textarea>
+      </div>
+      <div>
+        <label class="ed-label">YouTube URL (RU)</label>
+        <input type="url" id="editYtRu" placeholder="https://youtube.com/watch?v=..." class="ed-input" />
+      </div>
+      <div>
+        <label class="ed-label">YouTube URL (EN)</label>
+        <input type="url" id="editYtEn" class="ed-input" />
+      </div>
+      <div>
+        <label class="ed-label">Конспект HTML (RU)</label>
+        <textarea id="editContentRu" rows="10" class="ed-input" style="font-family:monospace;font-size:12px"></textarea>
+      </div>
+      <div>
+        <label class="ed-label">Конспект HTML (EN)</label>
+        <textarea id="editContentEn" rows="10" class="ed-input" style="font-family:monospace;font-size:12px"></textarea>
+      </div>
+      <div>
+        <label class="ed-label">Цвет (HEX)</label>
+        <input type="text" id="editColor" placeholder="#0071e3" class="ed-input" />
+      </div>
+      <div id="editorError" style="color:#FF3B30;font-size:13px;display:none"></div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="button" onclick="closeEditor()" style="flex:1;padding:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--tg-text);font-weight:600;cursor:pointer">Отмена</button>
+        <button type="submit" id="saveBlockBtn" style="flex:2;padding:12px;background:linear-gradient(135deg,#C9A961,#B89548);border:none;border-radius:10px;color:#0A0E1A;font-weight:700;cursor:pointer">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+<style>
+  .ed-label { display:block; font-size:11px; font-weight:700; color:var(--tg-hint); letter-spacing:0.4px; text-transform:uppercase; margin-bottom:4px; }
+  .ed-input { width:100%; box-sizing:border-box; padding:10px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(201,169,97,0.2); border-radius:8px; color:var(--tg-text); font-size:14px; outline:none; resize:vertical; }
+  .ed-input:focus { border-color:var(--gold); }
+</style>
 
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
@@ -547,13 +624,129 @@ function toggleJournal(el) {
 function switchTab(tab) {
   document.getElementById('tabPending').classList.toggle('active', tab === 'pending');
   document.getElementById('tabAll').classList.toggle('active', tab === 'all');
+  document.getElementById('tabContent').classList.toggle('active', tab === 'content');
   document.getElementById('pendingView').style.display = tab === 'pending' ? 'block' : 'none';
   document.getElementById('allView').style.display = tab === 'all' ? 'block' : 'none';
+  document.getElementById('contentView').style.display = tab === 'content' ? 'block' : 'none';
+  if (tab === 'content') loadContent();
 }
 
-function previewAsStudent() {
-  localStorage.setItem('crest_student_preview', '1');
-  window.location.href = 'index.html';
+// ---------- Content editor ----------
+
+let contentBlocks = [];
+
+async function loadContent() {
+  const list = document.getElementById('contentList');
+  list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--tg-hint);font-size:13px">Загрузка блоков...</div>';
+
+  const { data, error } = await _supabase
+    .from('blocks')
+    .select('id, order_num, letter, title_ru, title_en, subtitle_ru, subtitle_en, description_ru, description_en, content_ru, content_en, youtube_ru, youtube_en, color')
+    .order('order_num');
+
+  if (error) {
+    list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:#FF3B30;font-size:13px">Не удалось загрузить блоки.</div>';
+    return;
+  }
+
+  contentBlocks = data || [];
+  list.innerHTML = '';
+
+  if (contentBlocks.length === 0) {
+    list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--tg-hint)">Блоков нет.</div>';
+    return;
+  }
+
+  contentBlocks.forEach(block => {
+    const card = document.createElement('div');
+    card.className = 'student-card';
+    card.style.cursor = 'pointer';
+    card.onclick = () => openEditor(block.id);
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:10px;background:${block.color || 'rgba(201,169,97,0.2)'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex-shrink:0">${block.letter || block.order_num}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:var(--tg-text)">Блок ${block.order_num}: ${block.title_ru || '—'}</div>
+          <div style="font-size:12px;color:var(--tg-hint);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${block.subtitle_ru || ''}</div>
+        </div>
+        <div style="font-size:13px;color:var(--gold);font-weight:600">✎ Изменить</div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function openEditor(blockId) {
+  const block = contentBlocks.find(b => b.id === blockId);
+  if (!block) return;
+
+  document.getElementById('editorTitle').textContent = `Блок ${block.order_num}: ${block.title_ru || ''}`;
+  document.getElementById('editBlockId').value = block.id;
+  document.getElementById('editOrder').value = block.order_num || '';
+  document.getElementById('editLetter').value = block.letter || '';
+  document.getElementById('editTitleRu').value = block.title_ru || '';
+  document.getElementById('editTitleEn').value = block.title_en || '';
+  document.getElementById('editSubtitleRu').value = block.subtitle_ru || '';
+  document.getElementById('editSubtitleEn').value = block.subtitle_en || '';
+  document.getElementById('editDescRu').value = block.description_ru || '';
+  document.getElementById('editDescEn').value = block.description_en || '';
+  document.getElementById('editYtRu').value = block.youtube_ru || '';
+  document.getElementById('editYtEn').value = block.youtube_en || '';
+  document.getElementById('editContentRu').value = block.content_ru || '';
+  document.getElementById('editContentEn').value = block.content_en || '';
+  document.getElementById('editColor').value = block.color || '';
+  document.getElementById('editorError').style.display = 'none';
+
+  document.getElementById('editorModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEditor() {
+  document.getElementById('editorModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function saveBlock(e) {
+  e.preventDefault();
+  const btn = document.getElementById('saveBlockBtn');
+  const errEl = document.getElementById('editorError');
+  errEl.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Сохраняем...';
+
+  const id = parseInt(document.getElementById('editBlockId').value, 10);
+  const update = {
+    order_num: parseInt(document.getElementById('editOrder').value, 10),
+    letter: document.getElementById('editLetter').value.trim() || null,
+    title_ru: document.getElementById('editTitleRu').value.trim(),
+    title_en: document.getElementById('editTitleEn').value.trim() || null,
+    subtitle_ru: document.getElementById('editSubtitleRu').value.trim() || null,
+    subtitle_en: document.getElementById('editSubtitleEn').value.trim() || null,
+    description_ru: document.getElementById('editDescRu').value.trim() || null,
+    description_en: document.getElementById('editDescEn').value.trim() || null,
+    youtube_ru: document.getElementById('editYtRu').value.trim() || null,
+    youtube_en: document.getElementById('editYtEn').value.trim() || null,
+    content_ru: document.getElementById('editContentRu').value || null,
+    content_en: document.getElementById('editContentEn').value || null,
+    color: document.getElementById('editColor').value.trim() || null,
+  };
+
+  const { error } = await _supabase.from('blocks').update(update).eq('id', id);
+
+  if (error) {
+    errEl.textContent = `Ошибка сохранения: ${error.message}`;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Сохранить';
+    return;
+  }
+
+  toast('Блок сохранён', 'success');
+  if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+  closeEditor();
+  await loadContent();
+  btn.disabled = false;
+  btn.textContent = 'Сохранить';
 }
 
 async function doLogout() {
