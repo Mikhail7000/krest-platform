@@ -322,14 +322,20 @@ async function loadDashboard(user) {
   let blocks = [];
   let progresses = [];
   try {
-    const [b, p] = await Promise.all([
-      _supabase.from('blocks').select('id, order_num, title_ru').order('order_num'),
-      _supabase.from('student_progress').select('block_id, admin_approved').eq('user_id', user.id).is('lesson_id', null),
-    ]);
+    const b = await _supabase.from('blocks').select('id, order_num, title_ru').order('order_num');
+    if (b.error) console.error('blocks query error:', b.error);
     blocks = b.data || [];
-    progresses = p.data || [];
+    console.log('[loadDashboard] blocks loaded:', blocks.length);
   } catch (e) {
-    console.error('blocks/progress load exception:', e);
+    console.error('blocks load exception:', e);
+  }
+  try {
+    const p = await _supabase.from('student_progress').select('block_id, admin_approved').eq('user_id', user.id).is('lesson_id', null);
+    if (p.error) console.error('progress query error:', p.error);
+    progresses = p.data || [];
+    console.log('[loadDashboard] progresses loaded:', progresses.length);
+  } catch (e) {
+    console.error('progress load exception:', e);
   }
 
   const progressMap = {};
@@ -348,7 +354,12 @@ async function loadDashboard(user) {
   const list = document.getElementById('blocksList');
   list.innerHTML = '';
 
-  (blocks || []).forEach(block => {
+  if (!blocks || blocks.length === 0) {
+    list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:var(--tg-hint);font-size:14px;line-height:1.5">Не удалось загрузить блоки курса.<br>Обновите страницу или попробуйте позже.</div>';
+    return;
+  }
+
+  blocks.forEach(block => {
     const ord = block.order_num;
     const isApproved = progressMap[block.id] === true;
     const isPending = progressMap[block.id] === false;
