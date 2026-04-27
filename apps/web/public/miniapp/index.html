@@ -25,96 +25,28 @@
       <p id="authSubtitle">Платформа ученичества</p>
     </div>
 
-    <!-- Telegram quick login (главный путь, виден только в Telegram WebApp) -->
-    <div id="telegramAuthBlock" style="display:none;margin-bottom:20px">
+    <!-- Telegram quick login (главный и единственный путь) -->
+    <div id="telegramAuthBlock">
+      <p style="font-size:14px;color:var(--tg-hint);text-align:center;line-height:1.5;margin-bottom:20px">
+        Платформа доступна только из приложения Telegram.<br>
+        Откройте бота <strong style="color:var(--gold)">@cross_bot</strong> и нажмите Start.
+      </p>
       <button class="btn" id="telegramAuthBtn" onclick="doTelegramAuth()" style="background:linear-gradient(135deg,#229ED9,#1B7BAB);color:#fff;width:100%">
         ✈️ Войти через Telegram
       </button>
       <p id="telegramAuthError" style="color:#FF3B30;font-size:13px;margin-top:10px;display:none;text-align:center"></p>
-      <div style="display:flex;align-items:center;gap:10px;margin:18px 0;color:var(--tg-hint);font-size:12px">
-        <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
-        <span>или</span>
-        <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
-      </div>
     </div>
 
-    <!-- Login mode -->
-    <div id="loginMode">
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="emailInput" placeholder="your@email.com" autocomplete="email" />
-      </div>
-      <div class="form-group">
-        <label>Пароль</label>
-        <input type="password" id="passwordInput" placeholder="••••••••" autocomplete="current-password" />
-      </div>
-      <button class="btn" id="loginBtn" onclick="doLogin()">Войти</button>
-      <p id="loginError" style="color:#FF3B30;font-size:13px;margin-top:10px;display:none;text-align:center"></p>
-      <p style="text-align:center;margin-top:20px;font-size:14px;color:var(--tg-hint)">
-        Нет аккаунта?
-        <span onclick="switchToRegister()" style="color:var(--gold);font-weight:700;cursor:pointer">Зарегистрироваться</span>
+    <!-- Не из Telegram WebApp — fallback с deep link -->
+    <div id="notInTelegramView" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:56px;margin-bottom:16px">✈️</div>
+      <h3 style="font-size:20px;font-weight:800;color:var(--gold);margin-bottom:10px">Откройте в Telegram</h3>
+      <p style="font-size:15px;color:var(--tg-hint);line-height:1.6;margin-bottom:24px">
+        КРЕСТ работает внутри Telegram-бота. Нажмите кнопку ниже, чтобы открыть.
       </p>
-    </div>
-
-    <!-- Register mode -->
-    <div id="registerMode" style="display:none">
-      <div class="form-group">
-        <label>Имя и фамилия</label>
-        <input type="text" id="nameInput" placeholder="Иван Иванов" autocomplete="name" />
-      </div>
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="regEmailInput" placeholder="your@email.com" autocomplete="email" />
-      </div>
-      <div class="form-group">
-        <label>Пароль</label>
-        <input type="password" id="regPasswordInput" placeholder="минимум 6 символов" autocomplete="new-password" />
-      </div>
-      <div class="form-group">
-        <label>Повторите пароль</label>
-        <input type="password" id="regPasswordConfirm" placeholder="••••••••" autocomplete="new-password" />
-      </div>
-
-      <div class="form-group">
-        <label>Ваш контакт (Telegram / WhatsApp / телефон)</label>
-        <input type="text" id="contactInput" placeholder="@username или +7..." />
-      </div>
-
-      <div class="form-group">
-        <label>Откуда вы узнали о КРЕСТ?</label>
-        <div class="source-grid">
-          <div class="source-btn" onclick="selectSource(this,'instagram')">📸 Instagram</div>
-          <div class="source-btn" onclick="selectSource(this,'tiktok')">🎵 TikTok</div>
-          <div class="source-btn" onclick="selectSource(this,'telegram')">✈️ Telegram</div>
-          <div class="source-btn" onclick="selectSource(this,'friend')">👤 От друга</div>
-          <div class="source-btn" onclick="selectSource(this,'youtube')">▶️ YouTube</div>
-          <div class="source-btn" onclick="selectSource(this,'other')">💬 Другое</div>
-        </div>
-        <input type="hidden" id="referralSource" />
-      </div>
-
-      <div class="form-group" id="referralDetailGroup" style="display:none">
-        <label id="referralDetailLabel">Укажите подробнее</label>
-        <input type="text" id="referralDetail" placeholder="" />
-      </div>
-
-      <button class="btn" id="registerBtn" onclick="doRegister()">Создать аккаунт</button>
-      <p id="registerError" style="color:#FF3B30;font-size:13px;margin-top:10px;display:none;text-align:center"></p>
-      <p style="text-align:center;margin-top:20px;font-size:14px;color:var(--tg-hint)">
-        Уже есть аккаунт?
-        <span onclick="switchToLogin()" style="color:var(--gold);font-weight:700;cursor:pointer">Войти</span>
-      </p>
-    </div>
-
-    <!-- Email confirmation message -->
-    <div id="confirmMode" style="display:none;text-align:center;padding:20px 0">
-      <div style="font-size:56px;margin-bottom:16px">📩</div>
-      <h3 style="font-size:20px;font-weight:800;color:var(--gold);margin-bottom:10px">Проверьте почту</h3>
-      <p style="font-size:15px;color:var(--tg-hint);line-height:1.6;margin-bottom:20px">
-        Мы отправили письмо на<br><strong id="confirmEmail" style="color:var(--tg-text)"></strong><br><br>
-        Перейдите по ссылке в письме, чтобы подтвердить аккаунт и войти в КРЕСТ.
-      </p>
-      <p style="font-size:13px;color:var(--tg-hint)">Не получили письмо? Проверьте папку «Спам».</p>
+      <a href="https://t.me/cross_bot" target="_blank" rel="noopener noreferrer" class="btn" style="display:inline-block;background:linear-gradient(135deg,#229ED9,#1B7BAB);color:#fff;text-decoration:none;padding:14px 28px;border-radius:12px;font-weight:700">
+        Открыть @cross_bot
+      </a>
     </div>
   </div>
 </div>
@@ -151,24 +83,30 @@
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script>
-async function init() {
-  // Failsafe: если init не справится за 10 сек — показываем login чтобы не висеть вечно
-  const failsafe = setTimeout(() => {
-    console.error('init failsafe triggered (10s)');
-    showLoading(false);
-    document.getElementById('loginView').style.display = 'block';
-    if (typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0) {
-      document.getElementById('telegramAuthBlock').style.display = 'block';
-    }
-    const err = document.getElementById('loginError');
-    if (err) {
-      err.textContent = 'Долгая загрузка. Попробуйте войти через Telegram.';
+function showFatal(msg) {
+  console.error('FATAL:', msg);
+  showLoading(false);
+  document.getElementById('loginView').style.display = 'block';
+  const inTg = typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0;
+  if (inTg) {
+    document.getElementById('telegramAuthBlock').style.display = 'block';
+    document.getElementById('notInTelegramView').style.display = 'none';
+    const err = document.getElementById('telegramAuthError');
+    if (err && msg) {
+      err.textContent = msg;
       err.style.display = 'block';
     }
-  }, 10000);
+  } else {
+    document.getElementById('telegramAuthBlock').style.display = 'none';
+    document.getElementById('notInTelegramView').style.display = 'block';
+  }
+}
+
+async function init() {
+  // Глобальный failsafe — через 12 сек откатываемся на экран входа что бы ни случилось
+  const failsafe = setTimeout(() => showFatal('Долгая загрузка. Попробуйте ещё раз.'), 12000);
 
   try {
-    // 1. Существующая сессия?
     const { data: { session } } = await _supabase.auth.getSession();
     if (session) {
       clearTimeout(failsafe);
@@ -176,31 +114,21 @@ async function init() {
       return;
     }
 
-    // 2. Открыто из Telegram WebApp с валидным initData → автоматический вход/регистрация
-    const inTelegram = typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0;
-    if (inTelegram) {
+    const inTg = typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0;
+    if (inTg) {
+      // автоматический Telegram-вход
       const ok = await autoTelegramAuth();
       clearTimeout(failsafe);
-      if (ok) return;  // loadDashboard вызвался внутри
-      // если не получилось — показываем login + кнопку Telegram-входа как fallback
-      showLoading(false);
-      document.getElementById('loginView').style.display = 'block';
-      document.getElementById('telegramAuthBlock').style.display = 'block';
+      if (!ok) showFatal('Не удалось авторизоваться. Нажмите кнопку ниже.');
       return;
     }
 
-    // 3. Не Telegram WebApp — показываем обычный login
+    // Не Telegram WebApp — показываем deep-link к боту
     clearTimeout(failsafe);
-    showLoading(false);
-    document.getElementById('loginView').style.display = 'block';
+    showFatal(null);
   } catch (e) {
     clearTimeout(failsafe);
-    console.error('init exception:', e);
-    showLoading(false);
-    document.getElementById('loginView').style.display = 'block';
-    if (typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0) {
-      document.getElementById('telegramAuthBlock').style.display = 'block';
-    }
+    showFatal(e?.message || 'Ошибка инициализации');
   }
 }
 
@@ -317,165 +245,6 @@ async function doTelegramAuth() {
   }
 }
 
-const SOURCE_LABELS = {
-  instagram: { label: 'Ник в Instagram', placeholder: '@your_instagram' },
-  tiktok:    { label: 'Ник в TikTok', placeholder: '@your_tiktok' },
-  telegram:  { label: 'Ник или канал в Telegram', placeholder: '@username или @channel' },
-  friend:    { label: 'Имя человека, который посоветовал', placeholder: 'Имя и контакт' },
-  youtube:   { label: 'Название канала или видео', placeholder: 'Название канала' },
-  other:     { label: 'Расскажите подробнее', placeholder: 'Где именно увидели?' },
-};
-
-function selectSource(el, source) {
-  document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('referralSource').value = source;
-  const detail = SOURCE_LABELS[source];
-  document.getElementById('referralDetailLabel').textContent = detail.label;
-  document.getElementById('referralDetail').placeholder = detail.placeholder;
-  document.getElementById('referralDetailGroup').style.display = 'block';
-}
-
-function switchToRegister() {
-  document.getElementById('loginMode').style.display = 'none';
-  document.getElementById('registerMode').style.display = 'block';
-  document.getElementById('authSubtitle').textContent = 'Создайте аккаунт';
-}
-
-function switchToLogin() {
-  document.getElementById('registerMode').style.display = 'none';
-  document.getElementById('loginMode').style.display = 'block';
-  document.getElementById('authSubtitle').textContent = 'Платформа ученичества';
-}
-
-async function doLogin() {
-  const btn = document.getElementById('loginBtn');
-  const err = document.getElementById('loginError');
-  btn.disabled = true;
-  btn.textContent = 'Входим...';
-  err.style.display = 'none';
-
-  const email = document.getElementById('emailInput').value.trim();
-  const password = document.getElementById('passwordInput').value;
-
-  const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    err.textContent = t.loginError;
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = t.login;
-    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-    return;
-  }
-  document.getElementById('loginView').style.display = 'none';
-  showLoading(true);
-  await loadDashboard(data.user);
-}
-
-async function doRegister() {
-  const btn = document.getElementById('registerBtn');
-  const err = document.getElementById('registerError');
-  btn.disabled = true;
-  btn.textContent = 'Создаём...';
-  err.style.display = 'none';
-
-  const name = document.getElementById('nameInput').value.trim();
-  const email = document.getElementById('regEmailInput').value.trim();
-  const password = document.getElementById('regPasswordInput').value;
-  const confirm = document.getElementById('regPasswordConfirm').value;
-  const contact = document.getElementById('contactInput').value.trim();
-  const referralSource = document.getElementById('referralSource').value;
-  const referralDetail = document.getElementById('referralDetail').value.trim();
-
-  if (!name) {
-    err.textContent = 'Введите имя и фамилию';
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Создать аккаунт';
-    return;
-  }
-  if (password.length < 6) {
-    err.textContent = 'Пароль должен быть не менее 6 символов';
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Создать аккаунт';
-    return;
-  }
-  if (password !== confirm) {
-    err.textContent = 'Пароли не совпадают';
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Создать аккаунт';
-    return;
-  }
-
-  // Регистрация через стандартный Supabase Auth (mailer_autoconfirm=true,
-  // поэтому письмо не отправляется и rate limit не задействуется).
-  const { data: signUpData, error } = await _supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: name } }
-  });
-
-  if (error) {
-    const m = (error.message || '').toLowerCase();
-    err.textContent = m.includes('already') || m.includes('exists') || m.includes('registered')
-      ? 'Этот email уже зарегистрирован. Войдите в аккаунт.'
-      : `Ошибка регистрации: ${error.message}`;
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = 'Создать аккаунт';
-    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-    return;
-  }
-
-  if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-
-  // Привязка к церкви по ref-токену + сохранение доп. полей профиля
-  const urlParams = new URLSearchParams(window.location.search);
-  const ref = urlParams.get('ref');
-  let churchId = null, nastavnikId = null;
-  if (ref) {
-    const { data: church } = await _supabase.from('churches').select('id, pastor_id').eq('invite_token', ref).single();
-    if (church) { churchId = church.id; nastavnikId = church.pastor_id; }
-  }
-
-  if (signUpData.user) {
-    await _supabase.from('profiles').update({
-      contact_info: contact || null,
-      referral_source: referralSource || null,
-      referral_detail: referralDetail || null,
-      church_id: churchId,
-      nastavnik_id: nastavnikId,
-    }).eq('id', signUpData.user.id);
-
-    notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail });
-  }
-
-  // Если session есть (mailer_autoconfirm=true) — сразу на дашборд
-  if (signUpData.session) {
-    document.getElementById('loginView').style.display = 'none';
-    showLoading(true);
-    await loadDashboard(signUpData.user);
-    return;
-  }
-
-  // Fallback (если confirmation вернётся): попробовать ручной логин
-  const { data: loginData } = await _supabase.auth.signInWithPassword({ email, password });
-  if (loginData?.user) {
-    document.getElementById('loginView').style.display = 'none';
-    showLoading(true);
-    await loadDashboard(loginData.user);
-    return;
-  }
-
-  // Final fallback — экран "проверьте email"
-  document.getElementById('registerMode').style.display = 'none';
-  document.getElementById('confirmEmail').textContent = email;
-  document.getElementById('confirmMode').style.display = 'block';
-  document.getElementById('authSubtitle').textContent = 'Почти готово!';
-}
-
 async function notifyAdminsNewStudent({ name, email, contact, referralSource, referralDetail }) {
   try {
     const sourceMap = { instagram:'Instagram', tiktok:'TikTok', telegram:'Telegram', friend:'От друга', youtube:'YouTube', other:'Другое' };
@@ -492,6 +261,9 @@ async function notifyAdminsNewStudent({ name, email, contact, referralSource, re
 }
 
 async function loadDashboard(user) {
+  // Локальный failsafe для loadDashboard — 8 секунд
+  const dashFailsafe = setTimeout(() => showFatal('Не удалось загрузить дашборд.'), 8000);
+
   let profile = null;
   try {
     const { data, error } = await _supabase
@@ -506,37 +278,37 @@ async function loadDashboard(user) {
   }
 
   if (!profile) {
-    await _supabase.auth.signOut();
-    showLoading(false);
-    document.getElementById('loginView').style.display = 'block';
-    if (typeof tg !== 'undefined' && tg?.initData && tg.initData.length > 0) {
-      document.getElementById('telegramAuthBlock').style.display = 'block';
-    }
+    clearTimeout(dashFailsafe);
+    await _supabase.auth.signOut().catch(() => {});
+    showFatal('Профиль не найден. Войдите снова.');
     return;
   }
 
-  // Admin — redirect to admin panel
   if (profile.role === 'admin') {
+    clearTimeout(dashFailsafe);
     window.location.href = 'admin.html';
     return;
   }
 
-  // Check if onboarding is needed
   if (!profile.onboarding_done) {
+    clearTimeout(dashFailsafe);
     window.location.href = 'setup.html';
     return;
   }
 
-  const { data: blocks } = await _supabase
-    .from('blocks')
-    .select('id, order_num, title_ru')
-    .order('order_num');
-
-  const { data: progresses } = await _supabase
-    .from('student_progress')
-    .select('block_id, admin_approved')
-    .eq('user_id', user.id)
-    .is('lesson_id', null);
+  let blocks = [];
+  let progresses = [];
+  try {
+    const [b, p] = await Promise.all([
+      _supabase.from('blocks').select('id, order_num, title_ru').order('order_num'),
+      _supabase.from('student_progress').select('block_id, admin_approved').eq('user_id', user.id).is('lesson_id', null),
+    ]);
+    blocks = b.data || [];
+    progresses = p.data || [];
+  } catch (e) {
+    console.error('blocks/progress load exception:', e);
+  }
+  // блок ниже использует blocks/progresses вместо ожидания .data — защищено
 
   const progressMap = {};
   (progresses || []).forEach(p => { progressMap[p.block_id] = p.admin_approved; });
@@ -583,6 +355,8 @@ async function loadDashboard(user) {
     list.appendChild(card);
   });
 
+  clearTimeout(dashFailsafe);
+  document.getElementById('loginView').style.display = 'none';
   showLoading(false);
   document.getElementById('dashView').style.display = 'block';
 }
