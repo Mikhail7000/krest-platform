@@ -1,159 +1,105 @@
 # HANDOVER — КРЕСТ
-> Дата: 2026-04-27 | Сессия: Plan B + post-MVP cron/B2B + auth-fixes + Telegram-auth + лендинг
+> Дата: 2026-04-27 11:00 UTC | Сессия: Spec-First + cron + B2B + Telegram-only auth + in-app content editor
 
 ---
 
-## 🎯 ВАЖНО для следующей сессии
+## 🎯 Что сейчас работает в production
 
-### Регистрация ТЕПЕРЬ работает 3 способами:
-1. **Email + пароль** (самый простой) — стандартный signUp с `mailer_autoconfirm=true` (письма не отправляются, лимит Resend не блокирует)
-2. **Через Telegram WebApp** (1 клик) — кнопка "✈️ Войти через Telegram" видна только когда страница открыта из бота. Использует `tg.initData` с HMAC-валидацией.
-3. **Через ссылку-приглашение церкви** — `?ref=invite_token` автоматически привязывает студента к церкви и пастору
+**URL:** `https://krest-platform-web.vercel.app/`
 
-### Что НЕ нужно делать пользователю:
-- ❌ Не нужно добавлять `SUPABASE_SERVICE_ROLE_KEY` в Vercel (мы обошли это через mailer_autoconfirm)
-- ❌ Не нужно письмо-подтверждение для пользователей (отключено через Management API)
+### Реально протестированные сценарии
 
-### Что **НУЖНО** сделать пользователю (опционально):
-- ⚠️ Добавить `CRON_SECRET` в Vercel для защиты cron-endpoints (сейчас открыты)
-- ⚠️ В Supabase Dashboard → Settings → API обновить `SUPABASE_SERVICE_ROLE_KEY` в Vercel env (там сейчас стоит publishable key вместо service_role JWT) — это нужно если в будущем понадобится auth.admin API
+✅ **Регистрация студента** — через @cross_bot → Mini App → автоматический Telegram-auth (1 клик, без email/пароля). Друг тестировщика прошёл регистрацию, прошёл блок 1, получил одобрение от admin.
+✅ **Админ-вход** — chat_id 255214568 → автоматическая роль 'admin' в profile → редирект на `/miniapp/admin.html`
+✅ **Telegram webhook** — /start показывает кнопку "✝️ Открыть КРЕСТ" с web_app URL
+✅ **Streak-механика** — пишет в `streak_logs`, обновляет `profiles.streak_count`
+✅ **Отклонение блока с комментарием** — студент получает push, прогресс сбрасывается
+✅ **Cohort auto-join** — студент при входе в блок попадает в малую группу до 12 человек
+✅ **Лендинг** для пасторов на `/` + `/register-church`
+✅ **Cron** — `/api/cron/reset-streaks`, `/api/cron/archive-cohorts` (требуют `CRON_SECRET` в Vercel — пока не установлен)
 
----
+### Новое в этой сессии (27.04, после Plan B)
 
-## Текущий статус
-
-### ✅ Что работает в production
-
-**Лендинг:** `https://krest-platform-web.vercel.app/`
-- Hero "Узнай христианство за 6 недель"
-- 3 блока "Как это работает" (6 блоков / Лидер / Малая группа)
-- Секция для пасторов с CTA "Зарегистрировать церковь"
-- Footer с ссылкой на /login
-
-**Telegram Mini App:** `https://krest-platform-web.vercel.app/miniapp/index.html`
-- Дашборд с 6 блоками + streak counter (🔥)
-- Регистрация: email или Telegram-1-click
-- Вход через Telegram (`tg.initData` HMAC-validated)
-- Блок-flow: видео + форум (3×100 символов) + одобрение лидера
-- Cohort-badge (👥 N человек) на странице урока
-- Test mode `?test=1` (2x speed, 5% threshold)
-
-**Веб-админка пастора:** `https://krest-platform-web.vercel.app/login`
-- Регистрация церкви на `/register-church`
-- После логина → `/admin` (текущий, нужен апдейт)
-- `/admin/students` — список студентов
-
-**Cron-задачи (Vercel Scheduled):**
-- `/api/cron/reset-streaks` (00:00 UTC) — сброс streak >7 дней
-- `/api/cron/archive-cohorts` (01:00 UTC) — архивация cohorts >14 дней
-
-### ✅ Тесты (run on 27.04 от 21:42)
-
-| Тест | Статус |
-|------|--------|
-| Email signup | ✅ User создан, email_confirmed_at установлен |
-| Email duplicate | ✅ 422 |
-| Login | ✅ access_token получен, profile через триггер |
-| Telegram-auth no body | ✅ 400 BAD_REQUEST |
-| Telegram-auth no hash | ✅ 401 INVALID_INIT_DATA |
-| Telegram-auth bad HMAC | ✅ 401 INVALID_HMAC |
-| Все страницы | ✅ 200 (кроме редиректов / → /, /miniapp/ → /miniapp/index.html) |
-| API валидация | ✅ Все возвращают 400 на пустое тело |
+🆕 **In-app редактор блоков** — третья вкладка "Контент" в `/miniapp/admin.html`. Список 6 блоков → клик → модалка с всеми полями (title RU+EN, subtitle, описание, YouTube URL RU+EN, HTML контент, цвет) → save → UPDATE blocks через RLS.
+🆕 **Telegram-only регистрация** — убрана email-форма из Mini App. Единственный путь — `/api/miniapp/telegram-auth` с HMAC-валидацией.
+🆕 **Auto-confirm email** — `mailer_autoconfirm: true` в Supabase config. Resend rate limit обойдён.
+🆕 **Whitelist админов** — `ADMIN_TELEGRAM_CHAT_IDS` env (default: `255214568`). При регистрации через TG автоматически назначается role='admin'.
+🆕 **tg.close() при logout** — выход из Mini App вместо редиректа (иначе автологин циклил).
 
 ---
 
 ## База данных (Supabase)
 
-**Project ref:** `aejhlmoydnhgedgfndql`
+**Project ref:** `aejhlmoydnhgedgfndql` | **14 таблиц** | **14 миграций применено**
 
-**Применено миграций:** 14
+**Auth конфиг (через Supabase Management API):**
+- `mailer_autoconfirm: true` — без email-подтверждения
+- Триггер `handle_new_user` создаёт profile при INSERT в `auth.users`
 
-**Таблицы (14):**
-- `profiles` — расширен 25 колонками (telegram_chat_id, church_id, streak_count, etc.)
-- `blocks`, `lessons`, `student_progress`, `journal_entries`, `bible_verses`
-- `uploads`, `weekly_submissions`
-- `streak_logs` — лог дневной активности
-- `churches` — B2B-партнёры с invite_token
-- `cohorts` + `cohort_members` — малые группы (auto-cohort до 12)
-- `block_rejections` — история отклонений с комментариями
-- `notifications_log` — лог push/email
-
-### Auth конфиг (через Supabase Management API)
-- `mailer_autoconfirm: true` — письма не отправляются, пользователи сразу подтверждены
-- `disable_signup: false` — открытая регистрация
-- `password_min_length: 6`
+**Whitelist админов:** chat_id 255214568 (Михаил)
 
 ---
 
 ## API Routes (Next.js)
 
-### Авторизация и регистрация
-- `POST /api/miniapp/telegram-auth` 🆕 — Telegram WebApp 1-click auth (HMAC-validated)
-- `POST /api/admin/church/register` — регистрация церкви + пастора
+### Auth
+- `POST /api/miniapp/telegram-auth` — HMAC-validated Telegram WebApp auth, создаёт user + session
+- `POST /api/admin/church/register` — B2B регистрация церкви
 
 ### Mini App
-- `POST /api/miniapp/notify` — уведомление лидеру при форуме
-- `POST /api/miniapp/notify-rejection` — отклонение блока с комментарием
-- `POST /api/miniapp/notify-registration` — уведомление admin о новом
+- `POST /api/miniapp/notify` — push лидеру при отправке форума
+- `POST /api/miniapp/notify-rejection` — push студенту при отклонении блока
+- `POST /api/miniapp/notify-registration` — push админам о новом студенте
 - `POST /api/miniapp/streak` — Streak механика
 - `POST /api/miniapp/cohort` — Auto-cohort малых групп
 
 ### Admin
 - `POST /api/admin/approve` — одобрение блока
-- `POST /api/admin/cohort/setup-telegram` — привязать Telegram-чат к cohort
+- `POST /api/admin/cohort/setup-telegram` — привязка Telegram-чата к cohort
 - `POST /api/student/journal` — сохранение форума
-- `POST /api/telegram/webhook` — Telegram bot webhook
+- `POST /api/telegram/webhook` — Telegram bot webhook (с inline кнопкой "✝️ Открыть КРЕСТ")
 - `POST /api/auth/logout`
 
-### Cron (защищены через `Bearer ${CRON_SECRET}` если установлен)
+### Cron (`Bearer ${CRON_SECRET}` если установлен)
 - `GET /api/cron/reset-streaks` — daily 00:00 UTC
 - `GET /api/cron/archive-cohorts` — daily 01:00 UTC
 
 ---
 
-## Команда субагентов (все обновлены 27.04)
+## Команда субагентов (актуальна)
 
 | Агент | Модель | Зона |
 |-------|--------|------|
-| `database-architect` | Opus | Supabase schema, миграции, RLS |
-| `backend-engineer` 🆕 | Sonnet | Next.js API routes, Server Actions |
+| `database-architect` | Opus | Schema, миграции, RLS |
+| `backend-engineer` | Sonnet | Next.js API routes |
 | `frontend-developer` | Sonnet | Vanilla miniapp + Next.js admin |
-| `content-manager` | Sonnet | 6 блоков, RU/EN |
-| `qa-reviewer` | Sonnet (БЕЗ Write) | 8 категорий проверки |
-| `agent-architect` | Opus | Координация, деплой |
+| `content-manager` | Sonnet | Контент 6 блоков |
+| `qa-reviewer` | Sonnet (без Write) | Проверка |
+| `agent-architect` | Opus | Координация |
 
 ## Скиллы (10)
 
-`/add-new-block`, `/run-migration`, `/run-qa-review`, `/create-migration`, `/implement-feature`, `/supabase`, `/supabase-postgres-best-practices`, `/deploy` 🆕, `/handoff` 🆕, `/feature-spec` 🆕
+`/add-new-block`, `/run-migration`, `/run-qa-review`, `/create-migration`, `/implement-feature`, `/supabase`, `/supabase-postgres-best-practices`, `/deploy`, `/handoff`, `/feature-spec`
 
 ---
 
-## Структура проекта
+## Структура
 
 ```
-/
-├── 9 MD-файлов в корне: CLAUDE.md, PROJECT_IDEA.md, SPEC.md, UI_UX_BRIEF.md,
-│   SPEC_TEMPLATE.md, CREST.md, METHODOLOGY.md, START_HERE.md, HANDOVER.md
+/  (9 MD: CLAUDE, PROJECT_IDEA, SPEC, UI_UX_BRIEF, SPEC_TEMPLATE, CREST, METHODOLOGY, START_HERE, HANDOVER)
 ├── apps/web/
+│   ├── public/miniapp/              # Vanilla Mini App: index, lesson, admin, profile, trainer, setup
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── api/...              # 13 routes
+│   │   │   ├── api/                 # 13 routes (см. выше)
 │   │   │   ├── (admin)/admin/, student/, login/, register-church/
-│   │   │   └── page.tsx              # 🆕 публичный лендинг
-│   │   ├── lib/, hooks/
-│   │   └── middleware.ts
-│   ├── public/miniapp/               # Vanilla Telegram Mini App
-│   ├── vercel.json                   # Cron schedule
+│   │   │   └── page.tsx             # Публичный лендинг
+│   │   ├── lib/, hooks/, middleware.ts
+│   │   └── vercel.json              # Cron schedule
 │   └── package.json
-├── supabase/migrations/              # 14 миграций
-├── .claude/
-│   ├── agents/                       # 6 агентов
-│   ├── rules/                        # 5 правил
-│   └── skills/                       # 10 скиллов
-└── docs/
-    ├── spec-first/                   # 01 + 02 артефакты
-    ├── course-toolkit/               # 19 шаблонов курса Алекса
-    ├── legacy/, research/
+├── supabase/migrations/             # 14 миграций
+├── .claude/{agents,rules,skills}/
+└── docs/{spec-first,course-toolkit,legacy,research}/
 ```
 
 ---
@@ -164,56 +110,49 @@
 |------|-------|-----------|
 | Постоянный admin | sleezard@gmail.com | memory/admin_credentials.md |
 | Telegram bot | @cross_bot | env: TELEGRAM_BOT_TOKEN |
-
-**Studento-тестовик:** не нужен — можно зарегаться через Telegram WebApp в 1 клик или через email на `/miniapp/index.html`.
-
----
-
-## Vercel env vars (из `/api/debug-env` диагностики ранее)
-
-| Var | Status |
-|-----|--------|
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ PRESENT |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ PRESENT |
-| `SUPABASE_SERVICE_ROLE_KEY` | ⚠️ PRESENT but contains publishable key (sb_publi...), not JWT — нужно обновить если понадобятся auth.admin API |
-| `TELEGRAM_BOT_TOKEN` | ✅ PRESENT |
-| `RESEND_API_KEY` | ⚠️ Не проверено (Resend упёрся в rate limit, но через mailer_autoconfirm нам не нужен) |
-| `CRON_SECRET` | ❌ MISSING — добавить чтобы защитить cron-endpoints |
-| `NEXT_PUBLIC_SITE_URL` | (опционально, default krest-platform-web.vercel.app) |
+| Webhook | https://krest-platform-web.vercel.app/api/telegram/webhook | settled |
 
 ---
 
-## TODO для следующей сессии
+## Что осталось (для следующих сессий)
 
 ### Высокий приоритет
-1. **Реальный тест Telegram-auth** — войти в @cross_bot, нажать "Open App", проверить что 1-click регистрация работает
-2. **UI пастора `/admin/cohorts`** — список своих cohorts с возможностью привязать Telegram-чат
-3. **Обновить `SUPABASE_SERVICE_ROLE_KEY` в Vercel** — взять правильный JWT из Supabase Dashboard → Settings → API
+1. **Реалистичный лендинг** — текущий `/` готов, но нужен реальный контент с фото/видео/отзывами
+2. **CRON_SECRET в Vercel** — сейчас cron открыт публично
 
 ### Средний (post-MVP)
-4. Email digest для лидера через Resend (weekly summary активности)
-5. UI редактора контента блоков для пастора
-6. Полноценная админ-панель `/admin` (сейчас базовая)
+3. Email digest для лидера через Resend (weekly summary активности)
+4. UI пастора `/admin/cohorts` в Next.js (управление малыми группами)
+5. Конструктор уроков (lessons внутри блоков), сейчас редактируется только верхний уровень `blocks`
 
 ### Низкий (post-валидация)
-7. ЮKassa подписки (после 5+ платящих церквей)
-8. AI-ассистент лидера
-9. Path of Salvation — следующий курс после КРЕСТ
+6. ЮKassa подписки
+7. AI-ассистент лидера
+8. Path of Salvation — следующий курс
+
+---
+
+## 🚧 ПРИОРИТЕТ СЛЕДУЮЩЕЙ СЕССИИ
+
+Михаил планирует **переосмыслить контент** платформы:
+- Архитектура остаётся (Telegram Mini App + Supabase + 6 блоков)
+- Контент будет другой — будет загружать материалы для пересборки
+- Возможна модернизация UI/UX блоков под новый контент
+
+**План:** дождаться материалов от Михаила → проанализировать → предложить структуру контента → обновить через in-app редактор или миграцию `content.sql`.
 
 ---
 
 ## Контекст принятых решений
 
 - **Двойная архитектура (Next.js + Vanilla)** — Telegram WebView плохо работает с Next.js SSR
-- **mailer_autoconfirm=true** — обход Resend rate limit (100 emails/day free tier). Email теперь не нужен для регистрации
-- **Telegram-auth через HMAC** — безопасная 1-click регистрация без email и пароля для пользователей
-- **Тех. email `tg{id}@krest.local`** — для Telegram-пользователей создаётся автоматически, никогда не используется как реальный
-- **Детерминированный пароль** для Telegram-пользователей — `HMAC(BOT_TOKEN, "tg-pwd-{id}")` — пользователь не вводит, сервер знает как залогинить
-- **Streak Catch Me Up при 2-7 дней пропуска** — серия не сбрасывается (Bible.com style)
+- **mailer_autoconfirm=true** — обход Resend rate limit
+- **Telegram-only auth** — единственный путь регистрации, без email/пароля
+- **Whitelist админов** — chat_id-based, без email-логики
+- **Streak Catch Me Up при 2-7 дней пропуска** — Bible.com style
 - **Auto-cohort до 12 человек** — Alpha Course style
 - **B2B-монетизация только** — студентам всегда бесплатно
-- **Telegram Bot НЕ создаёт группы программно** — это ограничение API. Пастор создаёт сам, привязывает chat_id через `/api/admin/cohort/setup-telegram`
-- **Cron через Vercel** — не Edge Functions (запрет в CLAUDE.md)
+- **`SUPABASE_SERVICE_ROLE_KEY` в Vercel = publishable key** (баг env), не настоящий JWT — поэтому используем anon flow + mailer_autoconfirm
 
 ---
 
@@ -221,16 +160,14 @@
 
 1. **`HANDOVER.md`** (этот файл)
 2. **`CLAUDE.md`** (всегда автоматически)
-3. **`SPEC.md`** — если работаем над новой фичей
-4. **`memory/MEMORY.md`** — индекс памяти
+3. **`memory/MEMORY.md`** — индекс памяти
 
 Команды быстрого старта:
 ```bash
 git status && git log --oneline -10
 mcp__supabase__list_migrations
-curl -s https://krest-platform-web.vercel.app/api/debug-env  # удалён, см. memory
 ```
 
 ---
 
-*Версия 3.0 | 2026-04-27 21:45 UTC | После Plan B + auth-fixes + Telegram-auth + лендинг*
+*Версия 4.0 | 2026-04-27 11:00 UTC | После in-app content editor + Telegram-only auth*
