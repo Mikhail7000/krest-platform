@@ -152,21 +152,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Список Telegram chat_id админов (платформа КРЕСТ)
+    const ADMIN_CHAT_IDS = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
+      .split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n))
+    const isAdmin = ADMIN_CHAT_IDS.includes(tgId)
+
     // Обновляем профиль с telegram_chat_id и доп. полями (RLS требует session=своего юзера)
     const supaWithSession = createClient(SUPA_URL, SERVICE_KEY, {
       global: { headers: { Authorization: `Bearer ${session.access_token}` } },
     })
+    const profileUpdate: Record<string, unknown> = {
+      full_name: fullName,
+      telegram_chat_id: tgId,
+      church_id: churchId,
+      nastavnik_id: nastavnikId,
+      referral_source: 'telegram',
+      contact_info: tgUser.username ? `@${tgUser.username}` : null,
+      onboarding_done: true,
+    }
+    // Админ через Telegram → ставим role='admin'
+    if (isAdmin) profileUpdate.role = 'admin'
+
     const { error: updateErr } = await supaWithSession
       .from('profiles')
-      .update({
-        full_name: fullName,
-        telegram_chat_id: tgId,
-        church_id: churchId,
-        nastavnik_id: nastavnikId,
-        referral_source: 'telegram',
-        contact_info: tgUser.username ? `@${tgUser.username}` : null,
-        onboarding_done: true,
-      })
+      .update(profileUpdate)
       .eq('id', userId)
     if (updateErr) {
       console.error('profile update failed:', updateErr)
