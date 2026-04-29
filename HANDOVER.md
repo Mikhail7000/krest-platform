@@ -1,173 +1,169 @@
 # HANDOVER — КРЕСТ
-> Дата: 2026-04-27 11:00 UTC | Сессия: Spec-First + cron + B2B + Telegram-only auth + in-app content editor
+> Дата: 2026-04-29 | Сессия: пересборка под 10 блоков + новая модель урока (9 заданий) — спека готова, реализация на паузе
 
 ---
 
-## 🎯 Что сейчас работает в production
+## 🎯 Главное
 
-**URL:** `https://krest-platform-web.vercel.app/`
+Михаил **полностью переосмыслил курс**. Это не просто залив контента, а **архитектурная перестройка**:
 
-### Реально протестированные сценарии
+1. **6 блоков → 10 блоков**, заголовки строго как в чате «КРЕСТ КАПСУЛА» (см. ниже).
+2. **Полный wipe** старого учебного контента (видео, конспекты, стихи).
+3. **Новая модель урока:** не «видео → форум», а **9-этапная неделя домашних заданий** с куратором (см. `docs/spec-first/03-block1-maly-krest.md`).
+4. **Видео:** YouTube unlisted + кастомный плеер с overlay (нельзя уйти на youtube.com). No-skip только при **первом просмотре**, после — обычная перемотка.
+5. **Кураторы (= лидеры):** мульти-админы, привязка ученик↔куратор, workflow одобрения по каждому submission.
+6. **Submission'ы разных типов:** текст, фото, видеокружки (single-take через MediaRecorder), аудио, ежедневные чекины.
+7. **Gate перехода блока:** одобрение нескольких ключевых пунктов куратором, после — поздравительный push с конспектом следующего блока.
+8. **Веб-сайт фич-парити** с miniapp.
+9. **Двусторонний чат** ученик↔куратор.
+10. **ИИ-тренажёр стихов** с допуском опечаток (Anthropic API).
+11. Платформа — **только русский** на этом этапе. EN-инфраструктура остаётся, переключатель скрывается.
 
-✅ **Регистрация студента** — через @cross_bot → Mini App → автоматический Telegram-auth (1 клик, без email/пароля). Друг тестировщика прошёл регистрацию, прошёл блок 1, получил одобрение от admin.
-✅ **Админ-вход** — chat_id 255214568 → автоматическая роль 'admin' в profile → редирект на `/miniapp/admin.html`
-✅ **Telegram webhook** — /start показывает кнопку "✝️ Открыть КРЕСТ" с web_app URL
-✅ **Streak-механика** — пишет в `streak_logs`, обновляет `profiles.streak_count`
-✅ **Отклонение блока с комментарием** — студент получает push, прогресс сбрасывается
-✅ **Cohort auto-join** — студент при входе в блок попадает в малую группу до 12 человек
-✅ **Лендинг** для пасторов на `/` + `/register-church`
-✅ **Cron** — `/api/cron/reset-streaks`, `/api/cron/archive-cohorts` (требуют `CRON_SECRET` в Vercel — пока не установлен)
+**Полная спека Блока 1 (шаблон для остальных):** `docs/spec-first/03-block1-maly-krest.md` — 12 секций, обязательно прочитать в начале сессии.
 
-### Новое в этой сессии (27.04, после Plan B)
-
-🆕 **In-app редактор блоков** — третья вкладка "Контент" в `/miniapp/admin.html`. Список 6 блоков → клик → модалка с всеми полями (title RU+EN, subtitle, описание, YouTube URL RU+EN, HTML контент, цвет) → save → UPDATE blocks через RLS.
-🆕 **Telegram-only регистрация** — убрана email-форма из Mini App. Единственный путь — `/api/miniapp/telegram-auth` с HMAC-валидацией.
-🆕 **Auto-confirm email** — `mailer_autoconfirm: true` в Supabase config. Resend rate limit обойдён.
-🆕 **Whitelist админов** — `ADMIN_TELEGRAM_CHAT_IDS` env (default: `255214568`). При регистрации через TG автоматически назначается role='admin'.
-🆕 **tg.close() при logout** — выход из Mini App вместо редиректа (иначе автологин циклил).
+**Контент Блока 1** (видео URL, аудио, PDF, транскрипция) — Михаил **ещё не передал**. Спросить в начале сессии.
 
 ---
 
-## База данных (Supabase)
+## ⏸ Статус на конец этой сессии
 
-**Project ref:** `aejhlmoydnhgedgfndql` | **14 таблиц** | **14 миграций применено**
+Михаил сказал: «Я вернусь позже, подумаю». Реализация **на паузе** — ждём решения:
+- Стартовать Этап 0 (фундамент: миграция 6→10 + wipe + плеер) **без** контента
+- Или ждать когда Михаил пришлёт все материалы Блока 1 и стартовать целиком
 
-**Auth конфиг (через Supabase Management API):**
-- `mailer_autoconfirm: true` — без email-подтверждения
-- Триггер `handle_new_user` создаёт profile при INSERT в `auth.users`
-
-**Whitelist админов:** chat_id 255214568 (Михаил)
+**В новой сессии:** прочитать [docs/spec-first/03-block1-maly-krest.md](docs/spec-first/03-block1-maly-krest.md), уточнить решение, не начинать кодить без подтверждения. Спека уже зафиксирована — не переписывать, только править по запросу.
 
 ---
 
-## API Routes (Next.js)
+## 📚 10 блоков курса (точные заголовки)
 
-### Auth
-- `POST /api/miniapp/telegram-auth` — HMAC-validated Telegram WebApp auth, создаёт user + session
-- `POST /api/admin/church/register` — B2B регистрация церкви
+| № | Заголовок (ru) | ДЗ |
+|---|---|---|
+| 1 | МАЛЫЙ КРЕСТ | 24.03.26 |
+| 2 | ПРИНЦИП СОТВОРЕНИЯ | 02.04.26 |
+| 3 | КОРЕННАЯ ПРОБЛЕМА | 08.04.26 |
+| 4 | СОСТОЯНИЕ МИРА | 08.04.26 |
+| 5 | СОСТОЯНИЕ НЕВЕРУЮЩЕГО | 22.04.26 |
+| 6 | УСИЛИЯ ЧЕЛОВЕКА | 08.04.26 |
+| 7 | ОБЕТОВАНИЯ И ИСПОЛНЕНИЕ | 08.04.26 |
+| 8 | ИИСУС ХРИСТОС | 08.04.26 |
+| 9 | БЛАГОСЛОВЕНИЯ ВЕРУЮЩЕГО | 08.04.26 |
+| 10 | 5 УВЕРЕННОСТЕЙ | 08.04.26 |
 
-### Mini App
-- `POST /api/miniapp/notify` — push лидеру при отправке форума
-- `POST /api/miniapp/notify-rejection` — push студенту при отклонении блока
-- `POST /api/miniapp/notify-registration` — push админам о новом студенте
-- `POST /api/miniapp/streak` — Streak механика
-- `POST /api/miniapp/cohort` — Auto-cohort малых групп
-
-### Admin
-- `POST /api/admin/approve` — одобрение блока
-- `POST /api/admin/cohort/setup-telegram` — привязка Telegram-чата к cohort
-- `POST /api/student/journal` — сохранение форума
-- `POST /api/telegram/webhook` — Telegram bot webhook (с inline кнопкой "✝️ Открыть КРЕСТ")
-- `POST /api/auth/logout`
-
-### Cron (`Bearer ${CRON_SECRET}` если установлен)
-- `GET /api/cron/reset-streaks` — daily 00:00 UTC
-- `GET /api/cron/archive-cohorts` — daily 01:00 UTC
+Подтверждено Михаилом: «10-й — 5 уверенностей. Все надо переделать так, как в чате. Подзаголовки такие же.»
 
 ---
 
-## Команда субагентов (актуальна)
+## 🛠 11 этапов реализации (по порядку, итерациями)
+
+Полностью описаны в `docs/spec-first/03-block1-maly-krest.md` (раздел 12). Краткий чек-лист:
+
+| Этап | Что | Готово? |
+|------|-----|---------|
+| 0 | Миграция 6→10 блоков + wipe + кастомный плеер с overlay + `first_watch_completed` | ⬜ |
+| 1 | Расширение ролей + назначение админов/кураторов + `profiles.curator_id` | ⬜ |
+| 2 | Ресурсы Блока 1 (видео + аудио + PDF + гайд + стихи) | ⬜ ждём контент |
+| 3 | Структура `assignments` + `submissions` + UI 9 карточек ДЗ | ⬜ |
+| 4 | Submission: текст + фото (Пункты 2, 3, 7, 8, 9) | ⬜ |
+| 5 | Submission: видео-кружки через MediaRecorder (Пункты 4, 6) | ⬜ |
+| 6 | UI куратора: одобрить/отказать/вернуть/коммент/оценка + push | ⬜ |
+| 7 | Gate: 5 одобренных пунктов → unlock следующего блока + поздравление | ⬜ |
+| 8 | Двусторонний чат ученик↔куратор | ⬜ |
+| 9 | ИИ-тренажёр стихов (Anthropic API, допуск опечаток) | ⬜ |
+| 10 | Веб-сайт фич-парити (`/student/block/{n}`) | ⬜ |
+| 11 | Заливка контента блоков 2-10 | ⬜ |
+
+**Не пытаться сделать всё сразу.** Михаил профи и просил «скрупулёзный профессиональный подход».
+
+---
+
+## 🆕 Концептуальные новинки (то, чего раньше не было)
+
+1. **9-этапное ДЗ на неделю**, не «один форум на блок»
+2. **No-skip снимается после 1-го просмотра** (`first_watch_completed`)
+3. **Несколько типов submission:** текст, фото, видеокружок (single-take), ежедневный чекин
+4. **Workflow куратора:** одобрить / отказать / вернуть / коммент / оценка
+5. **Привязка ученик↔куратор** (`profiles.curator_id`)
+6. **Назначение админов из UI** (root admin → дополнительные admin → curator)
+7. **Ежедневные задания** (молитва, переписывание, отчёт) — продолжаются и после открытия следующего блока
+8. **Видеокружки в miniapp** через `MediaRecorder` (нативный Telegram videoMessage из WebApp **недоступен**)
+9. **Видео-вступление** перед Блоком 1
+10. **Поздравительный push** при открытии следующего блока с конспектом
+
+---
+
+## ✅ Что работает сейчас в production
+
+URL: `https://krest-platform-web.vercel.app/`
+
+- Регистрация студента через @cross_bot → Mini App (Telegram-auth, 1 клик)
+- Админ-вход (whitelist chat_id 255214568)
+- Telegram webhook
+- Streak-механика
+- Отклонение блока с комментарием
+- Cohort auto-join до 12 человек
+- Лендинг `/` + `/register-church`
+- Cron `reset-streaks`, `archive-cohorts` (CRON_SECRET ещё не установлен)
+- In-app редактор блоков (3-я вкладка `/miniapp/admin.html`)
+
+---
+
+## 🗄 База данных
+
+**Project ref:** `aejhlmoydnhgedgfndql` | 14 таблиц | 14 миграций
+
+После следующей сессии будет +1 миграция (6→10 блоков + wipe контента).
+
+**Auth:** `mailer_autoconfirm: true`, триггер `handle_new_user`, whitelist админов в env.
+
+---
+
+## 👤 Активные аккаунты
+
+| Роль | Identifier | Где креды |
+|------|------------|-----------|
+| Постоянный admin | sleezard@gmail.com / chat_id 255214568 | memory/admin_credentials.md |
+| Telegram bot | @cross_bot | env: TELEGRAM_BOT_TOKEN |
+| Webhook | `/api/telegram/webhook` | настроен |
+
+---
+
+## 🧠 Контекст принятых решений (на сегодня)
+
+- **10 блоков** (не 6) — структура курса от автора, заголовки строго как в Telegram-капсуле
+- **Полная замена контента** — старый учебный материал больше не используется
+- **Только русский** — английский отдельной фазой с отдельными материалами
+- **YouTube unlisted + кастомный плеер** — никаких ссылок на youtube.com из плеера
+- **Двойная архитектура (Next.js + Vanilla)** — Telegram WebView плохо работает с SSR
+- **Telegram-only auth** — без email-форм
+- **Whitelist админов** — chat_id-based
+- **B2B-монетизация только** — студентам всегда бесплатно
+
+---
+
+## 📂 Что прочитать первым в новой сессии
+
+1. **`HANDOVER.md`** (этот файл) — старт всегда отсюда
+2. **`CLAUDE.md`** (загружается автоматически)
+3. **`memory/MEMORY.md`** — индекс долгой памяти
+
+```bash
+git status && git log --oneline -5
+```
+
+---
+
+## 🤖 Команда субагентов
 
 | Агент | Модель | Зона |
 |-------|--------|------|
-| `database-architect` | Opus | Schema, миграции, RLS |
-| `backend-engineer` | Sonnet | Next.js API routes |
-| `frontend-developer` | Sonnet | Vanilla miniapp + Next.js admin |
-| `content-manager` | Sonnet | Контент 6 блоков |
-| `qa-reviewer` | Sonnet (без Write) | Проверка |
+| `database-architect` | Opus | Миграция 6→10, wipe контента |
+| `backend-engineer` | Sonnet | API routes, Telegram уведомления |
+| `frontend-developer` | Sonnet | Кастомный плеер, форум 4-полей, чат |
+| `content-manager` | Sonnet | Заливка контента блоков |
+| `qa-reviewer` | Sonnet | Проверка lesson flow + новый плеер |
 | `agent-architect` | Opus | Координация |
 
-## Скиллы (10)
-
-`/add-new-block`, `/run-migration`, `/run-qa-review`, `/create-migration`, `/implement-feature`, `/supabase`, `/supabase-postgres-best-practices`, `/deploy`, `/handoff`, `/feature-spec`
-
 ---
 
-## Структура
-
-```
-/  (9 MD: CLAUDE, PROJECT_IDEA, SPEC, UI_UX_BRIEF, SPEC_TEMPLATE, CREST, METHODOLOGY, START_HERE, HANDOVER)
-├── apps/web/
-│   ├── public/miniapp/              # Vanilla Mini App: index, lesson, admin, profile, trainer, setup
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── api/                 # 13 routes (см. выше)
-│   │   │   ├── (admin)/admin/, student/, login/, register-church/
-│   │   │   └── page.tsx             # Публичный лендинг
-│   │   ├── lib/, hooks/, middleware.ts
-│   │   └── vercel.json              # Cron schedule
-│   └── package.json
-├── supabase/migrations/             # 14 миграций
-├── .claude/{agents,rules,skills}/
-└── docs/{spec-first,course-toolkit,legacy,research}/
-```
-
----
-
-## Активные аккаунты
-
-| Роль | Email | Где креды |
-|------|-------|-----------|
-| Постоянный admin | sleezard@gmail.com | memory/admin_credentials.md |
-| Telegram bot | @cross_bot | env: TELEGRAM_BOT_TOKEN |
-| Webhook | https://krest-platform-web.vercel.app/api/telegram/webhook | settled |
-
----
-
-## Что осталось (для следующих сессий)
-
-### Высокий приоритет
-1. **Реалистичный лендинг** — текущий `/` готов, но нужен реальный контент с фото/видео/отзывами
-2. **CRON_SECRET в Vercel** — сейчас cron открыт публично
-
-### Средний (post-MVP)
-3. Email digest для лидера через Resend (weekly summary активности)
-4. UI пастора `/admin/cohorts` в Next.js (управление малыми группами)
-5. Конструктор уроков (lessons внутри блоков), сейчас редактируется только верхний уровень `blocks`
-
-### Низкий (post-валидация)
-6. ЮKassa подписки
-7. AI-ассистент лидера
-8. Path of Salvation — следующий курс
-
----
-
-## 🚧 ПРИОРИТЕТ СЛЕДУЮЩЕЙ СЕССИИ
-
-Михаил планирует **переосмыслить контент** платформы:
-- Архитектура остаётся (Telegram Mini App + Supabase + 6 блоков)
-- Контент будет другой — будет загружать материалы для пересборки
-- Возможна модернизация UI/UX блоков под новый контент
-
-**План:** дождаться материалов от Михаила → проанализировать → предложить структуру контента → обновить через in-app редактор или миграцию `content.sql`.
-
----
-
-## Контекст принятых решений
-
-- **Двойная архитектура (Next.js + Vanilla)** — Telegram WebView плохо работает с Next.js SSR
-- **mailer_autoconfirm=true** — обход Resend rate limit
-- **Telegram-only auth** — единственный путь регистрации, без email/пароля
-- **Whitelist админов** — chat_id-based, без email-логики
-- **Streak Catch Me Up при 2-7 дней пропуска** — Bible.com style
-- **Auto-cohort до 12 человек** — Alpha Course style
-- **B2B-монетизация только** — студентам всегда бесплатно
-- **`SUPABASE_SERVICE_ROLE_KEY` в Vercel = publishable key** (баг env), не настоящий JWT — поэтому используем anon flow + mailer_autoconfirm
-
----
-
-## Что прочитать первым в новой сессии
-
-1. **`HANDOVER.md`** (этот файл)
-2. **`CLAUDE.md`** (всегда автоматически)
-3. **`memory/MEMORY.md`** — индекс памяти
-
-Команды быстрого старта:
-```bash
-git status && git log --oneline -10
-mcp__supabase__list_migrations
-```
-
----
-
-*Версия 4.0 | 2026-04-27 11:00 UTC | После in-app content editor + Telegram-only auth*
+*Версия 5.0 | 2026-04-28 23:00 MSK | Пересборка курса под 10 блоков*

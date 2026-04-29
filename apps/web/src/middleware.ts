@@ -23,14 +23,41 @@ function createMiddlewareSupabase(request: NextRequest) {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Miniapp static files — bypass auth entirely
+  // Miniapp static files — bypass auth entirely (внутренний JS-гейт по chat_id)
   if (pathname.startsWith('/miniapp/')) {
     return NextResponse.next()
   }
 
-  // API routes — handle their own auth (or operate with service role)
+  // API routes — handle their own auth (или service role)
   if (pathname.startsWith('/api/')) {
     return NextResponse.next()
+  }
+
+  // Maintenance gate — блокирует весь Next.js фронтенд кроме /maintenance
+  // Bypass: query ?bypass=<MAINTENANCE_BYPASS_TOKEN> ставит cookie crest_bypass
+  const MAINTENANCE_ON = process.env.MAINTENANCE_MODE === 'true'
+  if (MAINTENANCE_ON && pathname !== '/maintenance') {
+    const expected = process.env.MAINTENANCE_BYPASS_TOKEN || ''
+    const queryToken = request.nextUrl.searchParams.get('bypass') || ''
+    const cookieToken = request.cookies.get('crest_bypass')?.value || ''
+
+    const allowed = expected !== '' && (queryToken === expected || cookieToken === expected)
+
+    if (allowed) {
+      const res = NextResponse.next()
+      if (queryToken === expected && cookieToken !== expected) {
+        res.cookies.set('crest_bypass', expected, {
+          path: '/',
+          httpOnly: true,
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 30,
+          secure: true,
+        })
+      }
+      return res
+    }
+
+    return NextResponse.redirect(new URL('/maintenance', request.url))
   }
 
   const { supabase, supabaseResponse } = createMiddlewareSupabase(request)
