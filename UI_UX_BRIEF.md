@@ -1,103 +1,133 @@
-# КРЕСТ — UI/UX Brief
+# КРЕСТ — UI/UX Brief v3.0
 
-> Версия: 1.0 | Дата: 2026-04-26
-> Дизайн-система для всех экранов: Telegram Mini App + Next.js веб-админка.
+> Версия: 3.0 | Дата: 2026-05-01 | Замещает v1.0 полностью.
+> Дизайн-система для лендинга, Telegram MiniApp и веб-админки. Один Next.js проект, три аудитории.
 
 ---
 
-## 1. Общее описание интерфейса
+## 1. Концепция и tone of voice
 
-### Концепция
-**"Тёплый минимализм с золотым акцентом"** — иконы как духовный визуальный код, navy-фон как небо/глубина, золото как свет/благодать. Не агрессивный современный, не древний православный стиль. Дружественный, спокойный, ведущий.
+### Стиль одной фразой
+
+**«Современный минимализм с премиальным wow-моментом в hero. Без тени церковной эстетики».**
+
+### Что ДА
+
+- Светлый, чистый, просторный
+- Премиальные тёмные акценты (как «оазисы» внутри светлого сайта)
+- Крупная выразительная типографика
+- Плавные анимации Framer Motion
+- Cursor glow эффект на тёмных секциях (как у superhuman.com)
+- Минимум визуального шума, максимум воздуха
+- Серьёзность через сдержанность, а не пафос
+
+### Что НЕТ
+
+- ❌ Золото / готические шрифты / орнаменты / иконы / арки
+- ❌ Любой намёк на «русский православный сайт»
+- ❌ Стоковые «руки в небо», «закат с крестом», «открытая Библия»
+- ❌ Цвета: насыщенный синий, бордо, церковное золото
+- ❌ Многословные заголовки, длинные параграфы
+
+### Tone of voice (текст в UI)
+
+- **Уважительный, но без пафоса.** Как умный друг, который объясняет важное.
+- **Конкретный, не абстрактный.** «12 пунктов ДЗ» — да. «Путь духовного развития» — нет (или только в одном-двух местах для смыслового акцента).
+- **Прямой, не извинительный.** «Сдай куратору» — да. «Не могли бы вы попробовать сдать вашему куратору?» — нет.
+- **Современный, не архаичный.** Слова «горница», «капсула», «эпоха пятницы» — это терминология **внутри курса** (на дашборде, в задачах), но не на лендинге. Лендинг говорит языком 2026.
 
 ### Целевая аудитория
-- **Технический уровень:** новичок (студенты-ищущие 18-45) и опытный (пасторы 30+)
-- **Устройства:** **mobile-first** (студенты в Telegram), **desktop-friendly** (пасторы за компом)
-- **Контекст использования:** в дороге (студент, 5-15 мин), за рабочим столом (пастор, 30-60 мин)
 
-### Ключевые референсы
+| Аудитория | Где сидит | Что ценит |
+|---|---|---|
+| Ученик-новичок (18-45) | Telegram MiniApp на телефоне в дороге | Быстрая навигация, понятный прогресс, минимум текста |
+| Куратор / лидер горницы | Веб-админка на ноутбуке | Видеть всю группу разом, точечная обратная связь, не залипать в UI |
+| Super-admin (Михаил, Алекс, Эля, Игорь) | Веб-админка | Аналитика, управление городами/ролями, обзор всей платформы |
+| Случайный посетитель лендинга | Браузер | Понять что это за платформа за 10 секунд |
 
-1. **Telegram Wallet** — как Mini App выглядит изнутри, плавность анимаций, привычка пользователя
-2. **Linear** — для веб-админки: чистая навигация, плотность информации без перегруза
-3. **YouVersion (Bible.com)** — типографика для длинных текстов (конспекты), читабельность
-4. **Notion mobile** — карточки, состояния, мягкие тени
+### Главные референсы
+
+| # | Сайт | Что берём |
+|---|---|---|
+| 1 | **superhuman.com** | Primary — премиальный тёмный hero, cursor glow, чистый минимализм |
+| 2 | linear.app | Типографика, плавные scroll-переходы |
+| 3 | vercel.com | Крупные числа, минимальные кнопки |
+| 4 | apple.com/iphone | Wow-параллакс при скролле |
+| 5 | arc.net | Большая типографика в hero |
+
+### Анти-референсы
+
+- Любой сайт прихода с куполами и витражами в шапке
+- Wordpress-темы для церквей с слайдером псалмов
+- Стоковая фотография «верующих с поднятыми руками»
 
 ---
 
-## 2. Цветовая схема
+## 2. Цветовая палитра
 
-### Режим: dark-first (соответствует Telegram theme), с поддержкой light для веб-админки
+### Принцип: **тема C — светлый с тёмными акцентами**
 
-### Основные цвета (Tailwind v4 @theme)
+Основной сайт светлый. Hero лендинга и опциональные «эмоциональные секции» — тёмные оазисы. Темная и светлая темы поддерживаются обе (переключение по системным настройкам пользователя), но светлая — основная.
+
+### Tailwind v4 @theme
 
 ```css
 @theme {
-  /* Бренд-акцент: золото = благодать, свет, ценность */
-  --color-primary: #C9A961;            /* Gold 500 */
-  --color-primary-hover: #B89548;      /* Gold 600 */
-  --color-primary-muted: #C9A96126;    /* Gold с alpha 15% */
+  /* === SURFACES (light, default) === */
+  --color-bg: #FFFFFF;                    /* основной фон страниц */
+  --color-bg-subtle: #FAFAFA;             /* секции-зебры */
+  --color-bg-card: #FFFFFF;               /* карточки */
+  --color-bg-elevated: #F5F5F4;           /* hover, dropdowns */
 
-  /* Вторичный: indigo = небо, глубина, духовное */
-  --color-secondary: #4F46E5;          /* Indigo 600 */
+  /* === SURFACES dark (для hero и dark theme) === */
+  --color-bg-dark: #0A0A0A;               /* тёмный фон */
+  --color-bg-dark-card: #18181B;          /* тёмная карточка */
+  --color-bg-dark-elevated: #27272A;
 
-  /* Фоны */
-  --color-bg: #0A0E1A;                 /* Navy near-black */
-  --color-bg-card: #141828;            /* Карточки на чуть светлее */
-  --color-bg-sidebar: #0F1320;
-  --color-bg-overlay: rgba(10,14,26,0.85); /* для модалок */
+  /* === TEXT === */
+  --color-text: #0A0A0A;                  /* основной текст light */
+  --color-text-muted: #71717A;            /* вторичный, hint */
+  --color-text-on-dark: #FAFAFA;          /* текст на тёмном фоне */
+  --color-text-muted-on-dark: #A1A1AA;
 
-  /* Текст */
-  --color-text: #F5F5F7;               /* Off-white, не чистый */
-  --color-text-muted: #8E8E93;         /* iOS-style hint */
-  --color-text-inverse: #0A0E1A;       /* для золотых кнопок */
+  /* === BORDERS === */
+  --color-border: #E5E5E5;                /* light */
+  --color-border-strong: #D4D4D4;
+  --color-border-on-dark: #27272A;
 
-  /* Статусы */
-  --color-success: #34C759;            /* iOS Green */
-  --color-warning: #FF9F0A;            /* Amber */
-  --color-error: #FF3B30;              /* iOS Red */
-  --color-info: #0A84FF;               /* iOS Blue */
+  /* === ACCENT (минимальный, нейтральный) === */
+  --color-accent: #18181B;                /* почти чёрный — это и есть «акцент» в минимализме */
+  --color-accent-hover: #000000;
+  --color-accent-on-dark: #FAFAFA;        /* белый акцент на тёмном */
 
-  /* Границы */
-  --color-border: rgba(255,255,255,0.08);
-  --color-border-hover: rgba(201,169,97,0.3); /* gold tint */
+  /* === STATES === */
+  --color-success: #16A34A;               /* зелёный — одобрено, gate пройден */
+  --color-warning: #EAB308;               /* жёлтый — алерт куратора */
+  --color-error: #DC2626;                 /* красный — отклонено, ошибка */
+  --color-info: #0284C7;                  /* синий — info, inline help */
 
-  /* Tailwind v4 синтаксис */
-  --shadow-card: 0 4px 20px rgba(0,0,0,0.3);
-  --shadow-elevated: 0 8px 32px rgba(201,169,97,0.15);
+  /* === GLOW (для cursor glow, hero) === */
+  --color-glow: rgba(255, 255, 255, 0.08); /* белое сияние на тёмном */
+  --color-glow-strong: rgba(255, 255, 255, 0.18);
+
+  /* === ELEVATION === */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.10);
+  --shadow-glow-dark: 0 0 80px rgba(255,255,255,0.05);
 }
 ```
 
-### Light theme для веб-админки (override)
+### Принципы использования
 
-```css
-[data-theme="light"] {
-  --color-bg: #FFFFFF;
-  --color-bg-card: #F9FAFB;
-  --color-bg-sidebar: #F3F4F6;
-  --color-text: #1F2937;
-  --color-text-muted: #6B7280;
-  --color-border: #E5E7EB;
-}
-```
+- **Никакого золота, никакого синего пафоса.** Палитра почти монохромная — это и даёт wow через «отсутствие лишнего».
+- **Тёмные секции** — только осознанно (hero, ачивки, transitions). 90% сайта светлое.
+- **Цветовые акценты** появляются точечно для статусов (✅ зелёный, ⚠️ жёлтый, ❌ красный) — не для бренда.
+- **Контраст текста** ≥7:1 на основном фоне (AAA уровень).
 
-### Скругления (Tailwind classes)
+### Тёмная тема (опционально)
 
-| Элемент | Значение | Класс |
-|---------|----------|-------|
-| Кнопки | 10-12px | `rounded-xl` |
-| Карточки | 14-16px | `rounded-2xl` |
-| Инпуты | 10px | `rounded-xl` |
-| Аватарки | 9999px | `rounded-full` |
-| Модалки | 16-20px | `rounded-3xl` |
-| Toast | 10px | `rounded-xl` |
-
-### Glassmorphism (для карточек на дашборде)
-
-```css
-background: rgba(255,255,255,0.06);
-backdrop-filter: blur(10px);
-border: 1px solid rgba(201,169,97,0.15);
-```
+Системная dark-mode поддерживается. Применяется ко всему сайту через `data-theme="dark"`. Hero остаётся тёмным в обеих темах, основной контент инвертируется.
 
 ---
 
@@ -105,115 +135,281 @@ border: 1px solid rgba(201,169,97,0.15);
 
 ### Шрифты
 
-- **Основной:** Inter (sans-serif, 400/500/600/700/800) — для всего UI
-- **Моноширинный:** Geist Mono — для кода, ID, технических полей
+**Один шрифт на всё: Geist Sans** (или Inter, технически взаимозаменяемы).
 
 ```css
-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+font-family: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
 ```
 
-### Размеры (mobile-first)
+Зачем один шрифт — это и есть минимализм. Wow-эффект достигается через **разницу размеров и весов**, не через смешение шрифтов.
 
-| Уровень | Размер | Tailwind | Использование |
-|---------|--------|----------|---------------|
-| H1 страницы | 24-28px / 700 | `text-2xl font-bold` | Заголовок дашборда, лендинга |
-| H2 секции | 18-20px / 700 | `text-lg font-bold` | Заголовок блока, секции |
-| H3 карточки | 15-16px / 600 | `text-base font-semibold` | Название блока в списке |
-| Body | 14-15px / 400 | `text-sm` | Основной текст |
-| Caption | 12-13px / 500 | `text-xs font-medium` | Подписи, даты, статусы |
-| Micro | 10-11px / 700 letterSpacing 0.5 | `text-[11px] tracking-wider uppercase` | Бейджи, теги |
+Опционально для **display-цифр** в hero (237, 5000, 7000, 7000) — Geist Mono или Inter Display variant. Цифры выглядят выразительнее в моноширинном начертании.
 
-### Леттеринг
+### Шкала размеров
 
-- **Заголовки:** `letter-spacing: -0.02em` (стянутые)
-- **Caps/бейджи:** `letter-spacing: 0.05em` (расширенные)
+| Уровень | Размер | Вес | Tailwind | Использование |
+|---|---|---|---|---|
+| **Display XL** | 80-120px | 800 | `text-[120px] font-extrabold tracking-tighter` | Hero «КРЕСТ» |
+| **Display L** | 56-72px | 700 | `text-7xl font-bold tracking-tight` | Заголовки секций лендинга |
+| **Display M** | 40-48px | 700 | `text-5xl font-bold tracking-tight` | H1 страниц админки |
+| **H1** | 28-32px | 700 | `text-3xl font-bold` | Заголовок дашборда, страниц MiniApp |
+| **H2** | 22-24px | 600 | `text-2xl font-semibold` | Заголовки блоков, секций |
+| **H3** | 17-18px | 600 | `text-lg font-semibold` | Заголовки карточек |
+| **Body L** | 16-17px | 400 | `text-base` | Основной текст, описания |
+| **Body** | 14-15px | 400 | `text-sm` | Вторичный текст |
+| **Caption** | 12-13px | 500 | `text-xs font-medium` | Подписи, статусы, даты |
+| **Micro** | 10-11px | 600 | `text-[11px] uppercase tracking-wider font-semibold` | Бейджи, теги |
+
+### Леттеринг (letter-spacing)
+
+- **Display:** `tracking-tighter` (-0.04em) — крупные заголовки выглядят дороже стянутыми
+- **H1-H3:** `tracking-tight` (-0.02em)
+- **Body:** дефолт (0)
+- **Caps/бейджи:** `tracking-wider` (+0.05em)
+
+### Высота строки
+
+- Display: `leading-none` (1.0) или `leading-tight` (1.1)
+- Заголовки: `leading-tight` (1.2)
+- Body: `leading-relaxed` (1.6) — для читаемости длинных текстов (конспекты, транскрипции)
 
 ---
 
-## 4. Лейаут и навигация
-
-### Mini App (mobile-only, ширина устройства)
+## 4. Лейаут — Лендинг (`/`)
 
 ```
-┌─────────────────────────────┐
-│ ← (BackButton от Telegram)  │
-├─────────────────────────────┤
-│ Header                      │
-│ ─ Avatar + Name             │
-│ ─ Streak (🔥 5)             │
-├─────────────────────────────┤
-│ Main Content                │
-│ ─ Прокручиваемая область    │
-│ ─ Карточки блоков           │
-│ ─ Action buttons            │
-├─────────────────────────────┤
-│ Bottom Nav (3 кнопки)       │
-│ Дашборд / Тренажёр / Профиль│
-└─────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  HERO (тёмный, 100vh)                                       │
+│                                                             │
+│  [фоновое изображение: небо + светящийся крест]              │
+│  [cursor glow эффект следует за мышью]                       │
+│                                                             │
+│                       КРЕСТ (Display XL, white)             │
+│                                                             │
+│         Великое Поручение Иисуса Христа                     │
+│             (Body L, muted-on-dark)                         │
+│                                                             │
+│         «Матфея 28:18-20 — Итак идите, научите все народы»  │
+│                                                             │
+│         ─────────────────                                   │
+│                                                             │
+│         237          5000         7000        7000          │
+│         СТРАН    НАРОДНОСТЕЙ    ГОРНИЦ      УЧЕНИКОВ        │
+│                                                             │
+│         [Войти в КРЕСТ]   [Узнать больше →]                 │
+│                                                             │
+│                          ↓ scroll                           │
+└────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  СЕКЦИЯ 1: «Что такое КРЕСТ» (светлая)                      │
+│                                                             │
+│  Display L заголовок                                        │
+│  Body L описание в 2-3 предложения                          │
+│                                                             │
+│  [визуализация: 10 кругов-блоков курса с названиями]         │
+└────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  СЕКЦИЯ 2: «Как это работает» (светлая)                     │
+│                                                             │
+│  3 карточки: Ученик / Куратор / Курс                        │
+│  С иконками Lucide и короткими описаниями                   │
+└────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  СЕКЦИЯ 3: «Видение» (тёмный оазис)                         │
+│                                                             │
+│  Большой текст про 3 курса (КРЕСТ → 10 писем → 20 писем)    │
+│  Cursor glow тоже тут                                       │
+└────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  СЕКЦИЯ 4: «Команда» (светлая)                              │
+│                                                             │
+│  Фото 4 super-admin (Михаил, Алекс, Эля, Игорь)             │
+│  Без названия должностей, просто имена и города             │
+└────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  CTA снизу: «Найти куратора в своём городе» (тёмная)        │
+│  Большая кнопка ведёт в /m/onboarding                       │
+└────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  Footer (минимальный)                                       │
+│  Контакты, ссылки, год                                      │
+└────────────────────────────────────────────────────────────┘
 ```
 
-**Ширина:** 100% viewport (Telegram Mini App автоматически адаптирует).
+### Hero — детали для Midjourney
 
-### Веб-админка (desktop-first, адаптивная)
+**Фоновое изображение:**
 
+Промпт:
 ```
-┌──────────────────────────────────────────────────────┐
-│  Logo КРЕСТ      🔍 Search (⌘K)         👤 Pastor   │
-├──────────┬───────────────────────────────────────────│
-│          │                                          │
-│ Sidebar  │  Main Content                            │
-│ 240px    │                                          │
-│          │  ┌─── Stats (4 карточки) ───┐            │
-│ ─ Дашб.  │  │ Total / Active / ... │  │            │
-│ ─ Студ.  │  └────────────────────────┘            │
-│ ─ Когорт │                                          │
-│ ─ Контнт │  ┌─── Pending Approvals ───┐             │
-│ ─ Профил │  │  Card / Card / Card     │             │
-│          │  └─────────────────────────┘             │
-│          │                                          │
-│ ⚙ Конф.  │                                          │
-└──────────┴──────────────────────────────────────────┘
+Cinematic ethereal sky, soft volumetric clouds, golden rays of sunlight
+breaking through, glowing white cross silhouette at center, peaceful
+atmosphere, dark gradient at edges fading to luminous center,
+photorealistic, 8K, hyper-detailed, no text, no people, no buildings
+--ar 16:9 --v 6 --style raw
 ```
 
-### Mobile-навигация (веб-админка)
+Вариации (если первый не подойдёт):
+- `--style raw → --stylize 750` (более художественный)
+- Заменить `golden` на `silver` (если золото читается как церковное)
+- Заменить `cross silhouette` на `light pillar with cross-shape` (более абстрактно)
 
-- Sidebar **скрыт за бургером** при `< md (768px)`
-- Drawer открывается слева, перекрывает контент
+Сгенерить 6-10 вариантов, выбрать тот, где **крест читается, но не доминирует**. Изображение должно работать как фон под текст, не отвлекать.
+
+**Cursor glow реализация:**
+
+```tsx
+// components/CursorGlow.tsx
+'use client';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+import { useEffect } from 'react';
+
+export function CursorGlow() {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const sx = useSpring(x, { stiffness: 200, damping: 30 });
+  const sy = useSpring(y, { stiffness: 200, damping: 30 });
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { x.set(e.clientX); y.set(e.clientY); };
+    window.addEventListener('mousemove', handler);
+    return () => window.removeEventListener('mousemove', handler);
+  }, [x, y]);
+
+  return (
+    <motion.div
+      className="pointer-events-none fixed inset-0 z-0"
+      style={{
+        background: useTransform([sx, sy], ([cx, cy]) =>
+          `radial-gradient(600px circle at ${cx}px ${cy}px, rgba(255,255,255,0.06), transparent 40%)`
+        ),
+      }}
+    />
+  );
+}
+```
+
+Применяется только на тёмных секциях. Внутри светлых секций cursor glow не делается (там нет смысла).
 
 ---
 
-## 5. Список экранов
+## 5. Лейаут — MiniApp (`/m/*`)
 
-### Telegram Mini App
+Mobile-first, ширина viewport (Telegram Mini App автоматически подгоняет). При открытии в браузере на десктопе — центрируется в колонке max-width 480px.
 
-| # | Экран | Путь | Layout | Состояния |
-|---|-------|------|--------|-----------|
-| 1 | Регистрация / лендинг бота | `/miniapp/index.html` (если не залогинен) | Single column | default, loading, error |
-| 2 | Онбординг | `/miniapp/setup.html` | 3 шага slide | step 1/2/3, loading |
-| 3 | Дашборд студента | `/miniapp/index.html` (если залогинен) | List with cards | loading, data, empty |
-| 4 | Урок | `/miniapp/lesson.html?blockId=N` | Full-width video + form | loading, video, forum, konspekt, approval |
-| 5 | Тренажёр стихов | `/miniapp/trainer.html` | Card stack | loading, exercise, complete |
-| 6 | Профиль | `/miniapp/profile.html` | Form | view, edit, saving |
-| 7 | Админ-панель в Telegram | `/miniapp/admin.html` | Tabs | loading, pending, all, cohorts |
+```
+┌─────────────────────────────────┐
+│ Telegram BackButton (нативный)  │
+├─────────────────────────────────┤
+│ Header                          │
+│   Аватар + имя + город          │
+├─────────────────────────────────┤
+│ Main (scrollable)               │
+│                                 │
+│   [контент экрана]              │
+│                                 │
+├─────────────────────────────────┤
+│ Bottom Nav (4 кнопки)           │
+│ Дашборд • Тренажёр • Чат • Ещё  │
+└─────────────────────────────────┘
+```
 
-### Next.js веб-админка
+«Ещё» открывает sheet с: Профиль / Раздел «Важно» (для curator+) / Настройки / Выход.
 
-| # | Экран | Путь | Layout | Состояния |
-|---|-------|------|--------|-----------|
-| 8 | Лендинг для пасторов | `/` | Marketing pages | static |
-| 9 | Регистрация церкви | `/register-church` | Form | default, validating, success |
-| 10 | Вход | `/login` | Centered form | default, loading, error |
-| 11 | Дашборд лидера | `/admin` | Sidebar + Stats | loading, data |
-| 12 | Список студентов | `/admin/students` | Sidebar + Table | loading, data, filtered, empty |
-| 13 | Малые группы | `/admin/cohorts` | Sidebar + Cards | loading, data, empty |
-| 14 | Редактор контента | `/admin/editor` | Sidebar + Editor | loading, editing, saving |
-| 15 | Профиль | `/admin/profile` | Sidebar + Form | view, edit |
+### Принципы MiniApp
+
+- **Большие тач-таргеты** ≥48px высотой
+- **Минимум текста на экране**, информация раскрывается клик-на-клик
+- **Telegram themeParams** учитываются (тёмная тема в Telegram → MiniApp адаптируется через CSS-переменные)
+- **HapticFeedback** на важных действиях (одобрение, отправка submission, открытие нового блока)
 
 ---
 
-## 6. Библиотека компонентов
+## 6. Лейаут — Веб-админка (`/admin/*`)
 
-### shadcn/ui (для Next.js веб-админки)
+Desktop-first, адаптивная под планшеты. На мобильном sidebar в drawer.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  КРЕСТ        🔍 Search (⌘K)              👤 Имя куратора     │
+├────────────┬─────────────────────────────────────────────────│
+│ Sidebar    │ Main Content                                    │
+│ 240px      │                                                 │
+│            │ Page header (заголовок + действия)               │
+│ Дашборд    │                                                 │
+│ Группа     │ ┌─── Блок данных ────┐                           │
+│ Календарь  │ │ Таблица / карточки │                           │
+│ Экзамены   │ └────────────────────┘                           │
+│ Чат        │                                                 │
+│ Важно      │ ┌─── Доп. секции ────┐                           │
+│ ─────────  │ └────────────────────┘                           │
+│ (super)    │                                                 │
+│ Контент    │                                                 │
+│ Города     │                                                 │
+│ Роли       │                                                 │
+│ Аналитика  │                                                 │
+└────────────┴─────────────────────────────────────────────────┘
+```
+
+### Mobile-навигация админки
+
+При `< md (768px)`:
+- Sidebar скрыт за бургером, открывается как drawer слева
+- Поиск ⌘K заменяется на иконку лупы
+
+---
+
+## 7. Список экранов (полный)
+
+### Лендинг
+
+| # | Экран | Путь | Layout |
+|---|---|---|---|
+| 1 | Главная | `/` | Hero + 5 секций |
+| 2 | Войти | `/login` | Centered form |
+
+### MiniApp (для ученика и куратора через Telegram или браузер)
+
+| # | Экран | Путь | Layout |
+|---|---|---|---|
+| 3 | Онбординг | `/m/onboarding` | Wizard 5 шагов |
+| 4 | Дашборд курса | `/m/dashboard` | Список 10 блоков + прогресс |
+| 5 | Урок (12 пунктов) | `/m/lesson/[blockId]` | 12 карточек-пунктов |
+| 6 | Тренажёр стихов | `/m/trainer` | Card stack |
+| 7 | Чат с куратором | `/m/chat` | Threaded messages |
+| 8 | Раздел «Важно» (curator+) | `/m/important` | Список ресурсов |
+| 9 | Профиль | `/m/profile` | Form |
+| 10 | Достижения | `/m/achievements` | Список ачивок |
+
+### Веб-админка (для curator / admin / super_admin)
+
+| # | Экран | Путь | Доступ |
+|---|---|---|---|
+| 11 | Дашборд куратора | `/admin/dashboard` | curator+ |
+| 12 | Моя группа | `/admin/group` | curator+ |
+| 13 | Дневной календарь | `/admin/calendar` | curator+ |
+| 14 | Карточка ученика | `/admin/student/[id]` | curator+ (свои), admin+ (любые) |
+| 15 | Экзамены (pending) | `/admin/exams` | curator+ |
+| 16 | Чат | `/admin/chat` | curator+ |
+| 17 | Раздел «Важно» | `/admin/important` | curator+ |
+| 18 | Управление контентом | `/admin/content` | super_admin |
+| 19 | Управление городами | `/admin/cities` | super_admin |
+| 20 | Управление ролями | `/admin/roles` | admin+ |
+| 21 | Аналитика | `/admin/analytics` | admin+ |
+
+### Состояния каждого экрана
+
+Все экраны должны обрабатывать 4 состояния:
+- **Loading** — skeleton или spinner
+- **Empty** — иллюстрация + текст + CTA («Нет учеников в группе. Добавь первого»)
+- **Error** — toast или полноэкранный error с кнопкой «Обновить»
+- **Success** — данные + интеракции
+
+---
+
+## 8. Компоненты
+
+### Базовая библиотека: shadcn/ui
 
 ```bash
 npx shadcn@latest add button input label card dialog sheet
@@ -222,182 +418,272 @@ npx shadcn@latest add table badge avatar separator
 npx shadcn@latest add toast tabs skeleton alert
 npx shadcn@latest add command popover calendar
 npx shadcn@latest add form textarea progress
+npx shadcn@latest add hover-card tooltip accordion
 ```
 
-### Telegram Mini App — кастомные компоненты (Vanilla)
+Все компоненты живут в `apps/web/src/components/ui/` (генерация через CLI).
 
-| Компонент | Файл | Что делает |
-|-----------|------|-----------|
-| `renderNav(profile, isAdmin)` | `js/auth.js` | Топ-навигация в `#topnav` |
-| `toast(msg, type)` | `js/auth.js` | Уведомления success/error/info |
-| `requireAuth()` / `requireAdmin()` | `js/auth.js` | Guard страницы, возвращает {user, profile} |
-| `BlockCard(block, status)` | `js/components.js` 🆕 | Карточка блока на дашборде |
-| `StreakBadge(count, status)` | `js/components.js` 🆕 | Иконка серии (🔥) |
-| `CohortInvite(cohort)` 🆕 | `js/components.js` | Карточка приглашения в Telegram-группу |
+### Кастомизация shadcn/ui
 
-### Next.js features-компоненты (`apps/web/src/components/features/`)
+Цвета через CSS-переменные из @theme — shadcn/ui автоматически подхватит. Не переопределяем компоненты, только токены.
+
+### Кастомные feature-компоненты (`apps/web/src/components/features/`)
+
+| Компонент | Где используется | Что делает |
+|---|---|---|
+| `<Hero />` | Лендинг | Full-viewport hero с тёмным фоном, cursor glow, фоновым изображением |
+| `<CursorGlow />` | Тёмные секции | Светящаяся точка следящая за курсором |
+| `<BlockCard />` | MiniApp дашборд | Карточка одного из 10 блоков с состоянием |
+| `<AssignmentCard />` | MiniApp lesson | Карточка одного из 12 пунктов ДЗ |
+| `<KinescopePlayer />` | MiniApp lesson | Embed Kinescope + no-skip overlay |
+| `<MediaRecorder />` | MiniApp lesson, chat | Запись voice/video-кружка через MediaRecorder |
+| `<DailyCalendar />` | Админка `/admin/calendar` | Таблица учеников × дней |
+| `<StudentCard />` | Админка `/admin/group` | Карточка одного ученика |
+| `<SubmissionReview />` | Админка `/admin/student/[id]` | UI для одобрения/отклонения с комментарием |
+| `<ChatThread />` | MiniApp + админка | Threaded messaging с реалтайм |
+| `<TrainerExercise />` | MiniApp `/m/trainer` | Один раунд тренажёра (стих + ввод + ИИ-проверка) |
+| `<AchievementUnlock />` | MiniApp при passing final exam | Полноэкранная анимация ачивки «Мастер Креста» |
+
+### Кастомные UI-компоненты (`apps/web/src/components/ui/custom/`)
 
 | Компонент | Что делает |
-|-----------|-----------|
-| `StatsCards` | 4 карточки KPI на дашборде |
-| `PendingApprovalCard` | Карточка ожидающего одобрения |
-| `StudentTable` | Таблица всех студентов с фильтрами |
-| `CohortGrid` | Сетка малых групп |
-| `ContentEditor` | Редактор для блоков/уроков (Tiptap или textarea) |
-| `ChurchOnboarding` | Wizard регистрации церкви |
+|---|---|
+| `<NumberStat />` | Большая цифра + подпись (для hero «237 / 5000 / 7000») |
+| `<ScrollIndicator />` | Стрелочка «↓» внизу hero, fade-out при скролле |
+| `<StatusBadge />` | Цветной бейдж: pending / approved / rejected с иконкой |
 
 ---
 
-## 7. Адаптивные точки
+## 9. Анимации (Framer Motion)
 
-Tailwind v4 default breakpoints:
+### Принципы
 
-| Breakpoint | Ширина | Кто пользуется |
-|-----------|--------|----------------|
-| `< sm` (320-639) | моб портрет | Telegram Mini App в основном |
-| `sm` (640-767) | моб ландшафт | Telegram Mini App в landscape |
-| `md` (768-1023) | планшет | Веб-админка с компактным sidebar |
-| `lg` (1024-1279) | ноутбук | Веб-админка с полным sidebar |
-| `xl` (1280-1535) | десктоп | Веб-админка просторно |
-| `2xl` (1536+) | большой десктоп | Веб-админка с widescreen layout |
+- **Длительность:** 200-400ms (большая — для wow, маленькая — для отзывчивости)
+- **Easing:** `[0.16, 1, 0.3, 1]` (cubic-bezier для премиального ощущения, как у superhuman)
+- **Уважать `prefers-reduced-motion`** — если включено, отключаем все нестрогие анимации, оставляем только функциональные (loading)
 
-### Поведение
+### Анимационные паттерны
 
-- **< md (768px):** sidebar в drawer, single column main, mobile-first
-- **md-lg:** sidebar collapsed (icons only), 2-3 column main
-- **> lg:** full sidebar, multi-column
+| Где | Что | Параметры |
+|---|---|---|
+| Hero лендинга | Фоновое изображение fade-in + scale 1.05 → 1.0 | duration: 1.5s |
+| Hero текст | Stagger fade-up каждого элемента (заголовок, подзаголовок, цифры, CTA) | delay 0.2s между, duration 0.6s |
+| Cursor glow | Spring follow за мышью | stiffness: 200, damping: 30 |
+| Scroll reveal | Появление секций при попадании в viewport (Intersection Observer + opacity/translate) | once: true, margin: -100px |
+| Card hover | Подъём карточки на 4px + усиление тени | duration 200ms |
+| Page transitions | Fade + tiny translate-y | 250ms |
+| Achievement unlock | Confetti + scale 0→1.1→1.0 + glow pulse | duration 1.2s, blocking 2s |
+| Modal open | Backdrop fade + dialog scale 0.95→1.0 | 200ms |
+| Toast | Slide-in from top + fade | 300ms |
+| Submission approval ✅ | Чекмарк рисуется path-by-path | 500ms |
 
----
+### Cursor glow — финальный код
 
-## 8. Анимации и переходы
-
-### Общие принципы
-
-- **Длительность:** 150-300ms (не замедляют работу)
-- **Easing:** `ease-out` для появления, `ease-in` для исчезновения
-- Уважать `prefers-reduced-motion` — отключать анимации полностью
-
-### Конкретные анимации
-
-| Элемент | Анимация | Tailwind / CSS |
-|---------|----------|---------------|
-| Модалки | Fade in + scale 95→100% | `transition-all duration-200` |
-| Telegram Sheet | Slide from bottom | Native Telegram API |
-| Sidebar mobile drawer | Slide from left | `transition-transform duration-300` |
-| Skeleton loading | Pulse | `animate-pulse` |
-| Toast | Slide from right | `animate-in slide-in-from-right` |
-| Block card hover | Background + tiny scale | `hover:bg-card-hover hover:scale-[1.02] transition-all` |
-| Streak counter "+1" | Bounce + fade | Кастомная keyframe |
-| Approval ✅ появление | Scale 0→100% + ротация | `animate-in zoom-in-50 spin-in-180` |
-| Approval ❌ → форум | Slide-out + slide-in новой формы | Sequential transition |
-| Cohort invite | Confetti burst (один раз) | canvas-confetti library |
-
-### Микро-интеракции
-
-- Кнопка нажата → `scale(0.96) opacity-0.9` (`active:scale-95`)
-- Hover на интерактивный элемент → cursor pointer + background change 200ms
-- Focus на input → border golden + subtle glow 200ms
-
----
-
-## 9. Состояния UI (обязательные для каждого экрана)
-
-### 1. Loading
-- **Skeleton** для известного layout (карточки блоков, список студентов)
-- **Spinner** для unknown layout (загрузка данных)
-- НЕ оставлять пустой экран
-
-### 2. Empty
-- **Иллюстрация** (SVG) или эмодзи (🎉, 👥, 📚)
-- **Текст** объясняющий состояние ("Нет ожидающих одобрения")
-- **CTA-кнопка** ("Создайте первый блок")
-
-### 3. Error
-- **Toast** для временных ошибок (сеть, валидация)
-- **Inline error** под полем формы
-- **Полноэкранный error** с кнопкой "Обновить" для критичных ошибок
-
-### 4. Success
-- **Toast** "Сохранено!" + auto-dismiss через 3 сек
-- **Haptic feedback** в Telegram Mini App
-- **Confetti** для значимых событий (одобрение блока, завершение курса)
-
-### Формы
-
-- Валидация **inline** под каждым полем
-- Кнопка **disabled + spinner** при loading
-- Успех → **toast + редирект** (или закрытие модалки)
-- Ошибка → **toast + подсветка** проблемного поля
+См. секцию 4 (Hero лендинга). Применяется как `<CursorGlow />` на любой странице где нужно — но обычно только на лендинге и на странице ачивки.
 
 ---
 
 ## 10. Иконки
 
-### Lucide React (для Next.js)
+### Lucide React (везде)
+
+Один набор иконок на весь проект — **Lucide React**. Подключение:
 
 ```tsx
-import { Check, X, Lock, Unlock, Clock, Flame, Users, BookOpen, Settings } from 'lucide-react';
+import { Check, X, Lock, Unlock, Clock, Users, BookOpen, Settings,
+         MessageCircle, Calendar, GraduationCap, Trophy,
+         FileText, Video, Mic, Camera, Cross, Heart } from 'lucide-react';
 ```
 
-### Эмодзи (для Telegram Mini App)
+### Эмодзи в UI
 
-| Контекст | Эмодзи |
-|----------|--------|
-| Streak | 🔥 |
-| Одобрено | ✅ |
-| Ожидает | ⏳ |
-| Заблокировано | 🔒 |
-| Доработка | 🔄 |
-| Малая группа | 👥 |
-| Книга/Библия | 📖 |
-| Тренажёр | 🎯 |
-| Уведомление | 🔔 |
-| Лидер | 👨‍🏫 |
+**Минимально.** Используем для функциональных бейджей и пуш-сообщений, не для декорации.
 
----
+| Контекст | Эмодзи | Где |
+|---|---|---|
+| Одобрено | ✅ | Status badge |
+| Отклонено | ❌ | Status badge |
+| Ожидает | ⏳ | Status badge |
+| Заблокировано | 🔒 | Карточка блока |
+| Алерт куратору | ⚠️ | Push notification |
+| Тревога куратору | 🚨 | Push notification |
+| Ачивка | 🏆 | Page «Достижения» + push |
 
-## 11. Доступность (a11y)
+Никаких 🙏, ✝️, 🤍, ⛪ — это и есть «церковный стиль».
 
-- Семантический HTML (`<button>`, `<nav>`, `<main>`, `<article>`)
-- `aria-label` на иконках-кнопках без текста
-- Контраст текста ≥4.5:1 (проверено для navy bg + off-white text)
-- Focus-trap в модалках
-- Keyboard navigation (Tab/Enter/Escape) — обязательно для веб
-- Размер touch-target ≥44×44px (Telegram Mini App)
+### Иконка платформы (логотип КРЕСТ)
 
----
+Простой sans-serif wordmark «КРЕСТ» крупными буквами с `tracking-tighter`. Возможно один маленький символ — крест-точка между К и Р или знак ✕ как абстрактный знак вместо «крест-силуэт».
 
-## 12. Скриншоты-референсы (готовые экраны)
-
-### Главный экран Mini App
-- Тёмный фон navy
-- Сверху: glassy header с аватаром + streak (🔥 5)
-- Список 6 карточек блоков:
-  - Активный: золотая граница, прогресс-бар
-  - Завершённый: ✅ + полупрозрачный
-  - Заблокированный: 🔒 + серый
-- Bottom nav: Дашборд / Тренажёр / Профиль
-
-### Урок (Mini App)
-- Видео занимает весь viewport сверху (`paddingTop: 56.25%`)
-- Под видео: блок-бейдж "Блок 1" (золотой) + заголовок
-- Форум: 3 textarea с counters "0 / 100"
-- Кнопка "Отправить ответы" (золотая, full-width)
-- После отправки: конспект (rich text с golden подчёркиваниями) + статус-карточка
-
-### Дашборд лидера (веб-админка)
-- 4 stats-карточки: Total / Active / Pending / Completed
-- Tabs: "Ожидают (3)" / "Все" / "Малые группы"
-- Pending: карточки с аватаром студента, блок, кнопки Approve/Reject
-- Last activities: лента действий
-
-### Лендинг для пасторов
-- Hero: "Узнай христианство за 6 недель" + CTA "Стать партнёром"
-- Section "Проблема": 90% бросают
-- Section "Решение": 5 функций с иконками
-- Section "Pricing": 4 тарифа с подсветкой "Церковь"
-- Footer: контакты, документы
+Подбор финального логотипа — через Midjourney + ручная итерация. Промпт:
+```
+minimalist wordmark logo "КРЕСТ" Cyrillic, modern sans-serif typography,
+black on white, single accent dot or geometric mark, no religious imagery,
+no decorative elements, premium tech aesthetic --v 6
+```
 
 ---
 
-*Версия 1.0 | Дата: 2026-04-26 | Spec-First Pipeline шаг 5/9*
+## 11. Иллюстрации
+
+### Стратегия
+
+- **Лендинг:** одна большая фотореалистичная иллюстрация в hero (Midjourney)
+- **Внутренние страницы:** иллюстраций нет, только UI и текст. Воздух — это и есть «иллюстрация».
+- **Empty states:** простые SVG-иллюстрации (минимум деталей) или одна большая иконка Lucide
+- **Ачивки:** анимированные графические композиции через Framer Motion (не статичные картинки)
+
+### Midjourney промпты для платформы
+
+#### Hero лендинга
+```
+Cinematic ethereal sky, soft volumetric clouds, golden rays of sunlight
+breaking through, glowing white cross silhouette at center, peaceful
+atmosphere, dark gradient edges, photorealistic, 8K, hyper-detailed,
+no text, no people, no buildings --ar 16:9 --v 6 --style raw
+```
+
+#### Открытка для ачивки «Мастер Креста»
+```
+Abstract minimalist composition, soft gradient from deep blue to warm light,
+subtle cross-shaped light beam, no figurative elements, peaceful, premium,
+design-forward, --ar 4:5 --v 6
+```
+
+#### Empty state иллюстрация
+```
+Single line illustration, minimalist, abstract figure walking towards
+horizon, very simple, monochromatic, lots of negative space
+--ar 1:1 --v 6 --style raw
+```
+
+### Где НЕ нужны иллюстрации
+
+- В админке (только данные и UI, иллюстрации отвлекают)
+- Внутри MiniApp на дашборде и lesson-страницах (информационные)
+
+---
+
+## 12. Адаптивные брейкпоинты
+
+Tailwind v4 default + один кастомный для мобильных Telegram-устройств.
+
+| Brakpoint | Ширина | Контекст |
+|---|---|---|
+| `< sm` (320-639) | моб портрет | Telegram MiniApp в основном; mobile веб |
+| `sm` (640-767) | моб ландшафт | Telegram MiniApp в landscape |
+| `md` (768-1023) | планшет | Веб-админка с компактным sidebar |
+| `lg` (1024-1279) | ноутбук | Веб-админка с полным sidebar |
+| `xl` (1280-1535) | десктоп | Веб-админка просторно |
+| `2xl` (1536+) | большой десктоп | Лендинг, опционально |
+
+### Поведение
+
+- **< md (768px):** sidebar админки в drawer, single column main content, mobile-first
+- **md-lg:** sidebar collapsed (icons only) или полный + 2-column main
+- **> lg:** full sidebar + multi-column main
+
+Лендинг адаптируется отдельно:
+- < md: hero на 100vh, цифры в столбец
+- ≥ md: hero на 100vh, цифры в строку
+
+---
+
+## 13. Доступность (a11y)
+
+- **Семантический HTML** — `<button>`, `<nav>`, `<main>`, `<article>`, `<section>` где они уместны
+- **`aria-label`** на всех иконках-кнопках без видимого текста
+- **Контраст текста** ≥7:1 (AAA) на основных фонах. Для второстепенного текста ≥4.5:1
+- **Focus-trap** в модалках и drawer'ах
+- **Keyboard navigation** — Tab/Shift+Tab/Enter/Escape работают везде в админке. В MiniApp keyboard не критичен (пользователи на телефоне)
+- **Размер touch-target** ≥44×44px (Apple HIG) на мобильных
+- **`prefers-reduced-motion`** — отключаем анимации Framer Motion при включённом флаге
+- **Screen reader friendly** — каждая страница имеет один `<h1>`, заголовки иерархичны, картинки имеют `alt`
+
+---
+
+## 14. Дизайн-токены — экспорт
+
+Для использования в коде:
+
+```ts
+// apps/web/src/lib/design-tokens.ts
+export const tokens = {
+  colors: {
+    bg: 'var(--color-bg)',
+    bgSubtle: 'var(--color-bg-subtle)',
+    bgDark: 'var(--color-bg-dark)',
+    text: 'var(--color-text)',
+    textMuted: 'var(--color-text-muted)',
+    accent: 'var(--color-accent)',
+    border: 'var(--color-border)',
+    success: 'var(--color-success)',
+    warning: 'var(--color-warning)',
+    error: 'var(--color-error)',
+  },
+  shadows: {
+    sm: 'var(--shadow-sm)',
+    md: 'var(--shadow-md)',
+    lg: 'var(--shadow-lg)',
+    glowDark: 'var(--shadow-glow-dark)',
+  },
+  spacing: { /* Tailwind default используется */ },
+  radius: {
+    sm: '6px',
+    md: '10px',
+    lg: '14px',
+    xl: '20px',
+  },
+} as const;
+```
+
+---
+
+## 15. Нотация для дизайна экранов
+
+При обсуждении конкретных экранов используем единую нотацию:
+
+```
+Экран: /m/lesson/[blockId]
+Layout: stack column, padding 16px
+─────────────────────────────────────
+[Header]
+  ← BackButton (нативный Telegram)
+  H1: «Блок 1: Малый Крест»
+  Caption: «Пройдено 5 из 10 пунктов»
+
+[12 карточек ДЗ — vertical stack]
+  Card #1: Подготовка
+    Status: ✅ done (auto)
+  Card #2: Основное видео
+    Status: ✅ approved
+  Card #3: Дополнительное видео
+    Status: ⏳ pending → клик открывает плеер
+  ...
+
+[Bottom CTA — sticky если все ✅]
+  Кнопка «Готов сдавать куратору» (full-width, bg-accent)
+```
+
+Эта нотация — для разработчика, не для пользователя. На её основе верстается компонент.
+
+---
+
+## 16. Что НЕ входит в этот документ
+
+- Точная вёрстка каждого экрана (это делается на этапе реализации, по нотации)
+- Детальные спецификации компонентов (всё через shadcn/ui — там есть документация)
+- Pixel-perfect маппинг с Figma (Figma не используем, дизайн-первый = код-первый)
+
+---
+
+## 17. Связанные документы
+
+- `SPEC.md` v3.0 — техническая спецификация (что делаем)
+- `memory/project_design_direction.md` — высокоуровневое решение по стилю
+- `memory/project_lesson_model_v2.md` — 12-пунктовая модель урока (для UI lesson-экрана)
+- `memory/project_completion_achievements.md` — тексты ачивок (для UI achievement-экранов)
+
+---
+
+*Версия 3.0 | Дата: 2026-05-01 | Spec-First Pipeline шаг 5/9 | Замещает v1.0 полностью*

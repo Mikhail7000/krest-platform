@@ -1,118 +1,189 @@
 # КРЕСТ — Платформа управляемого ученичества
 
 ## Обзор
-КРЕСТ — Telegram Mini App + Next.js веб-админка для евангельских церквей. Проводит ищущего через 6 блоков знакомства с христианством под наставничеством пастора. Подробности в `PROJECT_IDEA.md` и `SPEC.md`.
 
-**Источники истины:** `SPEC.md` (что строим) и `PROJECT_IDEA.md` (зачем). При конфликте кода и спеки — сообщить пользователю, не править молча.
+КРЕСTТ — **внутренняя платформа церкви** (не коммерческая) для управляемого ученичества по 10 блокам курса «Крест». Один Next.js обслуживает три аудитории: учеников (через Telegram MiniApp + браузер), кураторов (веб-админка), руководство (super-admin). Архитектура **мультикурсовая**: после КРЕСТ откроется «10 писем», далее «20 писем».
+
+**Старт — только Бали.** Платформа поддерживает 8 стран + 19+ городов; остальные локации становятся доступны по мере назначения кураторов.
+
+## Источники истины
+
+- **`SPEC.md`** v3.0 — техническая спецификация (что строим)
+- **`UI_UX_BRIEF.md`** v3.0 — дизайн-система (как выглядит)
+- **`PROJECT_IDEA.md`** — зачем и для кого
+- **`memory/MEMORY.md`** — индекс рабочих решений (читать выборочно по indexed описаниям)
+
+При конфликте кода и спеки — **сообщить пользователю**, не править молча.
 
 ## Стек
 
-- **Веб-админка пастора:** Next.js 16 (App Router) + TS strict + React 19 + Tailwind v4 + shadcn/ui. Server Components по умолчанию.
-- **Telegram Mini App студента:** Vanilla HTML5/CSS3/JS ES6+ + Telegram Web App SDK + Supabase JS SDK напрямую (требование Telegram WebView)
-- **Backend:** Supabase (PostgreSQL 15, Auth, RLS, Storage) + Next.js API Routes
-- **Интеграции:** YouTube IFrame API, Telegram Bot API, Resend SMTP, ЮKassa (post-MVP), Anthropic API (post-MVP)
+- **Веб + MiniApp + админка:** Next.js 16 (App Router) + TS strict + React 19 + Tailwind v4 + shadcn/ui + Framer Motion. Server Components по умолчанию.
+- **Backend:** Supabase (PostgreSQL 15, Auth, RLS, Storage, Realtime) + Next.js API Routes
+- **Видео:** Kinescope (embed iframe + кастомный no-skip overlay)
+- **ИИ:** Anthropic Messages API (`claude-sonnet-4-6`) — тренажёр стихов; AI-помощник post-MVP
+- **AI-генерация изображений:** Midjourney (через подписку Михаила, $30/мес)
+- **Уведомления:** Telegram Bot API + Resend SMTP
 - **Деплой:** Vercel + Supabase Cloud
 
-**НЕ использовать:** Cursor, Lovable, n8n, Edge Functions, Stripe, OpenAI.
+**НЕ использовать:** Cursor, Lovable, n8n, Edge Functions, Stripe, OpenAI, ЮKassa, видеосозвон в платформе, YouTube IFrame (заменён на Kinescope), Vanilla MiniApp (всё на Next.js).
 
 ## Архитектура
 
 ```
-apps/web/
-├── public/miniapp/              # Vanilla Telegram Mini App
-│   ├── index.html               # Дашборд / регистрация
-│   ├── lesson.html              # Видео + форум + конспект
-│   ├── admin.html               # Панель лидера в Telegram
-│   ├── trainer.html, profile.html, setup.html
-│   ├── css/styles.css           # Все стили miniapp
-│   └── js/
-│       ├── config.js            # Supabase init + i18n (НЕ ТРОГАТЬ ключи)
-│       └── auth.js              # requireAuth, toast, renderNav
-│
-├── src/                         # Next.js
-│   ├── app/
-│   │   ├── (admin)/admin/       # Админка лидера
-│   │   ├── student/             # Дашборд студента (legacy веб)
-│   │   ├── login/, page.tsx     # Лендинг + вход
-│   │   └── api/
-│   │       ├── miniapp/notify/, notify-rejection/, notify-registration/
-│   │       ├── admin/approve/
-│   │       ├── student/journal/
-│   │       ├── telegram/webhook/
-│   │       └── auth/logout/
-│   ├── lib/                     # supabase clients, helpers
-│   ├── hooks/, types/
-│   └── middleware.ts            # Пропускает /miniapp/* без auth
+apps/web/src/app/
+├── /                        # Лендинг (публичный, hero+5 секций)
+├── /login                   # Вход
+├── /m/*                     # MiniApp (Telegram + браузер, фич-парити)
+│   ├── onboarding           # Язык → страна → город → куратор
+│   ├── dashboard            # Список курсов и блоков
+│   ├── lesson/[blockId]     # 12 пунктов ДЗ
+│   ├── trainer              # ИИ-тренажёр стихов
+│   ├── chat                 # Двусторонний чат с куратором
+│   ├── important            # Раздел «Важно» (только curator+)
+│   ├── achievements         # Ачивки в библейском стиле
+│   └── profile              # Профиль ученика
+├── /admin/*                 # Веб-админка
+│   ├── dashboard, group, calendar, student/[id], exams, chat, important
+│   ├── content              # super_admin only
+│   ├── cities, roles        # super_admin / admin
+│   └── analytics
+└── /api/*                   # API routes (см. SPEC.md блок 3)
 
-supabase/
-├── migrations/                  # Инкрементальные миграции (target)
-├── schema.sql                   # Legacy (разбиваем на миграции)
-└── content.sql                  # Seed контента блоков
+apps/web/src/
+├── components/ui/           # shadcn/ui (генерация через CLI)
+├── components/features/     # Кастомные feature-компоненты
+├── lib/                     # Supabase clients, helpers, design-tokens
+├── hooks/, types/
+└── middleware.ts            # /m/* пропускается без maintenance gate
 
-docs/spec-first/                 # Артефакты Spec-First Pipeline
-└── 01-reverse-engineering.md, 02-problem-discovery.md
+apps/web/public/miniapp/     # ⚠️ LEGACY — Vanilla MiniApp, постепенная миграция в /m/*
+                             # Не удалять до полной миграции. Новый код — только в /m/*
+
+supabase/migrations/         # Инкрементальные миграции (только так!)
+docs/spec-first/             # Артефакты Spec-First Pipeline
 ```
 
 ## Доменные правила (критично)
 
-**Flow урока (строго по порядку, нарушение = баг):**
-1. Проверить `blocks_unlocked >= block.order_num` → иначе редирект
-2. Видео (конспект скрыт)
-3. YouTube no-skip: polling 500ms, `currentTime > maxWatched + 2` → `seekTo(maxWatched)`
-4. При `watched ≥ 95%` → активировать форум
-5. Форум (3 вопроса × мин. 100 символов) → `journal_entries`
-6. `student_progress` (`admin_approved=false`)
-7. Конспект + кнопка "Следующий" (🔒 до `admin_approved=true`)
+### 12-пунктовая модель ДЗ блока (одинакова для всех 10 блоков)
 
-**Одобрение лидером:**
-`UPDATE student_progress SET admin_approved=true WHERE user_id=? AND block_id=?`
+| # | Пункт | Обязателен | Способ |
+|---|---|---|---|
+| 1 | Подготовка (info) | — | авто |
+| 2 | Основное видео | ✅ | Kinescope no-skip ≥95% |
+| 3 | Дополнительное видео | ✅ | Kinescope no-skip ≥95% |
+| 4 | Форум-рефлексия (3 вопроса) | ✅ | text → push куратору |
+| 5 | Конспект | ✅ | text/photo → одобрение |
+| 6 | Писать крест ежедневно | ✅ | фото в день, мин. 7 дней |
+| 7 | Местописания | ✅ | видео-кружок ИЛИ загрузка |
+| 8 | Прослушать молитвы (только Блок 1) | — | авто |
+| 9 | Молитва ежедневно | — | галочка на доверии |
+| 10 | Сдача куратору (офлайн) | ✅ | manual approve куратором |
+| 11 | Эпоха пятницы | ✅ | text/photo/voice |
+| 12 | Эмоции + ежедневный отчёт | ✅ | text каждый день, алерт куратору при пропуске |
 
-**Разблокировка:**
-`UPDATE profiles SET blocks_unlocked = blocks_unlocked + 1` (max 6, только +1)
+### Block gate
+`is_block_completed(user_id, block_id)` — все обязательные ✅-пункты одобрены → unlock следующего блока. Для recurring пунктов (6, 12) минимум 7 уникальных дней.
 
-**Отклонение блока (новое):** `DELETE journal_entry + DELETE student_progress` → студент пересдаёт.
+### Иерархия экзаменов
+- 10 block-gates (пункт 10 каждого блока, у своего куратора, офлайн)
+- 1 mid-exam после Блока 5 «Состояние Неверующего» (у другого куратора)
+- 1 final-exam после Блока 10 «5 Уверенностей» (у admin) → ачивка «Мастер Креста» + unlock курса 10 писем
+
+### Ролевая иерархия
+
+| Роль | Кто назначает | Что может |
+|---|---|---|
+| `super_admin` | По seed (Михаил, Алекс, Эля, Игорь) | Всё. Назначать роли. CRUD городов. Передача управления |
+| `admin` | super_admin | Назначать кураторов в зоне. Прикреплять учеников |
+| `curator` | super_admin / admin | Принимать ДЗ. Видеть свою группу + кураторов своего города |
+| `student` | super_admin / admin / curator | Учится |
+
+**Передача прав super-admin** — явное действие через UI с двойным подтверждением.
+
+### Видимость как маркер прогрессии
+- Ученик пока учится КРЕСТ → видит только свою группу
+- Сдал КРЕСТ → видит всех учеников платформы глобально
+- … расширяется с каждым пройденным курсом
+- Куратор видит свою группу + кураторов своего города + их учеников
+- Admin / super-admin видят всё
+
+Реализация: PL/pgSQL функция `is_visible_to(viewer_id, target_id)` + RLS на `profiles`.
+
+### Гео
+- 8 стран + 19+ городов в РФ
+- На старте активен **только Бали**
+- CRUD через `/admin/cities` (super-admin)
+- При регистрации — выбор языка → страны → города → куратора
+
+### Только русский на старте
+EN — позже с **отдельными материалами** (отдельная база контента). Поле `lang` остаётся, на старте всегда `'ru'`.
 
 ## Правила БД (Supabase)
 
-- Изменения схемы — ТОЛЬКО через миграции в `supabase/migrations/`
+- Изменения схемы — **ТОЛЬКО через миграции** в `supabase/migrations/`
 - RLS обязательна на каждой таблице
 - `IF NOT EXISTS` на всех `CREATE TABLE` / `ADD COLUMN`
-- Не использовать `service_role` в браузере — только anon
+- `service_role` ключ — никогда в браузере, только server-side
 - snake_case для таблиц и колонок
-- Деньги хранить в INTEGER (копейки)
+- Деньги хранить в INTEGER (копейки) — на случай будущих платных функций
+- Project ref Supabase: `aejhlmoydnhgedgfndql`
 - Подробности — `.claude/rules/database.md`
 
 ## Правила кодирования
 
-- **Next.js:** TS strict без `any`, camelCase/PascalCase, max 200 строк/файл, импорты через `@/`
-- **Vanilla miniapp:** ввод студента → `textContent` (XSS), контент лидера → `innerHTML`, только `toast()` (не `alert()`), строки через `T[LANG]` из `config.js`
+- **TS strict** без `any`, camelCase для функций/переменных, PascalCase для компонентов
+- **Max 200 строк/файл**, импорты через `@/`
+- **Server Components по умолчанию**, `'use client'` только когда нужно
+- **XSS:** ввод ученика → `textContent` или React (auto-escape), контент куратора → можно `innerHTML` через DOMPurify
+- **Уведомления:** только через `toast()` из shadcn (не `alert`/`confirm`/`prompt`)
+- **i18n:** строки через i18n-словарь, не хардкод. На старте только `ru`.
+
+## Дизайн-направление
+
+- **Тема C: светлый с тёмными акцентами** (см. UI_UX_BRIEF.md)
+- **Primary reference:** superhuman.com
+- **Никакого «церковного стиля»:** нет золота, готики, икон, орнаментов
+- **Cursor glow эффект** на тёмных секциях (Framer Motion)
+- **Hero лендинга:** небеса+крест из Midjourney + цифры 237/5000/7000/7000 + Матфея 28:18-20
 
 ## MCP
 
-- **Context7** (всегда): `use context7` перед кодом любой внешней библиотеки
-- **Supabase** (для SQL): `project_ref=aejhlmoydnhgedgfndql`
+- **Context7** (всегда): `use context7` перед кодом любой внешней библиотеки (Supabase, Kinescope, Anthropic, Framer Motion)
+- **Supabase** (для SQL): project_ref `aejhlmoydnhgedgfndql`
 - **GitHub** (PRs, issues)
 
-## Субагенты
+## Субагенты (зоны пересмотрены под v3.0)
 
 | Агент | Модель | Зона |
-|-------|--------|------|
-| `database-architect` | Opus | schema.sql, миграции, RLS |
-| `backend-engineer` 🆕 | Sonnet | Next.js API routes, Server Actions, интеграции |
-| `frontend-developer` | Sonnet | HTML/CSS/JS miniapp + Next.js admin UI |
-| `content-manager` | Sonnet | editor.html, контент блоков (RU/EN) |
-| `qa-reviewer` | Sonnet | Проверка lesson flow, RLS, no-skip (БЕЗ Write) |
-| `ai-agent-architect` 🆕 | Opus | Продакшн AI-агенты для платформы (post-MVP) |
+|---|---|---|
+| `database-architect` | Opus | Миграции (6→10 блоков, новые таблицы), RLS, функции `is_visible_to`/`is_block_completed` |
+| `backend-engineer` | Sonnet | Next.js API routes, Server Actions, интеграции (Telegram, Kinescope, Anthropic, Resend) |
+| `frontend-developer` | Sonnet | **React/TS** (не vanilla) — Next.js MiniApp `/m/*` + админка `/admin/*` |
+| `content-manager` | Sonnet | Заливка контента блоков (transcript, ДЗ, местописания) |
+| `qa-reviewer` | Sonnet | Code/security review, RLS-аудит, lesson flow проверка (БЕЗ Write) |
+| `agent-architect` | Opus | Координация субагентов при больших миграциях |
 
-Скиллы: `/add-new-block`, `/run-migration`, `/run-qa-review`, `/deploy` 🆕, `/handoff` 🆕, `/feature-spec` 🆕
+**Скиллы:** `/add-new-block`, `/run-migration`, `/run-qa-review`, `/deploy`, `/handoff`, `/feature-spec`
 
 ## Команды
 
-- `npm --workspace=@krest/web run dev` — Next.js разработка
-- `npm --workspace=@krest/web run build` — продакшн сборка
-- `npm --workspace=@krest/web run lint` — линтер
-- `npx supabase db push` — применить миграции
+```bash
+npm --workspace=@krest/web run dev      # Next.js разработка
+npm --workspace=@krest/web run build    # Продакшн сборка
+npm --workspace=@krest/web run lint     # Линтер
+npx supabase db push                    # Применить миграции
+```
+
+## Maintenance mode
+
+Платформа закрыта для всех кроме Михаила (с 2026-04-29). `MAINTENANCE_MODE=true` в Vercel. Доступ:
+- Telegram через `@cross_bot` (whitelist chat_id 255214568)
+- Web через `?bypass=<MAINTENANCE_BYPASS_TOKEN>`
+- `/m/*` пропускается без maintenance gate (для PoC и постепенной миграции)
+
+Подробности в `memory/project_maintenance_mode_active.md`.
 
 ---
 
-*Версия 2.0 | Дата: 2026-04-26 | 110 строк | Соответствует Spec-First Pipeline методологии*
+*Версия 3.0 | Дата: 2026-05-01 | Замещает v2.0 | Соответствует SPEC v3.0 и UI_UX_BRIEF v3.0*
