@@ -1,207 +1,160 @@
 # HANDOVER — КРЕСТ
-> Дата: 2026-05-01 (поздняя ночь) | Сессия: ✅ Этап Б шаги 0+1 закоммичены ранее; **Supabase MCP починен** (`.mcp.json` обновлён, требуется рестарт Claude Code) — следующая сессия начинает шаг 2 (ресурсы Блока 1) уже через рабочий MCP
+> Дата: 2026-05-03 (поздняя ночь) | Сессия: ✅ Этап Б шаг 2 закрыт коммитом `7b2a12d`. Блок 1 «Малый Крест» полностью наполнен (БД + Storage + UI), страница `/m/lesson/1` открывается локально и тестировалась пользователем. Следующая сессия — на выбор Михаила (см. секцию «Куда дальше»).
 
 ---
 
 ## 🎯 Главное (читать первым)
 
-1. **Ветка:** `feat/nextjs-miniapp-poc`, последний коммит `a41abef`. **В main не сливать.**
-2. **БД продакшн (`aejhlmoydnhgedgfndql`) уже пересобрана под v3.0:** 10 пустых блоков курса КРЕСТ, мультикурс, гео, 4-уровневая иерархия ролей, владелец защищён.
-3. **Михаил = super_admin + is_protected=TRUE.**
-4. **Supabase MCP теперь работает** — корневая причина прошлой невыгрузки tools найдена и исправлена. См. секцию «Что случилось в мини-сессии 2026-05-01 ночь» ниже.
-5. **Только русский на старте.** EN — позже отдельной БД.
-6. **Maintenance mode активен** (Михаил — whitelist по chat_id 255214568 + `?bypass=<token>`).
+1. **Ветка:** `feat/nextjs-miniapp-poc`, последний коммит `7b2a12d`. **В main не сливать.**
+2. **БД продакшн (`aejhlmoydnhgedgfndql`):** v3.0 фундамент + роли + `block_resources` (7 строк для Блока 1). Storage bucket `block-resources` (private, 5 файлов).
+3. **MCP Supabase работает** — тулзы `apply_migration`, `execute_sql`, `list_tables`, `list_storage_buckets`, `generate_typescript_types` уже использовались в этой сессии и вели себя корректно.
+4. **Только русский на старте.** EN — позже отдельной БД.
+5. **Maintenance mode активен** для `/admin/*` и лендинга, `/m/*` пропускается без gate (для PoC и продолжения миграции в Next.js MiniApp).
 
 ---
 
-## 🆕 Что случилось в мини-сессии 2026-05-01 ночь
+## ✅ Что сделано в сессии 2026-05-02 → 2026-05-03
 
-Михаил поставил задачу: разобраться, почему Supabase MCP не выгружает инструменты, хотя `claude mcp list` пишет `✓ Connected`. Разобрались.
+### 1. MCP fix зафиксирован (commit `5cefc3a`)
 
-### Корневая причина
+`.mcp.json` остаётся в `.gitignore` (там личный `SUPABASE_ACCESS_TOKEN`). В репо лежит `.mcp.json.example` с фиксом `--features=database,debug,development,functions,storage,account,branching` (исключает сломанную фичу `docs`). Для свежего клона репо: `cp .mcp.json.example .mcp.json` + подставить токен.
 
-`@supabase/mcp-server-supabase` версий **0.7.0 и 0.8.0** содержит регрессию в feature `docs`. На запросе `tools/list` сервер обращается к Supabase Content API за списком search-инструментов; ответ API не проходит Zod-валидацию (`Failed to parse Supabase Content API response: invalid_union ... errors expected nonoptional, received undefined`); сервер вместо списка инструментов возвращает JSON-RPC error `-32603`.
+### 2. Этап Б шаг 2 — Ресурсы Блока 1 «Малый Крест» (commit `7b2a12d`)
 
-`initialize` при этом проходит нормально → `claude mcp list` показывает «Connected» → MCP-клиент Claude видит ошибку на `tools/list` и принимает «инструментов нет». Из-за этого баг очень обманчив — connection ОК, инструментов нет.
+**БД:** миграция `supabase/migrations/20260502120000_v3_block_resources.sql`
+- Таблица `block_resources` (12 колонок: id, block_id, resource_type, title_ru, description_ru, kinescope_id, storage_path, transcript_md, order_num, is_required, created_at, updated_at)
+- CHECK на `resource_type` ∈ `main_video / additional_video / audio_prayer / pdf_prayer / guide_pdf / transcript`
+- RLS + 2 политики (SELECT для authenticated, ALL для admin)
+- 3 индекса + триггер `updated_at`
 
-### Фикс
+**Storage:** миграция `supabase/migrations/20260502130000_v3_storage_block_resources.sql`
+- Приватный bucket `block-resources` (50 MB лимит, MIME whitelist: m4a, mp3, pdf, png, jpg, webp)
+- 4 политики на `storage.objects` для admin-only прямого доступа
+- Ученики получают ресурсы только через signed URL (генерация на сервере с service_role, обходит RLS)
 
-В `.mcp.json` добавлен явный `--features` без `docs`:
+**Скрипт заливки:** `scripts/upload-resources.mjs` (Node ESM, без npm-зависимостей)
+- Парсит `Кинескоп ссылки на видео.rtf`, `Транскрибация...txt`, `Вводный урок транскрибация.txt`
+- Парсит `Эпоха пятницы. Гайд.rtfd/TXT.rtf` → markdown (минимальный inline RTF-парсер, обработка `\u<dec>` и `\'XX` cp1252)
+- Заливает 5 файлов в Storage (с `x-upsert: true` — идемпотентно)
+- DELETE existing block_resources for block_id=1 → INSERT заново (идемпотентно)
+- Запускается через `set -a; source apps/web/.env.local; set +a; node scripts/upload-resources.mjs` от корня репо
+- ⚠ В `.claude/settings.json deny` стоит `Bash(node *)` → Михаил запускает скрипт сам в своём терминале, Claude не запускает напрямую. После успешного запуска **`SUPABASE_SERVICE_ROLE_KEY` в .env.local — новый, после rotate** (старый утёк в чат и был немедленно отозван, см. memory/feedback_secret_handling.md).
 
-```json
-"args": [
-  "-y",
-  "@supabase/mcp-server-supabase@latest",
-  "--project-ref=aejhlmoydnhgedgfndql",
-  "--features=database,debug,development,functions,storage,account,branching"
-]
-```
+**UI:** Server Component `apps/web/src/app/m/lesson/[blockId]/page.tsx` + `lesson.css`
+- Загрузка через service_role (не utечка — Server Component рендерится только на сервере)
+- Generate signed URLs для всех `storage_path` пакетно через `createSignedUrls(paths, 3600)`
+- Видео — Kinescope iframe в обёртке 16:9 (no-skip overlay будет в шаге 3)
+- Транскрипты под `<details>` (нативный HTML, без JS)
+- Аудио — HTML5 `<audio controls>`
+- PDF — `<a download>`-кнопки
+- Гайд «Эпоха пятницы» — золотая рамка, картинка + текст
 
-Проверка вручную (запуск через stdio + handshake) подтвердила: с `--features` сервер отдаёт 17+ инструментов: `list_tables, apply_migration, execute_sql, get_logs, get_advisors, get_project_url, get_publishable_keys, generate_typescript_types, list_edge_functions, get_edge_function, deploy_edge_function, create_branch, list_branches, delete_branch, merge_branch, reset_branch, list_extensions, list_migrations` — всё что нужно.
+**Дашборд:** в `/m/dashboard/page.tsx` добавлена карточка с кнопкой «Открыть блок →» на `/m/lesson/1`.
 
-### Что закоммичено и что нет
+**TypeScript types:** `packages/supabase/src/types.ts` обновлён через `mcp__supabase__generate_typescript_types`. Добавлена `block_resources`, поправлены v3.0-поля profiles (`country_id`, `city_id`, `curator_id`, `is_protected`).
 
-`.mcp.json` остаётся в `.gitignore` — он содержит `SUPABASE_ACCESS_TOKEN` (личный токен Михаила, не должен попадать в git). Вместо этого в репо лежит **`.mcp.json.example`** — копия рабочего конфига с фиксом `--features` и плейсхолдером `<YOUR_SUPABASE_ACCESS_TOKEN>` вместо реального токена.
+**Локальное тестирование:** Михаил запустил `npx next dev`, открыл `/m/dashboard` и `/m/lesson/1` — подтвердил «всё работает».
 
-Чтобы поднять MCP в свежем клоне репо:
-```bash
-cp .mcp.json.example .mcp.json
-# открыть .mcp.json и подставить SUPABASE_ACCESS_TOKEN
-```
+### 3. Memory обновлена
 
-`apps/web/next-env.d.ts` (auto-generated, всегда модифицирован) — НЕ стейджить.
-
-### Status в memory
-
-Заметка `feedback_supabase_mcp_unavailable.md` переписана: теперь там корневая причина + рецепт фикса. В индексе `MEMORY.md` подпись обновлена.
-
----
-
-## ✅ Что было сделано в основной сессии 2026-05-01 (вечер→ночь, до мини-сессии)
-
-### Этап Б шаг 0 — Фундамент (commit `91881ed`)
-
-Миграция `supabase/migrations/20260501120000_v3_foundation.sql`:
-- Создана `courses` + seed (КРЕСТ active, 10 писем coming_soon)
-- `blocks`: добавлены `course_id, slug`, индексы; wipe старых 6 блоков; seed 10 новых блоков КРЕСТ с правильными названиями и слагами
-- Удалены legacy таблицы v2.0: `cohorts, cohort_members, churches, pastor_subscriptions, streak_logs, block_rejections`
-- TRUNCATE `uploads, bible_verses, journal_entries, weekly_submissions, student_progress, lessons, blocks` (прод данных не было — maintenance активен)
-- `profiles`: дроп `church_id, streak_count, last_active_date`
-- Создана `countries` (9 стран ISO) + `cities` (28 городов, **только Бали active**)
-- RLS на новых таблицах
-
-**Verified:** 2 курса, 10 блоков, 28 городов (1 active).
-
-### Этап Б шаг 1 — Роли и иерархия (commit `f07460a`)
-
-Миграция `supabase/migrations/20260501130000_v3_roles_hierarchy.sql`:
-- `is_admin()` расширена до `('admin', 'super_admin')` — ДО смены ролей, иначе сломали бы все RLS
-- `profiles.role` CHECK расширен: `student / curator / admin / super_admin`
-- Удалены legacy колонки: `gornitsa_type, region, city (TEXT), blocks_unlocked`
-- Добавлены `country_id, city_id` (FK на новые таблицы)
-- `nastavnik_id` переименован в `curator_id` (данные сохранены)
-- Создан `is_protected BOOLEAN`; Михаил → `role='super_admin', is_protected=TRUE`
-- Создана `course_progress` + backfill: всем существующим профайлам открыт КРЕСТ как `unlocked`
-- Создана `role_change_log` (audit ролей; SELECT/INSERT только для admin+)
-- Создана PL/pgSQL функция `is_visible_to(viewer, target)` — видимость по прогрессии
-- RLS-политики через `is_visible_to` на `profiles` и `course_progress`
-
-**Verified:** `sleezard@gmail.com → super_admin → is_protected=true`.
+- `feedback_secret_handling.md` — никогда не принимать полные секреты в чате; просить только короткий префикс
+- `project_kinescope_mapping.md` — полный маппинг 14 Kinescope ID → блоки; «Божье благословение» = additional_video Блок 2 «Принцип сотворения»
 
 ---
 
-## 🛤 Что НЕ сделано
+## 🛤 Что НЕ сделано / что в долге
 
-### Этап Б шаг 1 — UI часть (отложено)
+### Этап Б шаг 1 (UI часть) — отложено
 
-В шаге 1 по плану ещё **UI назначения ролей в `/admin/roles`** (super_admin может менять роли + прикреплять учеников к кураторам). БД-часть готова, UI отложен — стыкуется со следующими шагами и будет полезнее когда появится поток учеников.
+UI назначения ролей в `/admin/roles` (super_admin меняет роли + прикрепляет учеников к кураторам). БД-часть готова (commit `f07460a`), UI отложен до момента когда появится поток учеников.
 
-### Этап Б шаг 2 — Ресурсы Блока 1 (СЛЕДУЮЩИЙ — теперь через MCP)
+### Этап Б шаг 3 — No-skip overlay для Kinescope (НЕ начат)
 
-Это **первая большая фича-задача**. Что нужно:
+После шага 2:
+- Кастомный overlay поверх iframe (Framer Motion + polling currentTime каждые 500мс)
+- При `currentTime > maxWatched + 2` → принудительно `seekTo(maxWatched)`
+- При `maxWatched / duration ≥ 0.95` → создаётся submission `auto_approved`
+- Это уже client-side компонент, потребует Supabase browser client + кнопка отметки
 
-1. **Миграция `block_resources`** (теперь через `mcp__supabase__apply_migration`, не Dashboard):
-   ```sql
-   CREATE TABLE block_resources (
-     id UUID PK, block_id INT FK, resource_type TEXT
-       CHECK IN ('main_video','additional_video','audio_prayer','pdf_prayer','guide_pdf','transcript'),
-     title_ru TEXT, kinescope_id TEXT, storage_path TEXT,
-     transcript_md TEXT, order_num INT, is_required BOOLEAN, ...
-   );
-   ```
-   + RLS (SELECT для всех authenticated, ALL для super_admin) + индексы
-2. **Storage bucket `block-resources`** (Supabase) — public read, upload только для super_admin/admin (можно создать через Dashboard или серверным скриптом с service_role)
-3. **Скрипт `scripts/upload-resources.ts`** — пройдётся по `~/Desktop/Капсула крест материалы /1 Малый Крест/`:
-   - Прочитает Kinescope ID для основного и доп. видео из `Кинескоп ссылки на видео.rtf` (он в RTF с Unicode-эскейпами `\u<digits>` для русских букв; ссылки `https://kinescope.io/<id>` — выудить regex'ом по plaintext)
-   - Загрузит 2 m4a-молитвы в Storage `block-resources/01-maly-krest/audio/`
-   - Загрузит 2 PDF (молитвы текстом) в Storage `block-resources/01-maly-krest/pdf/`
-   - Загрузит гайд «Эпоха пятницы» PDF (исходник — `.rtfd` бандл с TXT.rtf + Attachment.png; PDF нужно сгенерировать ИЛИ оставить .rtfd как есть, обсудить с Михаилом)
-   - Прочитает транскрипцию из `Транскрибация, малый крест видео. .txt` (это plain text, не RTF — упрощает парсинг) → запишет в `block_resources.transcript_md`
-   - Заполнит таблицу `block_resources` ссылками
-4. **UI `/m/lesson/[blockId]/page.tsx`** — Server Component:
-   - Видео в Kinescope iframe (no-skip overlay реализуется на шаге 3 вместе с auto-approve)
-   - Аудио-плеер для m4a-молитв
-   - Скачивание PDF
-   - Показ транскрипции (опционально, под катом)
+### Этап Б шаги 4-16 — НЕ начаты
 
-### Подтверждённое содержимое папки Блока 1
+Полный план в `docs/spec-first/03-block1-maly-krest.md` секция 12. Главные оставшиеся:
+- Шаг 4: Онбординг (язык/страна/город/куратор)
+- Шаг 5+: 12-пунктовое ДЗ (full submission flow)
+- Шаг 6+: Календарь активности куратора
+- Шаг 7+: Форум-рефлексия + чат с куратором
 
-```
-1 Малый Крест/
-├── 1 крест за 5 минут.mp4
-├── Вводный урок.mp4
-├── Вводный урок транскрибация видео.txt
-├── Задание для учеников из первого блока Малый крест. .rtf  (9-пунктовое ДЗ от Алекса)
-├── Молитва Крест Короткая (1).pdf
-├── Молитва Крест Короткая.m4a
-├── Молитва Крест Полная (1).pdf
-├── Молитва Крест Полная.m4a
-├── Транскрибация, малый крест видео. .txt
-└── Эпоха пятницы. Гайд.rtfd/
-    ├── Attachment.png
-    └── TXT.rtf
-```
+### Технические долги
 
-### Kinescope ID (декодированы из RTF верхней папки)
-
-| Видео | ID | Куда |
+| Долг | Где | Приоритет |
 |---|---|---|
-| Вводный урок | `ntfUqbL89b9mrGzrgKrLbW` | additional_video Блок 1 |
-| Малый крест | `pSGDKsHr56JZVAeWVsWev3` | main_video Блок 1 |
-| Принцип сотворения | `tJzZ6vsEsFdCMS4oonkZkD` | Блок 2 |
-| Коренная проблема | `wdJq1c4WCiexnLQe1xsnph` | Блок 3 |
-| Божье благословение | `3NUFJc6L1Q5cQcWA2B2HoZ` | (TBD) |
-| Состояние мира | `sZMf83zHvoxHnSt5B5ukTS` | Блок 4 |
-| Состояние неверующего | `ntk6dsQYPAeaxrmwDLNQr4` | Блок 5 |
-| Усилия человека | `vJ4o2gm4gNdK5iQg6eGgiB` | Блок 6 |
-| Обетования и исполнение | `71523EDPaiRHagahZgXzsf` | Блок 7 |
-| Иисус Христос | `udb6rtAoEXLuBiWUtbF4pJ` | Блок 8 |
-| Благословение верующего | `e82sBoBn5LHFgjGnHn4RTu` | Блок 9 |
-| Пять Уверенностей | `33xbQzhgwU5riZ3XjVinUe` | Блок 10 |
-| Инструкция для лидеров | `3iC4NbTjPJro4oWH3RKXpX` | curator-only |
-| Вопрос-ответ | `tCqRddRoFVJ8PEhYeqTKrj` | Q&A |
+| `.claude/agents/agent-architect.md` описывает legacy v2.0 архитектуру (vanilla MiniApp + ai-agent-architect) | `.claude/agents/agent-architect.md` | low — обновить под v3.0 одним редактом, не блокер |
+| Legacy TS errors в `apps/web/src/app/admin/*` и `student/*` (ссылки на удалённые `nastavnik_id`, `blocks_unlocked`, `gornitsa_type`, `city`, etc) | 22 ошибки, не в наших новых файлах | medium — мигрировать страницы под v3.0 поля или удалить если не используются |
+| Next.js 16: `middleware.ts` deprecated, нужно переименовать в `proxy.ts` | `apps/web/src/middleware.ts` | low — warning, не блокер |
+| Залить Блоки 2-10 (только Блок 1 наполнен) | папки `2 Принцип сотворения` … `10 Пять Уверенностей` в `~/Desktop/Капсула крест материалы /` | medium — повторить логику скрипта для остальных блоков, по мере готовности материалов |
+| Дизайн hero лендинга через Midjourney | Михаил подбирает кадр (был в работе в этой сессии — отложено) | medium |
 
-Уточнить у Михаила: куда «Божье благословение» (ID `3NUFJc6L1Q5cQcWA2B2HoZ`) — это additional video для какого блока? Возможно вводное общее.
+### Что NOT в working tree (untracked, но не код)
 
-### Этап Б шаги 3-16
-
-Не начаты. План в `docs/spec-first/03-block1-maly-krest.md` секция 12.
+- `notes/cherновое-tz-michail.md` — твой черновой документ, untracked, не трогать.
 
 ---
 
-## 📂 Состояние БД на 2026-05-01 (ночь, без изменений с шага 1)
+## 📂 Состояние БД и Storage на 2026-05-03
 
-**Таблицы public schema:**
-- `profiles` (с новыми колонками: `country_id, city_id, curator_id, is_protected`; legacy дропнуты)
-- `courses` (2 строки: krest, 10-pisem)
-- `blocks` (10 строк курса КРЕСТ, все пустые)
-- `lessons` (пусто), `bible_verses` (пусто), `student_progress` (пусто)
-- `journal_entries` (пусто), `uploads` (пусто), `weekly_submissions` (пусто)
-- `countries` (9 строк), `cities` (28 строк, 1 active=Бали)
-- `course_progress` (по 1 на каждый профайл, status='unlocked' на курсе КРЕСТ)
+**Таблицы public schema** (14, без изменений с шага 1 + добавлена block_resources):
+- `profiles` (10 строк)
+- `courses` (2: krest active, 10-pisem coming_soon)
+- `blocks` (10 — все 10 блоков КРЕСТ; только Блок 1 наполнен ресурсами)
+- `block_resources` (7 строк для block_id=1):
+  - main_video «Малый Крест» (Kinescope `pSGDKsHr56JZVAeWVsWev3`) + transcript 3806 chars
+  - additional_video «Вводный урок» (Kinescope `ntfUqbL89b9mrGzrgKrLbW`) + transcript 5239 chars
+  - audio_prayer × 2 (Молитва Короткая + Полная m4a)
+  - pdf_prayer × 2 (Молитва Короткая + Полная PDF)
+  - guide_pdf «Эпоха пятницы — Гайд» + transcript 3994 chars + картинка
+- `lessons` (пусто), `bible_verses` (пусто), `student_progress` (пусто), `journal_entries` (пусто), `uploads` (пусто), `weekly_submissions` (пусто)
+- `countries` (9), `cities` (28, 1 active=Бали)
+- `course_progress` (10 строк, все unlocked для КРЕСТ)
 - `role_change_log` (пусто)
-- `notifications_log` (как было до v3)
+- `notifications_log` (как было)
+
+**Storage:**
+- Bucket `block-resources` — приватный, 5 файлов в `01-maly-krest/`:
+  - `audio/molitva-korotkaya.m4a` (5.7 MB)
+  - `audio/molitva-polnaya.m4a` (15.2 MB)
+  - `pdf/molitva-korotkaya.pdf` (49 KB)
+  - `pdf/molitva-polnaya.pdf` (84 KB)
+  - `guide/attachment.png` (1.6 KB)
+- ~21 MB суммарно
+- 4 политики admin-only на `storage.objects`
 
 **Функции:**
-- `is_admin()` — обновлена под super_admin
-- `is_visible_to(viewer, target)` — новая
-- `update_updated_at_column()` — общая trigger-функция
-- `update_cohort_member_count()` — осталась от v2.0 (cohorts удалены, можно дропнуть позже как cleanup — это micro-задача, не блокер)
-
-**Удалены legacy:** cohorts, cohort_members, churches, pastor_subscriptions, streak_logs, block_rejections.
+- `is_admin()` — `super_admin` + `admin`
+- `is_visible_to(viewer, target)` — видимость по прогрессии
+- `update_updated_at_column()` — общий триггер
+- `get_leader_chat_id()` — для уведомлений
+- `update_cohort_member_count()` — наследие v2.0 (cohorts удалены), можно дропнуть как cleanup
 
 ---
 
 ## ⚙️ Технические условия следующей сессии
 
-1. **MCP должен заработать после рестарта Claude Code.** Если внезапно нет — проверь:
-   - `cat .mcp.json` — должен быть `--features=database,...,branching`
-   - `claude mcp list` — supabase должен быть `✓ Connected`
-   - Через ToolSearch: `select:mcp__supabase__apply_migration` — если не находит, MCP не выгрузил инструменты (rare — может из-за npx warm-up на первом запуске; перезапустить ещё раз)
-   - В крайнем случае — fallback на ручную вставку SQL в Dashboard SQL Editor (как делали в шагах 0+1)
-2. **Service role key** для скрипта заливки уже в `apps/web/.env.local` под именем `SUPABASE_SERVICE_ROLE_KEY` — не светить в браузерном коде.
+### Окружение
+
+1. **MCP Supabase** должен заработать после рестарта (`.mcp.json.example` лежит в репо). Если в свежем клоне нет `.mcp.json` — `cp .mcp.json.example .mcp.json` и подставить `SUPABASE_ACCESS_TOKEN` в env-блок.
+2. **Supabase service_role** — в `apps/web/.env.local` под `SUPABASE_SERVICE_ROLE_KEY`. **Это новый ключ** (старый отозван 2026-05-02 после случайного раскрытия в чате). Формат `sb_secret_...`, ~41 символ.
 3. **Папка с материалами с пробелом в конце имени:** `/Users/rogue/Desktop/Капсула крест материалы /` — все ls/Read/скрипты должны квотировать путь.
-4. **Permissions Bash:** `npm install` / `npm run` / `node *` заблокированы в `.claude/settings.json deny`. Если для скрипта заливки понадобится `node scripts/upload-resources.ts` — нужно запросить разрешение у Михаила или временно whitelist'нуть конкретную команду.
+4. **Permissions Bash:** `npm install` / `npm run` / `node *` заблокированы в `.claude/settings.json deny`. Запуск скриптов — Михаил у себя в терминале (вариант A из обсуждения шага 2.3). Если потребуется обойти deny — отдельное решение.
+
+### Безопасность секретов
+
+- Никогда не запрашивать у Михаила полные API-ключи / токены / пароли в чате. Только префикс из 4-6 символов с инструкцией «остальное замажь звёздочками». См. `memory/feedback_secret_handling.md`.
+
+### Процесс
+
+- Все DDL — через `mcp__supabase__apply_migration` (НЕ Dashboard SQL Editor).
+- Все DML/SELECT — через `mcp__supabase__execute_sql`.
+- Storage — через REST с service_role (см. `scripts/upload-resources.mjs` как эталон).
 
 ---
 
@@ -210,17 +163,23 @@ cp .mcp.json.example .mcp.json
 **Миграции v3 (применены):**
 - `supabase/migrations/20260501120000_v3_foundation.sql`
 - `supabase/migrations/20260501130000_v3_roles_hierarchy.sql`
+- `supabase/migrations/20260502120000_v3_block_resources.sql`
+- `supabase/migrations/20260502130000_v3_storage_block_resources.sql`
 
-**Новая планируемая:**
-- `supabase/migrations/{timestamp}_v3_block_resources.sql`
+**Новые в шаге 2 (закоммичены):**
+- `scripts/upload-resources.mjs`
+- `apps/web/src/app/m/lesson/[blockId]/page.tsx`
+- `apps/web/src/app/m/lesson/[blockId]/lesson.css`
+- `apps/web/src/app/m/dashboard/page.tsx` (модифицирован: добавлена кнопка «Открыть блок 1»)
+- `packages/supabase/src/types.ts` (регенерирован)
 
 **Конфигурация MCP:**
 - `.mcp.json` — gitignored (содержит `SUPABASE_ACCESS_TOKEN`)
 - `.mcp.json.example` — закоммичен; шаблон с фиксом `--features` без `docs`, токен в плейсхолдере
 
 **Где материалы курса:**
-- `/Users/rogue/Desktop/Капсула крест материалы /` (⚠️ пробел в конце!)
-- ⚠️ `/Users/rogue/Desktop/СКРИНЫ С ЧАТА КРЕСТ КАПСУЛА/` — НЕ ТРОГАТЬ
+- `/Users/rogue/Desktop/Капсула крест материалы /` (⚠ пробел в конце!)
+- ⚠ `/Users/rogue/Desktop/СКРИНЫ С ЧАТА КРЕСТ КАПСУЛА/` — НЕ ТРОГАТЬ
 
 **Спеки и правила (актуально):**
 - `SPEC.md` v3.0, `UI_UX_BRIEF.md` v3.0, `CLAUDE.md` v3.0
@@ -240,22 +199,30 @@ cp .mcp.json.example .mcp.json
 
 ## 🚀 Что сделать в начале новой сессии
 
-### Сразу после старта
+### Сразу после старта — фраза для Михаила
 
-1. Прочитать `HANDOVER.md` (этот файл)
-2. `CLAUDE.md` v3.0 (загрузится автоматически)
-3. Проверить `.mcp.json` и попробовать любой Supabase MCP-tool — например `mcp__supabase__list_tables` — чтобы убедиться, что фикс работает после рестарта. Если в свежем клоне репо `.mcp.json` нет — `cp .mcp.json.example .mcp.json` и подставить `SUPABASE_ACCESS_TOKEN`.
-4. Приступать к Этапу Б шагу 2
+Открой Claude Code в проекте и напиши:
 
-### План шага 2
+> Прочитай HANDOVER.md и memory/MEMORY.md. Потом скажи, в каком мы состоянии и какие у меня варианты что делать дальше — ничего не запускай.
 
-См. секцию «Этап Б шаг 2 — Ресурсы Блока 1» выше. Порядок:
-1. Миграция `block_resources` (через MCP `apply_migration`)
-2. Storage bucket `block-resources` (через Dashboard или серверный скрипт)
-3. Скрипт заливки `scripts/upload-resources.ts`
-4. UI `/m/lesson/[blockId]`
+После этого Claude Code:
+1. Прочитает HANDOVER (этот файл) и индекс памяти
+2. Сразу будет в курсе всего, что мы сделали
+3. Не будет лезть в код / БД / MCP без подтверждения
 
-Перед началом обязательно уточнить у Михаила, куда мапить «Божье благословение» Kinescope ID и нужно ли конвертировать `.rtfd` гайд «Эпоха пятницы» в PDF.
+### Куда дальше — варианты на выбор
+
+| Вариант | Описание | Размер |
+|---|---|---|
+| **A.** Этап Б шаг 3 — no-skip overlay для Kinescope | Видео нельзя скипать; при ≥95% пункт авто-approved | 1 сессия |
+| **B.** Этап Б шаг 4 — онбординг (язык/страна/город/куратор) | Регистрация ученика по гео-цепочке | 1-2 сессии |
+| **C.** Дизайн лендинга — hero на 100vh | Midjourney + Tailwind hero с цифрами 237/5000/7000/7000 + Матфея 28:18-20 | 1 сессия (когда будет готовая Midjourney картинка) |
+| **D.** Этап Б шаг 5+ — 12-пунктовое ДЗ | Полный flow прохождения блока с сабмишенами | 2-3 сессии |
+| **E.** Push в remote + Vercel preview | Залить ветку на GitHub, проверить на проде через `@Cross_Capsule_Test_bot` | 30 минут |
+| **F.** Залить материалы Блоков 2-10 | Расширить `scripts/upload-resources.mjs` на оставшиеся блоки (когда материалы готовы) | 30-60 минут |
+| **G.** Закрыть технические долги | Поправить `agent-architect.md` под v3.0, обновить legacy `admin/*` страницы под новые поля profiles, мигрировать `middleware.ts` → `proxy.ts` | 1 сессия |
+
+Михаил выбирает на старте новой сессии. Если пишет «продолжаем» без уточнения — по умолчанию идёт вариант A (это следующий шаг по плану в `docs/spec-first/03-block1-maly-krest.md`).
 
 ---
 
@@ -273,13 +240,13 @@ cp .mcp.json.example .mcp.json
 
 | Агент | Модель | Зона |
 |-------|--------|------|
-| `database-architect` | Opus | Миграции (теперь через MCP, не вручную) |
-| `backend-engineer` | Sonnet | API routes, скрипт заливки, Telegram, Storage |
-| `frontend-developer` | Sonnet | React/TS — Next.js MiniApp + админка + сайт |
+| `database-architect` | Opus | Миграции (через MCP `apply_migration`) |
+| `backend-engineer` | Sonnet | API routes, скрипты заливки, Telegram, Storage |
+| `frontend-developer` | Sonnet | React/TS — Next.js MiniApp `/m/*` + админка `/admin/*` + лендинг |
 | `content-manager` | Sonnet | Парсинг материалов, заливка контента |
-| `qa-reviewer` | Sonnet | Code review + RLS audit |
-| `agent-architect` | Opus | Координация при больших миграциях |
+| `qa-reviewer` | Sonnet | Code review + RLS audit (без Write) |
+| `agent-architect` | Opus | Координация при больших миграциях. ⚠ Файл агента содержит legacy v2.0 описание — обновить под v3.0 одним редактом. |
 
 ---
 
-*Версия 9.0 | 2026-05-01 (поздняя ночь) | MCP-fix применён в `.mcp.json`, требуется рестарт Claude Code; шаг 2 — следующая сессия*
+*Версия 10.0 | 2026-05-03 (поздняя ночь) | Этап Б шаг 2 закрыт коммитом `7b2a12d`. Блок 1 «Малый Крест» полностью наполнен и работает в `/m/lesson/1`. Михаил выбирает следующий шаг на старте новой сессии.*
