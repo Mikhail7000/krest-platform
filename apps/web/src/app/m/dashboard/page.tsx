@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { useHaptic } from '@/hooks/useHaptic'
@@ -92,6 +93,16 @@ export default function DashboardPage() {
         >
           Нажми меня ({counter})
         </button>
+      </div>
+
+      <div className="miniapp-card">
+        <p style={{ fontWeight: 600, marginBottom: 8 }}>Блок 1 — Малый Крест</p>
+        <p className="miniapp-hint" style={{ marginBottom: 12 }}>
+          Видео, аудио-молитвы, PDF и гайд «Эпоха пятницы».
+        </p>
+        <Link href="/m/lesson/1" className="miniapp-button" style={{ textDecoration: 'none' }}>
+          Открыть блок →
+        </Link>
       </div>
 
       <div className="miniapp-card">
