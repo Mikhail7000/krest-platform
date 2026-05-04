@@ -2,12 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Database } from '../../../../../../../packages/supabase/src/types'
+import { LessonVideos } from '@/components/lesson/LessonVideos'
 import './lesson.css'
 
 export const dynamic = 'force-dynamic'
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60
-const KINESCOPE_EMBED_BASE = 'https://kinescope.io/embed/'
 const STORAGE_BUCKET = 'block-resources'
 
 type BlockResource = Database['public']['Tables']['block_resources']['Row']
@@ -39,33 +39,6 @@ async function loadLesson(blockId: number) {
     }
   }
   return { block, resources, signedByPath }
-}
-
-function VideoCard({ resource }: { resource: BlockResource }) {
-  if (!resource.kinescope_id) return null
-  return (
-    <section className="lesson-card">
-      <h2 className="lesson-card__title">
-        {resource.title_ru}
-        {resource.is_required && <span className="lesson-badge">обязательно</span>}
-      </h2>
-      {resource.description_ru && <p className="lesson-card__desc">{resource.description_ru}</p>}
-      <div className="lesson-video">
-        <iframe
-          src={`${KINESCOPE_EMBED_BASE}${resource.kinescope_id}`}
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer; clipboard-write"
-          allowFullScreen
-          loading="lazy"
-        />
-      </div>
-      {resource.transcript_md && (
-        <details className="lesson-details">
-          <summary>Показать расшифровку</summary>
-          <div className="lesson-transcript">{resource.transcript_md}</div>
-        </details>
-      )}
-    </section>
-  )
 }
 
 function AudioCard({ resource, url }: { resource: BlockResource; url: string | undefined }) {
@@ -119,7 +92,17 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
   if (!data) notFound()
   const { block, resources, signedByPath } = data
 
-  const videos = resources.filter((r) => r.resource_type === 'main_video' || r.resource_type === 'additional_video')
+  const videoResources = resources
+    .filter((r) => r.resource_type === 'main_video' || r.resource_type === 'additional_video')
+    .filter((r): r is BlockResource & { kinescope_id: string } => !!r.kinescope_id)
+    .map((r) => ({
+      id: r.id,
+      kinescope_id: r.kinescope_id,
+      title_ru: r.title_ru,
+      description_ru: r.description_ru,
+      is_required: r.is_required,
+      transcript_md: r.transcript_md,
+    }))
   const audios = resources.filter((r) => r.resource_type === 'audio_prayer')
   const pdfs = resources.filter((r) => r.resource_type === 'pdf_prayer')
   const guides = resources.filter((r) => r.resource_type === 'guide_pdf')
@@ -133,7 +116,7 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
         {block.subtitle_ru && <p className="lesson-header__subtitle">{block.subtitle_ru}</p>}
       </header>
 
-      {videos.map((r) => <VideoCard key={r.id} resource={r} />)}
+      <LessonVideos videos={videoResources} />
 
       {audios.length > 0 && (
         <div className="lesson-section">

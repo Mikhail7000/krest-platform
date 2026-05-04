@@ -267,6 +267,24 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["uploads"]["Row"]>
         Relationships: []
       }
+      video_watch_progress: {
+        Row: {
+          block_resource_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          max_watched_seconds: number
+          total_seconds: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: Partial<Database["public"]["Tables"]["video_watch_progress"]["Row"]> & {
+          block_resource_id: string
+          user_id: string
+        }
+        Update: Partial<Database["public"]["Tables"]["video_watch_progress"]["Row"]>
+        Relationships: []
+      }
       weekly_submissions: {
         Row: {
           block_id: number | null
