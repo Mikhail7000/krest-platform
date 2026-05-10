@@ -1,0 +1,105 @@
+'use client'
+
+import Link from 'next/link'
+import { useState } from 'react'
+import { useTelegram } from '@/components/telegram/TelegramProvider'
+import { useHaptic } from '@/hooks/useHaptic'
+import { MainButton } from '@/components/telegram/MainButton'
+
+export function DashboardClient() {
+  const { status, user, errorMessage, platform } = useTelegram()
+  const haptic = useHaptic()
+  const [counter, setCounter] = useState(0)
+
+  if (status === 'init') {
+    return (
+      <div className="miniapp-container">
+        <p className="miniapp-hint">Загрузка...</p>
+      </div>
+    )
+  }
+
+  if (status === 'no-tg') {
+    return (
+      <div className="miniapp-container">
+        <h1 className="miniapp-headline">✝️ КРЕСТ</h1>
+        <p className="miniapp-status-error" style={{ marginTop: 16 }}>
+          {errorMessage}
+        </p>
+        <p className="miniapp-hint" style={{ marginTop: 12 }}>
+          Откройте бота{' '}
+          <a href="https://t.me/cross_bot" style={{ color: 'var(--tg-link, #0F8AD2)' }}>
+            @cross_bot
+          </a>{' '}
+          и нажмите кнопку «Открыть КРЕСТ».
+        </p>
+      </div>
+    )
+  }
+
+  if (status === 'forbidden') {
+    return (
+      <div className="miniapp-container">
+        <h1 className="miniapp-headline">Приложение в разработке</h1>
+        <p className="miniapp-hint" style={{ marginTop: 16 }}>{errorMessage}</p>
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="miniapp-container">
+        <h1 className="miniapp-headline">Ошибка</h1>
+        <p className="miniapp-status-error" style={{ marginTop: 16 }}>{errorMessage}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="miniapp-container">
+      <h1 className="miniapp-headline">✝️ КРЕСТ</h1>
+      <p className="miniapp-hint" style={{ marginBottom: 16 }}>
+        Привет, {user?.firstName ?? 'друг'}!
+      </p>
+
+      <div className="miniapp-card">
+        <p className="miniapp-hint">
+          Telegram ID: <code>{user?.id}</code>
+          {user?.username && (
+            <>
+              <br />
+              Username: <code>@{user.username}</code>
+            </>
+          )}
+          <br />
+          Платформа: <code>{platform ?? 'неизвестно'}</code>
+        </p>
+      </div>
+
+      <div className="miniapp-card">
+        <p style={{ fontWeight: 600, marginBottom: 8 }}>Тест haptic feedback</p>
+        <p className="miniapp-hint" style={{ marginBottom: 12 }}>
+          Кнопка ниже даёт лёгкую вибрацию (на iOS / Android).
+        </p>
+        <button
+          className="miniapp-button"
+          onClick={() => {
+            haptic.impact('medium')
+            setCounter((c) => c + 1)
+          }}
+        >
+          Нажми меня ({counter})
+        </button>
+      </div>
+
+      <MainButton
+        text="Тест MainButton"
+        onClick={() => {
+          haptic.notification('success')
+          // eslint-disable-next-line no-alert
+          alert('MainButton работает! Это нативная кнопка Telegram.')
+        }}
+      />
+    </div>
+  )
+}

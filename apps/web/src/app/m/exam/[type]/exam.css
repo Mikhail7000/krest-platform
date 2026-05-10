@@ -1,0 +1,137 @@
+/* Exam page — shares quiz.css visual language, imported in page.tsx alongside quiz.css */
+
+.exam-page {
+  padding-bottom: 3rem;
+}
+
+/* ── Back link ─────────────────────────────────────────────────── */
+.exam-back {
+  display: inline-block;
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+.exam-back:hover { color: var(--tg-text, #E5E7EB); }
+
+/* ── Header ─────────────────────────────────────────────────────── */
+.exam-header { margin-bottom: 1.25rem; }
+.exam-header__eyebrow {
+  color: var(--tg-button, #C9A961);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+.exam-header__title {
+  font-size: 1.625rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--tg-text, #E5E7EB);
+  margin-bottom: 0.25rem;
+}
+.exam-header__subtitle {
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ── Pass requirement badge ──────────────────────────────────────── */
+.exam-pass-req {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(201, 169, 97, 0.1);
+  border: 1px solid rgba(201, 169, 97, 0.25);
+  border-radius: 10px;
+  padding: 0.625rem 0.875rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--tg-button, #C9A961);
+  font-weight: 600;
+}
+.exam-pass-req__icon {
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Submit button (more prominent than quiz-submit) ─────────────── */
+.exam-submit {
+  display: block;
+  width: 100%;
+  padding: 1rem 1rem;
+  background: var(--tg-button, #C9A961);
+  color: var(--tg-button-text, #FFFFFF);
+  font-weight: 800;
+  font-size: 1.0625rem;
+  letter-spacing: 0.02em;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  margin-top: 0.75rem;
+  transition: opacity 0.15s, transform 0.1s;
+  box-shadow: 0 4px 16px rgba(201, 169, 97, 0.3);
+}
+.exam-submit:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.exam-submit:not(:disabled):active {
+  opacity: 0.85;
+  transform: scale(0.99);
+}
+
+/* ── Result score card ───────────────────────────────────────────── */
+.exam-result__score-wrap {
+  text-align: center;
+  padding: 2rem 1rem 1.5rem;
+  background: var(--tg-section-bg, #1A1C1F);
+  border-radius: 16px;
+  margin-bottom: 1rem;
+}
+.exam-result__score {
+  font-size: 4rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--tg-button, #C9A961);
+}
+.exam-result__score--fail {
+  color: var(--tg-destructive, #EF4444);
+}
+.exam-result__status {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--tg-hint, #9CA3AF);
+}
+.exam-result__status--pass { color: #4ADE80; }
+.exam-result__status--fail { color: var(--tg-destructive, #EF4444); }
+.exam-result__hint {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--tg-hint, #9CA3AF);
+  line-height: 1.5;
+}
+
+.exam-result__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-top: 1rem;
+}
+
+/* ── Pass next-step card ─────────────────────────────────────────── */
+.exam-passed-card {
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: #4ADE80;
+  font-weight: 600;
+  line-height: 1.5;
+}
