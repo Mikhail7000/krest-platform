@@ -30,3 +30,11 @@ export const WHISPER_DEFAULT_TIMEOUT_MS = 90_000
 
 // Storage bucket для голосовых/видео ученика
 export const STUDENT_RECITATIONS_BUCKET = 'student-recitations'
+
+// Deepgram
+export const DEEPGRAM_API_URL = 'https://api.deepgram.com/v1/listen'
+export const DEEPGRAM_MODEL = 'nova-2'
+export const DEEPGRAM_TIMEOUT_MS = 60_000
+
+// Storage bucket для ежедневных фото крестов
+export const STUDENT_CROSS_PHOTOS_BUCKET = 'student-cross-photos'

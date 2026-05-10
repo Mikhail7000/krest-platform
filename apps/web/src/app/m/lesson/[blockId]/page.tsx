@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Database } from '../../../../../../../packages/supabase/src/types'
 import { LessonVideos } from '@/components/lesson/LessonVideos'
+import { BlockProgressBanner } from './BlockProgressBanner'
+import { Stage4Nav } from './Stage4Nav'
 import './lesson.css'
 
 export const dynamic = 'force-dynamic'
@@ -116,6 +118,8 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
         {block.subtitle_ru && <p className="lesson-header__subtitle">{block.subtitle_ru}</p>}
       </header>
 
+      <BlockProgressBanner blockId={id} />
+
       <LessonVideos videos={videoResources} />
 
       {audios.length > 0 && (
@@ -139,6 +143,8 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
       {guides.map((r) => (
         <GuideCard key={r.id} resource={r} imageUrl={r.storage_path ? signedByPath[r.storage_path] : undefined} />
       ))}
+
+      <Stage4Nav blockId={id} />
     </div>
   )
 }

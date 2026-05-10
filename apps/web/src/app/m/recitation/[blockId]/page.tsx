@@ -1,0 +1,52 @@
+import { createClient } from '@supabase/supabase-js'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import type { Database } from '../../../../../../../packages/supabase/src/types'
+import { RecitationClient } from './RecitationClient'
+import './recitation.css'
+
+export const dynamic = 'force-dynamic'
+
+const adminClient = () =>
+  createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  )
+
+async function loadBlock(blockId: number) {
+  const supabase = adminClient()
+  const { data: block } = await supabase
+    .from('blocks')
+    .select('id, title_ru, subtitle_ru, order_num')
+    .eq('id', blockId)
+    .maybeSingle()
+  return block ?? null
+}
+
+export default async function RecitationPage({ params }: { params: Promise<{ blockId: string }> }) {
+  const { blockId } = await params
+  const id = Number(blockId)
+  if (!Number.isInteger(id) || id < 1) notFound()
+
+  const block = await loadBlock(id)
+  if (!block) notFound()
+
+  return (
+    <div className="miniapp-container recitation-page">
+      <Link href={`/m/lesson/${id}`} className="recitation-back">← К уроку</Link>
+
+      <header className="recitation-header">
+        <p className="recitation-header__eyebrow">Блок {block.order_num ?? id} — Пересказ</p>
+        <h1 className="recitation-header__title">
+          Пересказ блока: {block.title_ru ?? `Блок ${id}`}
+        </h1>
+        <p className="recitation-header__desc">
+          Расскажи своими словами — что узнал нового, что вдохновило, что берёшь в практику.
+        </p>
+      </header>
+
+      <RecitationClient blockId={id} />
+    </div>
+  )
+}

@@ -1,7 +1,12 @@
 /**
  * Supabase Database Types for KREST Platform
- * Regenerated via mcp__supabase__generate_typescript_types on 2026-05-09
- * после применения 9 миграций AI-first flow.
+ * Updated 2026-05-10 после применения 6 миграций Stage 4 AI-first flow:
+ *   - student_location_attempts.medium
+ *   - student_block_recitations (NEW)
+ *   - student_block_daily_cross (NEW) + bucket student-cross-photos
+ *   - profiles.can_skip_block_lock
+ *   - student_block_progress: тайминги Этапа 4 + block_passed_at + daily_cross_count
+ *   - функция is_block_unlocked(p_user_id, p_block_id)
  */
 
 export type Json =
@@ -505,6 +510,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          can_skip_block_lock: boolean
           city_id: number | null
           contact_info: string | null
           country_id: number | null
@@ -528,6 +534,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          can_skip_block_lock?: boolean
           city_id?: number | null
           contact_info?: string | null
           country_id?: number | null
@@ -551,6 +558,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          can_skip_block_lock?: boolean
           city_id?: number | null
           contact_info?: string | null
           country_id?: number | null
@@ -641,19 +649,68 @@ export type Database = {
           },
         ]
       }
+      student_block_daily_cross: {
+        Row: {
+          block_id: number
+          created_at: string
+          id: string
+          storage_path: string
+          submitted_date: string
+          user_id: string
+        }
+        Insert: {
+          block_id: number
+          created_at?: string
+          id?: string
+          storage_path: string
+          submitted_date: string
+          user_id: string
+        }
+        Update: {
+          block_id?: number
+          created_at?: string
+          id?: string
+          storage_path?: string
+          submitted_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_block_daily_cross_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_block_daily_cross_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_block_progress: {
         Row: {
           block_completed_at: string | null
           block_id: number
+          block_passed_at: string | null
+          block_unlocked_at: string | null
           created_at: string
+          daily_cross_count: number
           id: string
           last_quiz_score_pct: number | null
           locations_attempts: number
+          locations_audio_completed_at: string | null
           locations_locked_until: string | null
           locations_passed_at: string | null
+          locations_video_completed_at: string | null
           quiz_attempts: number
           quiz_locked_until: string | null
           quiz_passed_at: string | null
+          recitation_audio_passed_at: string | null
+          recitation_videos_passed_at: string | null
           status: string
           summary_acknowledged_at: string | null
           updated_at: string
@@ -663,15 +720,22 @@ export type Database = {
         Insert: {
           block_completed_at?: string | null
           block_id: number
+          block_passed_at?: string | null
+          block_unlocked_at?: string | null
           created_at?: string
+          daily_cross_count?: number
           id?: string
           last_quiz_score_pct?: number | null
           locations_attempts?: number
+          locations_audio_completed_at?: string | null
           locations_locked_until?: string | null
           locations_passed_at?: string | null
+          locations_video_completed_at?: string | null
           quiz_attempts?: number
           quiz_locked_until?: string | null
           quiz_passed_at?: string | null
+          recitation_audio_passed_at?: string | null
+          recitation_videos_passed_at?: string | null
           status?: string
           summary_acknowledged_at?: string | null
           updated_at?: string
@@ -681,15 +745,22 @@ export type Database = {
         Update: {
           block_completed_at?: string | null
           block_id?: number
+          block_passed_at?: string | null
+          block_unlocked_at?: string | null
           created_at?: string
+          daily_cross_count?: number
           id?: string
           last_quiz_score_pct?: number | null
           locations_attempts?: number
+          locations_audio_completed_at?: string | null
           locations_locked_until?: string | null
           locations_passed_at?: string | null
+          locations_video_completed_at?: string | null
           quiz_attempts?: number
           quiz_locked_until?: string | null
           quiz_passed_at?: string | null
+          recitation_audio_passed_at?: string | null
+          recitation_videos_passed_at?: string | null
           status?: string
           summary_acknowledged_at?: string | null
           updated_at?: string
@@ -706,6 +777,73 @@ export type Database = {
           },
           {
             foreignKeyName: "student_block_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_block_recitations: {
+        Row: {
+          ai_call_id: string | null
+          ai_comment: string | null
+          ai_score: number | null
+          block_id: number
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          medium: string
+          passed: boolean
+          storage_path: string
+          transcript: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_call_id?: string | null
+          ai_comment?: string | null
+          ai_score?: number | null
+          block_id: number
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          medium: string
+          passed: boolean
+          storage_path: string
+          transcript?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_call_id?: string | null
+          ai_comment?: string | null
+          ai_score?: number | null
+          block_id?: number
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          medium?: string
+          passed?: boolean
+          storage_path?: string
+          transcript?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_block_recitations_ai_call_id_fkey"
+            columns: ["ai_call_id"]
+            isOneToOne: false
+            referencedRelation: "ai_call_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_block_recitations_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_block_recitations_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -817,6 +955,7 @@ export type Database = {
           file_size_bytes: number | null
           id: string
           location_id: string
+          medium: string
           passed: boolean
           similarity_score: number | null
           source_type: string
@@ -833,6 +972,7 @@ export type Database = {
           file_size_bytes?: number | null
           id?: string
           location_id: string
+          medium?: string
           passed: boolean
           similarity_score?: number | null
           source_type: string
@@ -849,6 +989,7 @@ export type Database = {
           file_size_bytes?: number | null
           id?: string
           location_id?: string
+          medium?: string
           passed?: boolean
           similarity_score?: number | null
           source_type?: string
@@ -1280,6 +1421,7 @@ export type Database = {
     Functions: {
       get_leader_chat_id: { Args: { student_id: string }; Returns: number }
       is_admin: { Args: never; Returns: boolean }
+      is_block_unlocked: { Args: { p_user_id: string; p_block_id: number }; Returns: boolean }
       is_visible_to: { Args: { target_id: string; viewer_id: string }; Returns: boolean }
     }
     Enums: { [_ in never]: never }

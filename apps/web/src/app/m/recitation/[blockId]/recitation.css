@@ -1,0 +1,254 @@
+.recitation-page {
+  padding-bottom: 3rem;
+}
+
+/* ── Back link ─────────────────────────────────────────────────── */
+.recitation-back {
+  display: inline-block;
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+.recitation-back:hover { color: var(--tg-text, #E5E7EB); }
+
+/* ── Header ─────────────────────────────────────────────────────── */
+.recitation-header { margin-bottom: 1.25rem; }
+.recitation-header__eyebrow {
+  color: var(--tg-button, #C9A961);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+.recitation-header__title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--tg-text, #E5E7EB);
+  margin-bottom: 0.25rem;
+}
+.recitation-header__desc {
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+/* ── Section card ────────────────────────────────────────────────── */
+.recitation-card {
+  background: var(--tg-section-bg, #1A1C1F);
+  border-radius: 14px;
+  padding: 1rem 1.125rem;
+  margin-bottom: 0.75rem;
+}
+
+.recitation-card__title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--tg-text, #E5E7EB);
+  margin-bottom: 0.375rem;
+}
+.recitation-card__desc {
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+/* ── Status row ──────────────────────────────────────────────────── */
+.recitation-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  margin-bottom: 0.625rem;
+}
+.recitation-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--tg-hint, #9CA3AF);
+  flex-shrink: 0;
+}
+.recitation-status-dot--pass { background: #4ADE80; }
+.recitation-status-dot--pending { background: var(--tg-button, #C9A961); }
+
+/* ── AI feedback ─────────────────────────────────────────────────── */
+.recitation-feedback {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: linear-gradient(180deg, rgba(201, 169, 97, 0.14), rgba(201, 169, 97, 0.07));
+  border-left: 3px solid var(--tg-button, #C9A961);
+  border-radius: 0 10px 10px 0;
+}
+.recitation-feedback__label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-button, #C9A961);
+  margin-bottom: 0.375rem;
+}
+.recitation-feedback p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--tg-text, #E5E7EB);
+}
+
+/* ── Video list ──────────────────────────────────────────────────── */
+.recitation-video-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.625rem;
+}
+.recitation-video-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.recitation-video-item__num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--tg-button, #C9A961);
+  min-width: 1.25rem;
+}
+.recitation-video-item__comment {
+  flex: 1;
+  font-size: 0.8125rem;
+  color: var(--tg-hint, #9CA3AF);
+  line-height: 1.4;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.recitation-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 0.875rem;
+  background: var(--tg-button, #C9A961);
+  color: var(--tg-button-text, #FFFFFF);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.recitation-btn:active { opacity: 0.8; }
+.recitation-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+.recitation-btn--ghost {
+  background: transparent;
+  border: 1px solid rgba(201, 169, 97, 0.4);
+  color: var(--tg-button, #C9A961);
+}
+.recitation-btn--danger {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+}
+.recitation-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* ── Recording indicator ─────────────────────────────────────────── */
+.recitation-recording-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #EF4444;
+  display: inline-block;
+  animation: rec-blink 1s ease-in-out infinite;
+}
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+.recitation-recording-timer {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #EF4444;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ── Progress summary ────────────────────────────────────────────── */
+.recitation-progress {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.recitation-progress__item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  color: var(--tg-hint, #9CA3AF);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.recitation-progress__item--pass {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: rgba(74, 222, 128, 0.2);
+  color: #4ADE80;
+}
+
+/* ── Loading skeleton ────────────────────────────────────────────── */
+.recitation-skeleton {
+  background: var(--tg-section-bg, #1A1C1F);
+  border-radius: 14px;
+  height: 6rem;
+  margin-bottom: 0.75rem;
+  animation: rec-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rec-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.recitation-loading-hint {
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+/* ── Error state ─────────────────────────────────────────────────── */
+.recitation-error {
+  background: var(--tg-section-bg, #1A1C1F);
+  border-radius: 14px;
+  padding: 1.5rem 1.125rem;
+  text-align: center;
+}
+.recitation-error__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--tg-text, #E5E7EB);
+  margin-bottom: 0.5rem;
+}
+.recitation-error__desc {
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+/* ── Hidden file input ───────────────────────────────────────────── */
+.recitation-file-input { display: none; }
