@@ -66,11 +66,14 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
   const [state, setState] = useState<RecordingState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const mediaRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+  const livePreviewRef = useRef<HTMLVideoElement | null>(null)
   const timerSecs = useTimer(state === 'recording')
   const hasMediaDevices = typeof navigator !== 'undefined' && !!navigator.mediaDevices
+  const isVideo = medium === 'video_note'
 
   function stopRecording() {
     mediaRef.current?.stop()
@@ -79,18 +82,30 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
   async function startRecording() {
     setError(null)
     setBlob(null)
+    if (blobUrl) {
+      URL.revokeObjectURL(blobUrl)
+      setBlobUrl(null)
+    }
     try {
-      const constraints = medium === 'video_note'
+      const constraints = isVideo
         ? { audio: true, video: { width: 480, height: 480, facingMode: 'user' } }
         : { audio: true }
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      // Live preview только для видеокружка — показываем что снимает камера
+      if (isVideo && livePreviewRef.current) {
+        livePreviewRef.current.srcObject = stream
+        await livePreviewRef.current.play().catch(() => undefined)
+      }
       const recorder = new MediaRecorder(stream)
       chunksRef.current = []
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop())
-        const mimeType = medium === 'video_note' ? 'video/webm' : 'audio/webm'
-        setBlob(new Blob(chunksRef.current, { type: mimeType }))
+        if (livePreviewRef.current) livePreviewRef.current.srcObject = null
+        const mimeType = isVideo ? 'video/webm' : 'audio/webm'
+        const newBlob = new Blob(chunksRef.current, { type: mimeType })
+        setBlob(newBlob)
+        setBlobUrl(URL.createObjectURL(newBlob))
         setState('idle')
       }
       recorder.start()
@@ -135,6 +150,27 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
 
   return (
     <div>
+      {isVideo && (isRecording || blobUrl) && (
+        <div className="location-video-preview">
+          {isRecording ? (
+            <video
+              ref={livePreviewRef}
+              className="location-video-preview__el"
+              autoPlay
+              muted
+              playsInline
+            />
+          ) : blobUrl ? (
+            <video
+              key={blobUrl}
+              className="location-video-preview__el"
+              src={blobUrl}
+              controls
+              playsInline
+            />
+          ) : null}
+        </div>
+      )}
       {isRecording && (
         <div className="location-recording-timer">
           <span className="location-recording-dot" />

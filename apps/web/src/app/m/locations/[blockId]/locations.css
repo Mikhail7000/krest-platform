@@ -320,3 +320,22 @@
 
 /* ── Hidden file input ───────────────────────────────────────────── */
 .location-file-input { display: none; }
+
+/* ── Video preview (live + recorded playback) ────────────────────── */
+.location-video-preview {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1;
+  margin: 0.5rem 0 0.75rem;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid var(--tg-button, #C9A961);
+}
+.location-video-preview__el {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
