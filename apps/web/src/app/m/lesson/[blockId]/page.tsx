@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import type { Database } from '../../../../../../../packages/supabase/src/types'
 import { LessonVideos } from '@/components/lesson/LessonVideos'
 import { BlockProgressBanner } from './BlockProgressBanner'
@@ -76,11 +78,18 @@ function GuideCard({ resource, imageUrl }: { resource: BlockResource; imageUrl: 
       </h2>
       {resource.description_ru && <p className="lesson-card__desc">{resource.description_ru}</p>}
       {imageUrl && (
-        <div className="lesson-guide-image">
-          <img src={imageUrl} alt={resource.title_ru} loading="lazy" />
-        </div>
+        <a href={imageUrl} target="_blank" rel="noopener noreferrer" download className="lesson-button">
+          Скачать гайд
+        </a>
       )}
-      {resource.transcript_md && <div className="lesson-guide-text">{resource.transcript_md}</div>}
+      {resource.transcript_md && (
+        <details className="lesson-details">
+          <summary>Развернуть текст гайда</summary>
+          <div className="lesson-summary">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{resource.transcript_md}</ReactMarkdown>
+          </div>
+        </details>
+      )}
     </section>
   )
 }
