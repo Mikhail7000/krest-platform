@@ -76,10 +76,16 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       signal: ac.signal,
     })
       .then((r) => r.json())
-      .then((data: { allowed: boolean; maintenance?: boolean; reason?: string }) => {
+      .then((data: { allowed: boolean; maintenance?: boolean; reason?: string; message?: string }) => {
         if (!data.allowed) {
           setStatus('forbidden')
-          setErrorMessage('Приложение в разработке. Доступ откроется позже.')
+          if (data.reason === 'WAITLIST') {
+            setErrorMessage(data.message ?? 'Платформа ещё не открыта публично. Спасибо что ждёшь — мы скоро откроемся.')
+          } else if (data.reason === 'PROFILE_NOT_FOUND') {
+            setErrorMessage('Сначала запусти бота @cross_bot командой /start, потом возвращайся.')
+          } else {
+            setErrorMessage('Приложение в разработке. Доступ откроется позже.')
+          }
           return
         }
         const tgUser = tg.initDataUnsafe?.user

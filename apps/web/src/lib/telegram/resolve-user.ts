@@ -1,10 +1,11 @@
 /**
- * Универсальный резолвер user_id для MiniApp API:
- * - Проверяет Telegram WebApp initData (HMAC).
- * - В development mode + DEV_BYPASS_USER_ID — возвращает этот UUID без валидации.
+ * Универсальный резолвер user_id для MiniApp API.
+ * - DEV: NODE_ENV !== 'production' + DEV_BYPASS_USER_ID → возвращает этот UUID без проверок.
+ * - PROD: валидирует Telegram WebApp initData (HMAC) → ищет profile по telegram_chat_id →
+ *   проверяет whitelist (is_whitelisted=TRUE или role IN super_admin/admin/curator).
  *
- * Используется в /api/m/* эндпоинтах вместо прямого validateTelegramInitData,
- * чтобы можно было тестировать MiniApp в обычном браузере локально.
+ * Если пользователь валидный но НЕ в whitelist → возвращает 403 WAITLIST.
+ * Клиент обрабатывает это и показывает экран «Скоро откроемся».
  */
 
 import { validateTelegramInitData } from './init-data'
@@ -14,8 +15,9 @@ export type ResolveResult =
   | { ok: true; userId: string; viaDevBypass: boolean }
   | { ok: false; status: number; code: string; message: string }
 
+const PRIVILEGED_ROLES = new Set(['super_admin', 'admin', 'curator'])
+
 export async function resolveUserId(initData: string): Promise<ResolveResult> {
-  // Dev-bypass — только если NODE_ENV !== 'production' и переменная задана
   if (process.env.NODE_ENV !== 'production' && process.env.DEV_BYPASS_USER_ID) {
     return {
       ok: true,
@@ -37,12 +39,23 @@ export async function resolveUserId(initData: string): Promise<ResolveResult> {
   const supabase = createServiceSupabase()
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, role, is_whitelisted')
     .eq('telegram_chat_id', validation.chatId)
     .maybeSingle()
 
   if (!profile) {
     return { ok: false, status: 404, code: 'PROFILE_NOT_FOUND', message: 'Profile not found' }
+  }
+
+  const isPrivileged = profile.role !== null && PRIVILEGED_ROLES.has(profile.role)
+  const isWhitelisted = profile.is_whitelisted === true
+  if (!isPrivileged && !isWhitelisted) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'WAITLIST',
+      message: 'Платформа ещё не открыта публично. Спасибо что ждёшь — мы скоро.',
+    }
   }
 
   return { ok: true, userId: profile.id, viaDevBypass: false }

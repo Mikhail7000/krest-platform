@@ -521,6 +521,7 @@ export type Database = {
           id: string
           interests: string | null
           is_protected: boolean | null
+          is_whitelisted: boolean
           lang: string | null
           latitude: number | null
           location_name: string | null
@@ -545,6 +546,7 @@ export type Database = {
           id: string
           interests?: string | null
           is_protected?: boolean | null
+          is_whitelisted?: boolean
           lang?: string | null
           latitude?: number | null
           location_name?: string | null
@@ -569,6 +571,7 @@ export type Database = {
           id?: string
           interests?: string | null
           is_protected?: boolean | null
+          is_whitelisted?: boolean
           lang?: string | null
           latitude?: number | null
           location_name?: string | null
