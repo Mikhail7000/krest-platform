@@ -80,7 +80,21 @@ function RecordBlock({ blockId, medium, maxSecs, onResult, label, accept, captur
         ? { audio: true, video: { width: 480, height: 480, facingMode: 'user' } }
         : { audio: true }
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      const recorder = new MediaRecorder(stream)
+      // Низкий битрейт для аудио-пересказа: 32 kbps × 10 мин = ~2.4 MB,
+      // гарантированно проходит лимит Vercel 4.5 MB. Для Deepgram STT
+      // 32 kbps достаточно (модель Nova-2 устойчива к низкому битрейту).
+      const recorderOpts: MediaRecorderOptions =
+        medium === 'audio'
+          ? { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 32_000 }
+          : { mimeType: 'video/webm' }
+      const recorder = (() => {
+        try {
+          return new MediaRecorder(stream, recorderOpts)
+        } catch {
+          // Fallback если браузер не поддерживает указанный mimeType/битрейт
+          return new MediaRecorder(stream)
+        }
+      })()
       chunksRef.current = []
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       recorder.onstop = () => {
