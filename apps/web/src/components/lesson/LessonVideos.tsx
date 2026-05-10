@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { KinescopePlayerNoSkip } from './KinescopePlayerNoSkip'
 
 interface VideoResource {
@@ -9,7 +11,7 @@ interface VideoResource {
   title_ru: string
   description_ru: string | null
   is_required: boolean
-  transcript_md: string | null
+  summary_md: string | null
 }
 
 interface ProgressEntry {
@@ -73,11 +75,15 @@ export function LessonVideos({ videos }: { videos: VideoResource[] }) {
                 initialCompleted={!!p?.completedAt}
               />
             </div>
-            {v.transcript_md && (
-              <details className="lesson-details">
-                <summary>Показать расшифровку</summary>
-                <div className="lesson-transcript">{v.transcript_md}</div>
+            {v.summary_md ? (
+              <details className="lesson-details" open>
+                <summary>Конспект</summary>
+                <div className="lesson-summary">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{v.summary_md}</ReactMarkdown>
+                </div>
               </details>
+            ) : (
+              <p className="lesson-summary-pending">Конспект готовится…</p>
             )}
           </section>
         )

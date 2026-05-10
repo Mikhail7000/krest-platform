@@ -101,7 +101,7 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
       title_ru: r.title_ru,
       description_ru: r.description_ru,
       is_required: r.is_required,
-      transcript_md: r.transcript_md,
+      summary_md: r.summary_md,
     }))
   const audios = resources.filter((r) => r.resource_type === 'audio_prayer')
   const pdfs = resources.filter((r) => r.resource_type === 'pdf_prayer')
