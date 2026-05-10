@@ -107,20 +107,22 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const rows = (rowsRaw ?? []) as DailyCrossRow[]
 
-  // 5. Вычисляем today_index — сколько дней прошло с block_completed_at
+  // 5. Вычисляем today_index в UTC (хранение в БД — DATE без timezone, формат ISO YYYY-MM-DD).
   const today = new Date()
   const todayStr = formatDate(today)
 
   let todayIndex = 1
   if (blockCompletedAt) {
     const startDate = new Date(blockCompletedAt)
-    // Разница в полных сутках
-    const diffMs = today.setHours(0, 0, 0, 0) - new Date(startDate).setHours(0, 0, 0, 0)
+    startDate.setUTCHours(0, 0, 0, 0)
+    const todayUtc = new Date(today)
+    todayUtc.setUTCHours(0, 0, 0, 0)
+    const diffMs = todayUtc.getTime() - startDate.getTime()
     todayIndex = Math.max(1, Math.floor(diffMs / 86_400_000) + 1)
   }
 
-  // 6. Строим calendar на 7 дней, начиная с block_completed_at
-  const submittedMap = new Map<string, string>() // date → storage_path
+  // 6. Строим calendar на 7 дней, начиная с block_completed_at (всё в UTC).
+  const submittedMap = new Map<string, string>()
   for (const row of rows) {
     submittedMap.set(row.submitted_date, row.storage_path)
   }
@@ -135,10 +137,10 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   if (blockCompletedAt) {
     const startDate = new Date(blockCompletedAt)
-    startDate.setHours(0, 0, 0, 0)
+    startDate.setUTCHours(0, 0, 0, 0)
     for (let i = 0; i < 7; i++) {
       const d = new Date(startDate)
-      d.setDate(d.getDate() + i)
+      d.setUTCDate(d.getUTCDate() + i)
       const dateStr = formatDate(d)
       const storagePath = submittedMap.get(dateStr) ?? null
       days.push({
@@ -152,7 +154,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   } else {
     for (let i = 0; i < 7; i++) {
       const d = new Date(today)
-      d.setDate(d.getDate() + i)
+      d.setUTCDate(d.getUTCDate() + i)
       days.push({
         day_index: i + 1,
         date: formatDate(d),

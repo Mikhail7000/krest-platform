@@ -86,11 +86,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const rows = (rowsRaw ?? []) as RecitationRow[]
 
-  // Находим последнюю попытку по medium
   const lastAudio = rows.find((r) => r.medium === 'audio') ?? null
-  const lastVideo = rows.find((r) => r.medium === 'video_note') ?? null
+  const videoRows = rows.filter((r) => r.medium === 'video_note')
 
-  // Находим дату первой passed попытки по каждому medium
   const audioPassedRow = rows
     .slice()
     .reverse()
@@ -100,24 +98,25 @@ export async function POST(req: NextRequest, { params }: Params) {
     .reverse()
     .find((r) => r.medium === 'video_note' && r.passed)
 
-  function formatAttempt(row: RecitationRow | null) {
-    if (!row) return null
-    return {
-      passed: row.passed,
-      ai_score: row.ai_score,
-      ai_comment: row.ai_comment,
-      transcript: row.transcript,
-      created_at: row.created_at,
-    }
-  }
-
   return NextResponse.json({
     ok: true,
+    audio: lastAudio
+      ? {
+          passed: lastAudio.passed,
+          ai_score: lastAudio.ai_score,
+          ai_comment: lastAudio.ai_comment,
+          transcript: lastAudio.transcript,
+          created_at: lastAudio.created_at,
+        }
+      : null,
+    videos: videoRows.map((r) => ({
+      id: r.id,
+      passed: r.passed,
+      ai_score: r.ai_score,
+      ai_comment: r.ai_comment,
+      created_at: r.created_at,
+    })),
     audio_passed_at: audioPassedRow?.created_at ?? null,
     video_passed_at: videoPassedRow?.created_at ?? null,
-    last_attempts: {
-      audio: formatAttempt(lastAudio),
-      video: formatAttempt(lastVideo),
-    },
   })
 }

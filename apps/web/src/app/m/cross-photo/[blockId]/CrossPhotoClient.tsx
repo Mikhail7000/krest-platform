@@ -28,22 +28,6 @@ interface UploadResult {
   completed_count?: number
 }
 
-const BIBLE_QUOTES: { text: string; ref: string }[] = [
-  { text: 'Верный в малом и во многом верен, а неверный в малом неверен и во многом.', ref: 'Лк 16:10' },
-  { text: 'Делая добро, да не унываем, ибо в своё время пожнём, если не ослабеем.', ref: 'Гал 6:9' },
-  { text: 'Терпение нужно вам, чтобы, исполнив волю Божию, получить обещанное.', ref: 'Евр 10:36' },
-  {
-    text: 'Не бойся ничего, что тебе надобно будет претерпеть. Вот, диавол будет ввергать из среды вас в темницу, чтобы искусить вас, и будете иметь скорбь дней десять. Будь верен до смерти, и дам тебе венец жизни.',
-    ref: 'Откр 2:10',
-  },
-  { text: 'Утешайтесь надеждою; в скорби будьте терпеливы, в молитве постоянны.', ref: 'Рим 12:12' },
-  {
-    text: 'Блажен человек, который переносит искушение, потому что, быв испытан, он получит венец жизни, который обещал Господь любящим Его.',
-    ref: 'Иак 1:12',
-  },
-  { text: 'Подвигом добрым я подвизался, течение совершил, веру сохранил.', ref: '2 Тим 4:7' },
-]
-
 function getInitData(): string {
   if (typeof window === 'undefined') return ''
   return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp?.initData ?? ''
@@ -60,7 +44,6 @@ function DayCard({ day, isToday, blockId, onUploaded }: DayCardProps) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const quote = BIBLE_QUOTES[day.day_index - 1]
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -110,13 +93,6 @@ function DayCard({ day, isToday, blockId, onUploaded }: DayCardProps) {
           className="cp-photo-thumb"
           loading="lazy"
         />
-      )}
-
-      {quote && (
-        <blockquote className="cp-quote">
-          {quote.text}
-          <cite className="cp-quote__ref">— {quote.ref}</cite>
-        </blockquote>
       )}
 
       {isToday && !day.submitted && (
