@@ -59,15 +59,25 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const supabase = createServiceSupabase()
 
-  // 3. Загружаем progress для получения block_completed_at (= дата разблокировки)
-  const { data: progress } = await supabase
-    .from('student_block_progress')
-    .select('block_completed_at')
-    .eq('user_id', userId)
-    .eq('block_id', blockId)
-    .maybeSingle()
+  // 3. Дата разлока блока (откуда отсчитываем 7 дней).
+  //    Используем block_unlocked_at из student_block_progress.
+  //    Если у пользователя can_skip_block_lock — для удобства тестов считаем,
+  //    что блок открылся "сегодня" и календарь начинается с текущей даты.
+  const [{ data: profile }, { data: progress }] = await Promise.all([
+    supabase.from('profiles').select('can_skip_block_lock').eq('id', userId).maybeSingle(),
+    supabase
+      .from('student_block_progress')
+      .select('block_unlocked_at')
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+      .maybeSingle(),
+  ])
 
-  const blockCompletedAt = progress?.block_completed_at ?? null
+  let blockUnlockedAt: string | null = progress?.block_unlocked_at ?? null
+  if (!blockUnlockedAt && profile?.can_skip_block_lock) {
+    blockUnlockedAt = new Date().toISOString()
+  }
+  const blockCompletedAt = blockUnlockedAt
 
   // 4. Загружаем записи из student_block_daily_cross
   const { data: rowsRaw, error: fetchErr } = await (supabase as unknown as {
@@ -120,6 +130,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     date: string
     submitted: boolean
     storage_path: string | null
+    photo_url: string | null
   }> = []
 
   if (blockCompletedAt) {
@@ -135,10 +146,10 @@ export async function POST(req: NextRequest, { params }: Params) {
         date: dateStr,
         submitted: submittedMap.has(dateStr),
         storage_path: storagePath,
+        photo_url: null,
       })
     }
   } else {
-    // Блок ещё не разблокирован — показываем 7 пустых слотов начиная с сегодня
     for (let i = 0; i < 7; i++) {
       const d = new Date(today)
       d.setDate(d.getDate() + i)
@@ -147,12 +158,12 @@ export async function POST(req: NextRequest, { params }: Params) {
         date: formatDate(d),
         submitted: false,
         storage_path: null,
+        photo_url: null,
       })
     }
   }
 
   // 7. Добавляем сегодняшний день, если он за пределами 7 дней (>7)
-  // Это нужно, если ученик ещё не загрузил фото за сегодня после дня 7
   if (todayIndex > 7) {
     const alreadyInDays = days.some((d) => d.date === todayStr)
     if (!alreadyInDays) {
@@ -161,7 +172,25 @@ export async function POST(req: NextRequest, { params }: Params) {
         date: todayStr,
         submitted: submittedMap.has(todayStr),
         storage_path: submittedMap.get(todayStr) ?? null,
+        photo_url: null,
       })
+    }
+  }
+
+  // 8. Подписываем URL для каждого submitted дня (bucket private, public-URL не работает).
+  const submittedPaths = days
+    .map((d) => d.storage_path)
+    .filter((p): p is string => Boolean(p))
+  if (submittedPaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from('student-cross-photos')
+      .createSignedUrls(submittedPaths, 60 * 60)
+    const urlByPath = new Map<string, string>()
+    for (const item of signed ?? []) {
+      if (item.signedUrl && item.path) urlByPath.set(item.path, item.signedUrl)
+    }
+    for (const d of days) {
+      if (d.storage_path) d.photo_url = urlByPath.get(d.storage_path) ?? null
     }
   }
 

@@ -12,7 +12,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ru">
+    // suppressHydrationWarning: Telegram WebApp SDK (telegram-web-app.js) инжектит
+    // на <html> inline-стили --tg-viewport-height/--tg-viewport-stable-height,
+    // которых нет в SSR-разметке → ожидаемый клиент-серверный mismatch на этом узле.
+    <html lang="ru" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   )

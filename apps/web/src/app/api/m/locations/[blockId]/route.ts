@@ -54,30 +54,31 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const supabase = createServiceSupabase()
 
-  // 3. Блокировка по quiz_passed (местописания доступны только после квиза)
-  const { data: progress } = await supabase
-    .from('student_block_progress')
-    .select('status, quiz_passed_at, locations_passed_at, locations_locked_until')
-    .eq('user_id', userId)
-    .eq('block_id', blockId)
-    .maybeSingle()
+  // 3. Доступ к местописаниям: либо can_skip_block_lock у профиля (super_admin/тест),
+  //    либо квиз блока сдан (quiz_passed_at IS NOT NULL).
+  const [{ data: profile }, { data: progress }] = await Promise.all([
+    supabase.from('profiles').select('can_skip_block_lock').eq('id', userId).maybeSingle(),
+    supabase
+      .from('student_block_progress')
+      .select('status, quiz_passed_at, locations_passed_at, locations_locked_until')
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+      .maybeSingle(),
+  ])
 
-  const isBlockUnlocked = Boolean(progress?.locations_passed_at)
-
-  // Проверяем, доступны ли местописания: нужен пройденный квиз (quiz_passed_at)
+  const canSkip = Boolean(profile?.can_skip_block_lock)
+  let isBlockUnlocked = canSkip || Boolean(progress?.quiz_passed_at)
   let lockedReason: 'previous_not_passed' | 'cooldown_7_days' | undefined
   let unlockAt: string | undefined
-  let canSkip = false
 
-  if (!progress?.quiz_passed_at) {
+  if (!isBlockUnlocked) {
     lockedReason = 'previous_not_passed'
-    canSkip = false
-  } else if (progress.locations_locked_until) {
+  } else if (!canSkip && progress?.locations_locked_until) {
     const lockedUntil = new Date(progress.locations_locked_until)
     if (lockedUntil > new Date()) {
       lockedReason = 'cooldown_7_days'
       unlockAt = lockedUntil.toISOString()
-      canSkip = false
+      isBlockUnlocked = false
     }
   }
 

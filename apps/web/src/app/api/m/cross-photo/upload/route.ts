@@ -163,10 +163,17 @@ export async function POST(req: NextRequest) {
     .eq('user_id', userId)
     .eq('block_id', blockId)
 
+  // Подписываем URL для немедленного показа превью на клиенте (bucket private).
+  const { data: signed } = await supabase.storage
+    .from(STUDENT_CROSS_PHOTOS_BUCKET)
+    .createSignedUrl(storagePath, 60 * 60)
+  const photoUrl = signed?.signedUrl ?? null
+
   return NextResponse.json({
     ok: true,
     date: dateStr,
     storage_path: storagePath,
+    photo_url: photoUrl,
     completed_count: completedCount,
   })
 }

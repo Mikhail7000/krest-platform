@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-// TODO: replace with import from @/types when database-architect adds these tables
 interface DayEntry {
   day_index: number
   date: string
   submitted: boolean
   storage_path: string | null
+  photo_url: string | null
 }
 
 interface CrossPhotoApiResponse {
@@ -20,16 +20,12 @@ interface CrossPhotoApiResponse {
 
 interface UploadResult {
   ok: boolean
-  day_index: number
-  submitted: boolean
+  date?: string
+  day_index?: number
+  submitted?: boolean
   storage_path: string | null
-}
-
-// NOTE: storage_path is not a signed URL — needs backend to return signed URL or public URL.
-// Currently using storage_path directly. TODO: ask backend-engineer to return `photo_url` (signed).
-function resolvePhotoUrl(storagePath: string): string {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-  return `${base}/storage/v1/object/public/${storagePath}`
+  photo_url: string | null
+  completed_count?: number
 }
 
 const BIBLE_QUOTES: { text: string; ref: string }[] = [
@@ -107,9 +103,9 @@ function DayCard({ day, isToday, blockId, onUploaded }: DayCardProps) {
         </span>
       </div>
 
-      {day.submitted && day.storage_path && (
+      {day.submitted && day.photo_url && (
         <img
-          src={resolvePhotoUrl(day.storage_path)}
+          src={day.photo_url}
           alt={`Крест день ${day.day_index}`}
           className="cp-photo-thumb"
           loading="lazy"
@@ -183,12 +179,18 @@ export function CrossPhotoClient({ blockId }: Props) {
   function handleUploaded(result: UploadResult) {
     setDays((prev) =>
       prev.map((d) =>
-        d.day_index === result.day_index
-          ? { ...d, submitted: result.submitted, storage_path: result.storage_path }
+        d.date === result.date
+          ? {
+              ...d,
+              submitted: result.submitted ?? true,
+              storage_path: result.storage_path,
+              photo_url: result.photo_url,
+            }
           : d,
       ),
     )
-    if (result.submitted) setCompletedCount((c) => c + 1)
+    if (result.completed_count !== undefined) setCompletedCount(result.completed_count)
+    else if (result.submitted ?? true) setCompletedCount((c) => c + 1)
   }
 
   if (view === 'loading') {
