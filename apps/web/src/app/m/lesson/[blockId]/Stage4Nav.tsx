@@ -1,6 +1,5 @@
-// Server Component — bottom navigation cards to Этап 4 pages
-// Progress counts are not fetched here (require initData); shown as links with labels.
-// TODO: fetch progress counts via server-side after database-architect adds tables
+// Server Component — навигационные карточки практики блока (под видео и конспектом).
+// Заголовок и тексты — для ученика, без внутренней терминологии разработки.
 
 import Link from 'next/link'
 
@@ -11,7 +10,7 @@ interface Props {
 export function Stage4Nav({ blockId }: Props) {
   return (
     <div className="lesson-section">
-      <h3 className="lesson-section__title">Этап 4 — Практика</h3>
+      <h3 className="lesson-section__title">Практика блока</h3>
       <Link href={`/m/locations/${blockId}`} className="lesson-stage4-card">
         <span className="lesson-stage4-card__icon">📖</span>
         <span className="lesson-stage4-card__body">
