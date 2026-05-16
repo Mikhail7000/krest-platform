@@ -1,0 +1,59 @@
+.miniapp-root {
+  min-height: 100vh;
+  background: var(--tg-bg, #0F1114);
+  color: var(--tg-text, #E5E7EB);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.miniapp-container {
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}
+
+.miniapp-card {
+  background: var(--tg-section-bg, #1A1C1F);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.miniapp-button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background: var(--tg-button, #C9A961);
+  color: var(--tg-button-text, #FFFFFF);
+  border: 0;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.miniapp-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.miniapp-hint {
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.miniapp-headline {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--tg-button, #C9A961);
+  margin-bottom: 0.5rem;
+}
+
+.miniapp-status-error {
+  color: var(--tg-destructive, #EF4444);
+}

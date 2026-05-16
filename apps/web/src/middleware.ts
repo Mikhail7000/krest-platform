@@ -28,6 +28,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Next.js MiniApp routes (PoC) — bypass maintenance, проверка внутри TelegramProvider
+  if (pathname.startsWith('/m/')) {
+    return NextResponse.next()
+  }
+
   // API routes — handle their own auth (или service role)
   if (pathname.startsWith('/api/')) {
     return NextResponse.next()

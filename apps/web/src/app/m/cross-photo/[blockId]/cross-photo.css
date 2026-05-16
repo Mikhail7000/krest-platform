@@ -1,0 +1,211 @@
+.cross-photo-page {
+  padding-bottom: 3rem;
+}
+
+/* ── Back link ─────────────────────────────────────────────────── */
+.cp-back {
+  display: inline-block;
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+.cp-back:hover { color: var(--tg-text, #E5E7EB); }
+
+/* ── Header ─────────────────────────────────────────────────────── */
+.cp-header { margin-bottom: 1.25rem; }
+.cp-header__eyebrow {
+  color: var(--tg-button, #C9A961);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+.cp-header__motto {
+  font-size: 0.875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tg-button, #C9A961);
+  margin-bottom: 0.875rem;
+}
+.cp-header__progress {
+  font-size: 0.9rem;
+  color: var(--tg-hint, #9CA3AF);
+  margin-bottom: 0.25rem;
+}
+.cp-progress-bar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+}
+.cp-progress-bar__fill {
+  height: 100%;
+  background: var(--tg-button, #C9A961);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ── Day cards ───────────────────────────────────────────────────── */
+.cp-day-card {
+  background: var(--tg-section-bg, #1A1C1F);
+  border-radius: 14px;
+  padding: 1rem 1.125rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.cp-day-card--done {
+  border-color: rgba(74, 222, 128, 0.25);
+  background: linear-gradient(180deg, rgba(74, 222, 128, 0.04), rgba(74, 222, 128, 0.01));
+}
+.cp-day-card--today {
+  border-color: rgba(201, 169, 97, 0.35);
+}
+.cp-day-card--future {
+  opacity: 0.55;
+}
+
+.cp-day-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.cp-day-card__num {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tg-button, #C9A961);
+}
+.cp-day-card__date {
+  font-size: 0.8125rem;
+  color: var(--tg-hint, #9CA3AF);
+}
+.cp-day-card__status {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+/* ── Uploaded photo thumbnail ────────────────────────────────────── */
+.cp-photo-thumb {
+  width: 100%;
+  max-height: 12rem;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+/* ── Bible quote ─────────────────────────────────────────────────── */
+.cp-quote {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background: rgba(201, 169, 97, 0.06);
+  border-left: 3px solid var(--tg-button, #C9A961);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--tg-text, #E5E7EB);
+  font-style: italic;
+}
+.cp-quote__ref {
+  display: block;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--tg-button, #C9A961);
+}
+
+/* ── Upload button area ──────────────────────────────────────────── */
+.cp-upload-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 0.875rem;
+  background: var(--tg-button, #C9A961);
+  color: var(--tg-button-text, #FFFFFF);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.cp-upload-label:active { opacity: 0.8; }
+.cp-upload-label--disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.cp-file-input { display: none; }
+
+.cp-uploading-hint {
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  margin-top: 0.375rem;
+}
+.cp-upload-error {
+  color: var(--tg-destructive, #EF4444);
+  font-size: 0.8125rem;
+  margin-top: 0.375rem;
+}
+
+/* ── Loading skeleton ────────────────────────────────────────────── */
+.cp-skeleton {
+  background: var(--tg-section-bg, #1A1C1F);
+  border-radius: 14px;
+  height: 7rem;
+  margin-bottom: 0.75rem;
+  animation: cp-pulse 1.4s ease-in-out infinite;
+}
+@keyframes cp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.cp-loading-hint {
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+/* ── Error state ─────────────────────────────────────────────────── */
+.cp-error {
+  background: var(--tg-section-bg, #1A1C1F);
+  border-radius: 14px;
+  padding: 1.5rem 1.125rem;
+  text-align: center;
+}
+.cp-error__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--tg-text, #E5E7EB);
+  margin-bottom: 0.5rem;
+}
+.cp-error__desc {
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+.cp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.625rem 0.875rem;
+  background: var(--tg-button, #C9A961);
+  color: var(--tg-button-text, #FFFFFF);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.cp-btn:active { opacity: 0.8; }

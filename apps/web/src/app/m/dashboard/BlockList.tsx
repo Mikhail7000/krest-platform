@@ -1,0 +1,160 @@
+import Link from 'next/link'
+import type { Database } from '../../../../../../packages/supabase/src/types'
+import { loadDashboardData } from './loadDashboard'
+
+type Block = Database['public']['Tables']['blocks']['Row']
+type BlockProgress = Database['public']['Tables']['student_block_progress']['Row']
+
+type StatusVariant = 'done' | 'active' | 'locked' | 'default'
+
+function blockStatus(
+  block: Block,
+  progress: BlockProgress | undefined,
+  canSkip: boolean,
+  prevGroupUnlocked: boolean,
+): { label: string; variant: StatusVariant } {
+  if (progress?.block_passed_at) return { label: 'Сдан', variant: 'done' }
+  if (progress?.status === 'in_progress') return { label: 'Идёт сдача', variant: 'active' }
+  const num = block.order_num ?? 0
+  const accessible = progress?.block_unlocked_at || canSkip || num === 1 || prevGroupUnlocked
+  if (accessible) return { label: 'Доступен', variant: 'default' }
+  return { label: 'Заблокирован', variant: 'locked' }
+}
+
+interface BlockCardProps {
+  block: Block
+  progress: BlockProgress | undefined
+  canSkip: boolean
+  prevGroupUnlocked: boolean
+}
+
+function BlockCard({ block, progress, canSkip, prevGroupUnlocked }: BlockCardProps) {
+  const { label, variant } = blockStatus(block, progress, canSkip, prevGroupUnlocked)
+  const isDone = variant === 'done'
+  const isLocked = variant === 'locked'
+
+  const cardClass = [
+    'db-block-card',
+    isDone && 'db-block-card--done',
+    isLocked && 'db-block-card--locked',
+  ].filter(Boolean).join(' ')
+
+  const statusClass = [
+    'db-block-card__status',
+    isDone && 'db-block-card__status--done',
+    variant === 'active' && 'db-block-card__status--active',
+  ].filter(Boolean).join(' ')
+
+  return (
+    <Link href={`/m/lesson/${block.id}`} className={cardClass}>
+      <span className="db-block-card__num">{block.order_num ?? block.id}</span>
+      <span className="db-block-card__body">
+        <span className="db-block-card__title">
+          {block.title_ru ?? `Блок ${block.order_num ?? block.id}`}
+        </span>
+        <span className={statusClass}>{isDone ? `${label} ✓` : label}</span>
+      </span>
+      {!isLocked && <span className="db-block-card__arrow">›</span>}
+    </Link>
+  )
+}
+
+interface ExamCardProps {
+  href: string
+  icon: string
+  title: string
+  hint: string
+  active: boolean
+  passed: boolean
+}
+
+function ExamCard({ href, icon, title, hint, active, passed }: ExamCardProps) {
+  return (
+    <Link
+      href={href}
+      className={`db-exam-card${!active ? ' db-exam-card--locked' : ''}`}
+    >
+      <span className="db-exam-card__icon">{icon}</span>
+      <span className="db-exam-card__body">
+        <span className="db-exam-card__title">
+          {title}
+          {passed && ' ✓'}
+        </span>
+        <span className="db-exam-card__hint">{hint}</span>
+      </span>
+      {active && <span className="db-exam-card__arrow">›</span>}
+    </Link>
+  )
+}
+
+export async function BlockList() {
+  const {
+    blocks, progressByBlockId, canSkip,
+    midExamPassed, finalExamPassed, courseDone,
+  } = await loadDashboardData()
+
+  const blocks1to5 = blocks.filter((b) => (b.order_num ?? 0) <= 5)
+  const blocks6to10 = blocks.filter((b) => (b.order_num ?? 0) >= 6)
+
+  const allBlock5Passed = canSkip || blocks1to5.every(
+    (b) => !!progressByBlockId[b.id]?.block_passed_at,
+  )
+  const allBlock10Passed = canSkip || blocks6to10.every(
+    (b) => !!progressByBlockId[b.id]?.block_passed_at,
+  )
+
+  const midExamActive = allBlock5Passed || canSkip
+  const finalExamActive = (midExamPassed && allBlock10Passed) || canSkip
+
+  return (
+    <div className="miniapp-container" style={{ paddingTop: 0 }}>
+      <div className="db-section">
+        <p className="db-section__title">Курс КРЕСТ — Блоки 1–5</p>
+        {blocks1to5.map((block) => (
+          <BlockCard
+            key={block.id}
+            block={block}
+            progress={progressByBlockId[block.id]}
+            canSkip={canSkip}
+            prevGroupUnlocked={false}
+          />
+        ))}
+        <ExamCard
+          href="/m/exam/mid"
+          icon="🎓"
+          title="Промежуточный экзамен"
+          hint="По блокам 1–5"
+          active={midExamActive}
+          passed={midExamPassed}
+        />
+      </div>
+
+      <div className="db-section">
+        <p className="db-section__title">Блоки 6–10</p>
+        {blocks6to10.map((block) => (
+          <BlockCard
+            key={block.id}
+            block={block}
+            progress={progressByBlockId[block.id]}
+            canSkip={canSkip}
+            prevGroupUnlocked={midExamPassed}
+          />
+        ))}
+        <ExamCard
+          href="/m/exam/final"
+          icon="⭐"
+          title="Финальный экзамен"
+          hint="По всему курсу"
+          active={finalExamActive}
+          passed={finalExamPassed}
+        />
+        {courseDone && (
+          <Link href="/m/completed" className="db-cert-link">
+            <span className="db-cert-link__icon">🏆</span>
+            <span className="db-cert-link__text">Ваш сертификат — Мастер Креста</span>
+          </Link>
+        )}
+      </div>
+    </div>
+  )
+}
