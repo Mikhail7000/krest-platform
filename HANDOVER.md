@@ -1,12 +1,12 @@
 # HANDOVER — КРЕСТ
-> Дата: 2026-05-17 | Сессия: ✅ **Деплой на production выполнен. MiniApp работает в Telegram через @cross_capsule.** Найдена и устранена ключевая проблема — на Vercel в `SUPABASE_SERVICE_ROLE_KEY` лежал anon-key вместо service_role. После замены MiniApp проходит цикл end-to-end.
+> Дата: 2026-05-17 | Сессия: ✅ **Деплой на production выполнен. MiniApp работает в Telegram через `@cross_notify_bot`** (username — по нему ищется в Telegram; display name = «cross_capsule», но не имеет @ и для поиска не используется). Найдена и устранена ключевая проблема — на Vercel в `SUPABASE_SERVICE_ROLE_KEY` лежал anon-key вместо service_role. После замены MiniApp проходит цикл end-to-end.
 
 ---
 
 ## 🎯 Главное (читать первым)
 
 1. **Ветка main = 0a0c175 → e38f394** (debug добавлен и убран). Production deployment активен.
-2. **MiniApp доступен**: `https://krest-platform-web.vercel.app/m/dashboard` через Menu Button бота **`@cross_capsule`** (display name) / username **`@cross_notify_bot`** (внутренний, не путать).
+2. **MiniApp доступен**: `https://krest-platform-web.vercel.app/m/dashboard` через Menu Button бота **`@cross_notify_bot`** (это username — по нему ищется в Telegram). Display name бота — «cross_capsule» (видно в шапке чата), но `@cross_capsule` НЕ существует, для поиска и в текстах для учеников использовать строго `@cross_notify_bot`.
 3. **Михаил протестировал**: открывает MiniApp → видит dashboard со списком блоков → переходит на пересказ/местописания/фото без ошибок.
 4. **В БД (`aejhlmoydnhgedgfndql`)**: добавлен UNIQUE constraint `profiles_telegram_chat_id_unique`. Дубликат-профиль «Миша Моряк» удалён. У Михаила (sleezard@gmail.com) — один профиль `281ddca3-c413-43e3-bbb1-02bd60d6d2f7`, super_admin, is_whitelisted=TRUE, is_protected=TRUE, can_skip_block_lock=TRUE.
 5. **Все env-переменные на Vercel** проставлены через Import .env, ключи валидны.
@@ -31,7 +31,7 @@
 
 ## ❌ Что сломано / технические долги
 
-- **Хардкод `@cross_bot` в [TelegramProvider.tsx](apps/web/src/components/telegram/TelegramProvider.tsx#L59,L85)** — должно быть `@cross_capsule`. Ученики увидят неправильный username в текстах ошибок (если попадут на 401/404).
+- **Хардкод `@cross_bot` в [TelegramProvider.tsx](apps/web/src/components/telegram/TelegramProvider.tsx#L59,L85)** — должно быть `@cross_notify_bot` (это username бота, по нему ищут в Telegram). Сейчас ученик может прочитать «откройте @cross_bot» и не найти.
 - **`apps/web/package.json` script `lint`** всё ещё на `next lint` (Next 16 удалил). Не блокер.
 - **Унаследованные WARN advisors** (~16 шт): `function_search_path_mutable` + `anon/authenticated_security_definer_function_executable` для функций `is_admin`, `is_visible_to`, `get_leader_chat_id`. Не критично.
 - **Legacy v2.0 cron-endpoints**: `/api/cron/reset-streaks`, `/api/cron/archive-cohorts` в `apps/web/vercel.json` — таблицы пустые, операции no-op. Удалить при чистке legacy.
@@ -45,7 +45,7 @@
 | Merge `feat/nextjs-miniapp-poc` в `main` | Production на Vercel билдится с main, без merge AI-first MVP не доезжал | коммит `66ddab2` |
 | `SUPABASE_SERVICE_ROLE_KEY` починен на Vercel (anon → service_role) | RLS на profiles резала `auth.uid()=null` → 0 строк без ошибки → ложный PROFILE_NOT_FOUND. Час диагностики | memory `feedback_supabase_service_role_diagnostic.md` |
 | `UNIQUE` constraint на `profiles.telegram_chat_id` | После удаления дубликата «Миша Моряк». Один Telegram user.id = один профиль | миграция `..._profiles_telegram_chat_id_unique.sql` |
-| Display name бота → `cross_capsule` | Михаил поменял через `/setname` в BotFather. Username `@cross_notify_bot` остался (поменять нельзя без `_bot` суффикса) | memory `project_telegram_bots.md` |
+| Display name бота → `cross_capsule` (без @) | Михаил поменял через `/setname` в BotFather. Username `@cross_notify_bot` остался — username поменять нельзя без `_bot` суффикса. Для учеников и в коде использовать только `@cross_notify_bot` | memory `project_telegram_bots.md` |
 | Удалить дубликат-профиль «Миша Моряк» | Два профиля с одним telegram_chat_id → `.maybeSingle()` возвращал null → PROFILE_NOT_FOUND | manual SQL DELETE |
 | Импорт env на Vercel через `Import .env` файла `apps/web/.env.vercel-prod.local` | Удобнее ручного ввода 15 переменных | файл в .gitignore |
 
@@ -68,7 +68,7 @@ e38f394 chore(telegram): убрать temp debug-logging из resolveUserId
 
 ### Малые правки (1-2 часа)
 
-1. **Заменить хардкод `@cross_bot` на `@cross_capsule`** в `apps/web/src/components/telegram/TelegramProvider.tsx` строки 59 и 85.
+1. **Заменить хардкод `@cross_bot` на `@cross_notify_bot`** в `apps/web/src/components/telegram/TelegramProvider.tsx` строки 59 и 85. Это **username**, по нему ищется бот в Telegram. `cross_capsule` — это display name (заголовок в шапке), а не username, использовать его в текстах для учеников НЕЛЬЗЯ.
 2. **HapticFeedback** на submit квиза/экзамена/местописаний (`useHaptic` уже есть, только подключить).
 3. **BackButton wrapper** на `/m/lesson`, `/m/quiz`, `/m/exam`, `/m/locations`, `/m/recitation`, `/m/cross-photo`. Скрывать на dashboard.
 4. **Починить `lint` script** в `apps/web/package.json` — заменить `next lint` на `tsc --noEmit && eslint . --ext .ts,.tsx`.
@@ -76,7 +76,7 @@ e38f394 chore(telegram): убрать temp debug-logging из resolveUserId
 ### Расширение whitelist для тестов
 
 5. Когда Михаил подведёт книжку (Александр Алферев) и 2-3 тестовых ученика:
-   - Они отправляют `/start` боту `@cross_capsule` → попадают в `profiles` (через webhook, если будет настроен; иначе вручную через SQL)
+   - Они ищут бота по username **`@cross_notify_bot`**, отправляют `/start` → попадают в `profiles` (через webhook, если будет настроен; иначе вручную через SQL)
    - Получают свой chat_id через `@userinfobot`
    - SQL через MCP: `UPDATE profiles SET is_whitelisted=TRUE WHERE telegram_chat_id=<N>;`
 
