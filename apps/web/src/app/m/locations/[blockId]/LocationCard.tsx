@@ -117,12 +117,16 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
     }
     try {
       const constraints: MediaStreamConstraints = isVideo
-        ? { audio: true, video: { width: { ideal: 720 }, height: { ideal: 720 }, facingMode: 'user' } }
+        ? { audio: true, video: { width: { ideal: 480 }, height: { ideal: 480 }, facingMode: 'user' } }
         : { audio: true }
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
       const mimeType = pickMimeType(isVideo)
       setRecordedMime(mimeType)
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+      // Лимит body на Vercel serverless — 4.5 MB. Считаем: 60 сек * (500+64) kbps / 8 ≈ 4.2 MB → c запасом.
+      const recorderOptions: MediaRecorderOptions = isVideo
+        ? { videoBitsPerSecond: 500_000, audioBitsPerSecond: 64_000, ...(mimeType ? { mimeType } : {}) }
+        : { audioBitsPerSecond: 64_000, ...(mimeType ? { mimeType } : {}) }
+      const recorder = new MediaRecorder(stream, recorderOptions)
       chunksRef.current = []
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       recorder.onstop = () => {
@@ -145,8 +149,14 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
   }
 
   async function submitBlob(fileBlob: Blob, filename: string) {
-    setState('submitting')
     setError(null)
+    const sizeKb = Math.round(fileBlob.size / 1024)
+    // Vercel serverless body limit ~4.5 MB. Берём 4.2 MB с запасом на multipart-обёртку.
+    if (fileBlob.size > 4_200_000) {
+      setError(`Файл слишком большой (${sizeKb} KB). Перезапиши короче или загрузи файлом отдельно.`)
+      return
+    }
+    setState('submitting')
     const initData = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp?.initData ?? ''
     const fd = new FormData()
     fd.append('initData', initData)
@@ -154,7 +164,6 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
     fd.append('medium', medium)
     fd.append('file', fileBlob, filename)
     try {
-      const sizeKb = Math.round(fileBlob.size / 1024)
       const res = await fetch('/api/m/locations/upload', { method: 'POST', body: fd })
       if (!res.ok) {
         let serverMsg = ''
