@@ -37,23 +37,11 @@ export async function resolveUserId(initData: string): Promise<ResolveResult> {
   }
 
   const supabase = createServiceSupabase()
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
     .select('id, role, is_whitelisted')
     .eq('telegram_chat_id', validation.chatId)
     .maybeSingle()
-
-  // TEMP DEBUG — remove after fix
-  console.log('[resolveUserId DEBUG]', {
-    chatId: validation.chatId,
-    chatIdType: typeof validation.chatId,
-    profileFound: !!profile,
-    profile,
-    profileError,
-    hasServiceKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
-    serviceKeyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 12),
-    nodeEnv: process.env.NODE_ENV,
-  })
 
   if (!profile) {
     return { ok: false, status: 404, code: 'PROFILE_NOT_FOUND', message: 'Profile not found' }
