@@ -101,7 +101,10 @@ export async function POST(req: NextRequest) {
   }
 
   // 5. Upload file to Storage
-  const mimeType = file.type || (medium === 'video_note' ? 'video/mp4' : 'audio/ogg')
+  // iOS MediaRecorder отдаёт mime "video/mp4;codecs=avc1" — Supabase bucket
+  // allowed_mime_types сравнивает строку строго, поэтому отбрасываем codecs.
+  const rawMime = file.type || (medium === 'video_note' ? 'video/mp4' : 'audio/ogg')
+  const mimeType = rawMime.split(';')[0].trim()
   const ext = mimeToExt(mimeType, medium)
   const timestamp = Date.now()
   const storagePath = `${userId}/locations/${locationId}/${medium}_${timestamp}.${ext}`
@@ -116,8 +119,8 @@ export async function POST(req: NextRequest) {
     })
 
   if (uploadErr) {
-    console.error('[locations/upload] storage upload error:', uploadErr)
-    return err('Failed to upload file', 'STORAGE_ERROR', 500)
+    console.error('[locations/upload] storage upload error:', uploadErr, { mimeType, rawMime, size: file.size })
+    return err(`Storage upload failed: ${uploadErr.message}`, 'STORAGE_ERROR', 500)
   }
 
   // 6. Deepgram транскрипция
