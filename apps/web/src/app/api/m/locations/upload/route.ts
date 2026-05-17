@@ -146,13 +146,23 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // 7. AI-проверка
+  // 7. AI-проверка — уровень строгости зависит от номера попытки на этом стихе
+  const { count: prevAttempts } = await supabase
+    .from('student_location_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('location_id', locationId)
+    .eq('medium', medium)
+
+  const attemptNumber = (prevAttempts ?? 0) + 1
+
   const checkResult = await checkLocation(
     transcript,
     location.exact_text,
     location.check_mode as 'verbatim' | 'meaning',
     location.reference,
     userId,
+    attemptNumber,
   )
 
   // Нормализуем similarity_score в 0..1 для БД (поле NUMERIC(4,3))

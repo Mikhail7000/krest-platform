@@ -12,6 +12,10 @@ import { CLAUDE_HAIKU_MODEL } from '@/lib/ai/constants'
 
 export type CheckMode = 'verbatim' | 'meaning'
 
+// 1-2 попытка — мягко (свежее заучивание),
+// 3-4 — средне, 5+ — строго (уже неделя зубрёжки).
+export type StrictnessLevel = 'lenient' | 'medium' | 'strict'
+
 export interface LocationCheckResult {
   passed: boolean
   similarity_score: number
@@ -25,14 +29,22 @@ interface AiLocationResponse {
   comment: string
 }
 
+export function pickStrictness(attemptNumber: number): StrictnessLevel {
+  if (attemptNumber <= 2) return 'lenient'
+  if (attemptNumber <= 4) return 'medium'
+  return 'strict'
+}
+
 export async function checkLocation(
   transcript: string,
   exactText: string,
   checkMode: CheckMode,
   reference: string,
   userId: string,
+  attemptNumber = 1,
 ): Promise<LocationCheckResult> {
-  const systemPrompt = buildSystemPrompt(checkMode, reference)
+  const strictness = pickStrictness(attemptNumber)
+  const systemPrompt = buildSystemPrompt(checkMode, reference, strictness)
   const userMessage = buildUserMessage(transcript, exactText, checkMode)
 
   try {
@@ -54,8 +66,17 @@ export async function checkLocation(
     const comment = parsed?.comment ?? result.text.slice(0, 400)
 
     // Safety net: засчитываем по score, не на совести модели.
-    // verbatim — заучивание наизусть, малые допуски на устные оговорки.
-    const SCORE_AUTOPASS = checkMode === 'verbatim' ? 85 : 70
+    // Порог растёт с числом попыток: дальше — строже.
+    let SCORE_AUTOPASS: number
+    if (checkMode === 'meaning') {
+      SCORE_AUTOPASS = 70
+    } else if (strictness === 'lenient') {
+      SCORE_AUTOPASS = 85
+    } else if (strictness === 'medium') {
+      SCORE_AUTOPASS = 90
+    } else {
+      SCORE_AUTOPASS = 95
+    }
     const passed = aiPassed || score >= SCORE_AUTOPASS
 
     return { passed, similarity_score: score, ai_comment: comment, ai_call_id: result.aiCallId }
@@ -70,26 +91,17 @@ export async function checkLocation(
   }
 }
 
-function buildSystemPrompt(checkMode: CheckMode, reference: string): string {
+function buildSystemPrompt(checkMode: CheckMode, reference: string, strictness: StrictnessLevel): string {
   if (checkMode === 'verbatim') {
+    const strictnessBlock = buildStrictnessBlock(strictness)
     return [
       `Ты — учитель Писания, проверяющий устную сдачу стиха (${reference}) НАИЗУСТЬ.`,
       'Ученик произносит вслух — это аудио, расшифрованное системой распознавания речи (ASR).',
       '',
       'ЗАДАЧА: проверить, ВЫУЧИЛ ли ученик стих наизусть. Это НЕ пересказ —',
       'ученик должен произнести ВСЕ слова эталона в правильном порядке.',
-      'Но допустимы мелкие устные оговорки.',
       '',
-      'ИГНОРИРУЙ (не считай ошибкой):',
-      '  • знаки препинания, регистр, пробелы;',
-      '  • опечатки ASR на 1-2 буквы: «кусил»→«вкусил», «совершилос»→«совершилось»;',
-      '  • ДОБАВЛЕНИЯ ученика, которых нет в эталоне: «он», «она», «и», «же», «вот» — это естественные устные связки;',
-      '  • близкая словоформа КЛЮЧЕВОГО слова с тем же корнем: «свершилось»/«совершилось», «преклонивши»/«преклонив».',
-      '',
-      'ПРОПУСКАЙ (passed=true) когда:',
-      '  • ВСЕ ключевые слова эталона (существительные, глаголы, имена) произнесены;',
-      '  • порядок ключевых слов сохранён;',
-      '  • расхождения только из списка «ИГНОРИРУЙ» выше.',
+      strictnessBlock,
       '',
       'НЕ ПРОПУСКАЙ (passed=false) когда:',
       '  • пропущено любое значимое слово (существительное/глагол/имя/прилагательное);',
@@ -118,6 +130,50 @@ function buildSystemPrompt(checkMode: CheckMode, reference: string): string {
     '',
     'Верни ТОЛЬКО валидный JSON без лишнего текста:',
     '{ "passed": true/false, "similarity_score": 0..100, "comment": "краткий комментарий на русском" }',
+  ].join('\n')
+}
+
+function buildStrictnessBlock(strictness: StrictnessLevel): string {
+  if (strictness === 'lenient') {
+    return [
+      'УРОВЕНЬ СТРОГОСТИ: МЯГКИЙ (первые попытки, ученик только учит).',
+      '',
+      'ИГНОРИРУЙ (не считай ошибкой):',
+      '  • знаки препинания, регистр, пробелы;',
+      '  • опечатки ASR на 1-2 буквы: «кусил»→«вкусил», «совершилос»→«совершилось»;',
+      '  • ДОБАВЛЕНИЯ ученика, которых нет в эталоне: «он», «она», «и», «же», «вот» — естественные устные связки;',
+      '  • близкая словоформа КЛЮЧЕВОГО слова с тем же корнем: «свершилось»/«совершилось», «преклонивши»/«преклонив».',
+      '',
+      'ПРОПУСКАЙ (passed=true) когда ВСЕ ключевые слова эталона произнесены, порядок сохранён, расхождения только из списка «ИГНОРИРУЙ».',
+    ].join('\n')
+  }
+  if (strictness === 'medium') {
+    return [
+      'УРОВЕНЬ СТРОГОСТИ: СРЕДНИЙ (ученик уже несколько раз сдавал).',
+      '',
+      'ИГНОРИРУЙ (не считай ошибкой):',
+      '  • знаки препинания, регистр, пробелы;',
+      '  • опечатки ASR на 1 букву (явный артефакт распознавания речи).',
+      '',
+      'НЕ ИГНОРИРУЙ (на этом уровне ученик должен знать точнее):',
+      '  • добавления слов, которых нет в эталоне («он», «и», «же») — это ошибка;',
+      '  • любая словоформа должна совпадать с эталоном (никаких «свершилось»/«совершилось»).',
+      '',
+      'ПРОПУСКАЙ (passed=true) только когда стих произнесён почти идеально (1 ASR-опечатка максимум).',
+    ].join('\n')
+  }
+  // strict
+  return [
+    'УРОВЕНЬ СТРОГОСТИ: ВЫСОКИЙ (ученик зубрит уже неделю, должен знать наизусть).',
+    '',
+    'ИГНОРИРУЙ только очевидные опечатки распознавания речи (1 буква, не больше).',
+    '',
+    'НЕ ИГНОРИРУЙ:',
+    '  • любые добавления, пропуски или замены слов;',
+    '  • любые отклонения в словоформах;',
+    '  • любые перестановки.',
+    '',
+    'ПРОПУСКАЙ (passed=true) ТОЛЬКО при полном дословном совпадении с эталоном.',
   ].join('\n')
 }
 
