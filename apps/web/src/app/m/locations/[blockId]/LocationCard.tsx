@@ -10,6 +10,7 @@ export interface LocationItem {
   check_mode: string
   topic_label: string | null
   order_index: number
+  max_record_seconds: number
   audio_passed: boolean
   video_passed: boolean
   audio_attempts: number
@@ -41,7 +42,7 @@ const VIDEO_HINTS = [
   'Твоё писание — твоим голосом, своими глазами. Без помощи.',
 ]
 
-const MAX_RECORD_SECS = 60
+const DEFAULT_MAX_RECORD_SECS = 60
 
 function useTimer(running: boolean) {
   const [secs, setSecs] = useState(0)
@@ -67,13 +68,14 @@ function pickMimeType(video: boolean): string {
 interface StageProps {
   locationId: string
   medium: 'audio' | 'video_note'
+  maxRecordSecs: number
   onResult: (res: UploadResult) => void
   accept: string
   label: string
   captureAttr?: string
 }
 
-function RecordStage({ locationId, medium, onResult, accept, label, captureAttr }: StageProps) {
+function RecordStage({ locationId, medium, maxRecordSecs, onResult, accept, label, captureAttr }: StageProps) {
   const [state, setState] = useState<RecordingState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
@@ -142,7 +144,7 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
       mediaRef.current = recorder
       if (isVideo) setActiveStream(stream)
       setState('recording')
-      setTimeout(() => { if (mediaRef.current?.state === 'recording') mediaRef.current.stop() }, MAX_RECORD_SECS * 1000)
+      setTimeout(() => { if (mediaRef.current?.state === 'recording') mediaRef.current.stop() }, maxRecordSecs * 1000)
     } catch {
       setError('Нет доступа к микрофону/камере. Используйте загрузку файла.')
     }
@@ -230,7 +232,7 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
             {isRecording && (
               <div className="location-video-fullscreen__timer">
                 <span className="location-recording-dot" />
-                {timerSecs}с / {MAX_RECORD_SECS}с
+                {timerSecs}с / {maxRecordSecs}с
               </div>
             )}
 
@@ -309,7 +311,7 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
       {isRecording && (
         <div className="location-recording-timer">
           <span className="location-recording-dot" />
-          {timerSecs}с / {MAX_RECORD_SECS}с
+          {timerSecs}с / {maxRecordSecs}с
         </div>
       )}
       <div className="location-btn-row">
@@ -418,6 +420,7 @@ export function LocationCard({ item }: Props) {
           <RecordStage
             locationId={item.id}
             medium="audio"
+            maxRecordSecs={item.max_record_seconds || DEFAULT_MAX_RECORD_SECS}
             onResult={handleAudioResult}
             accept="audio/*"
             label="Записать голосовое"
@@ -447,6 +450,7 @@ export function LocationCard({ item }: Props) {
           <RecordStage
             locationId={item.id}
             medium="video_note"
+            maxRecordSecs={item.max_record_seconds || DEFAULT_MAX_RECORD_SECS}
             onResult={handleVideoResult}
             accept="video/*"
             label="Записать кружок"

@@ -85,7 +85,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   // 4. Загрузить местописания блока
   const { data: locations, error: locErr } = await supabase
     .from('block_locations_to_recite')
-    .select('id, reference, exact_text, check_mode, topic_label, order_index, is_required')
+    .select('id, reference, exact_text, check_mode, topic_label, order_index, is_required, max_record_seconds')
     .eq('block_id', blockId)
     .eq('is_required', true)
     .order('order_index', { ascending: true })
@@ -143,6 +143,9 @@ export async function POST(req: NextRequest, { params }: Params) {
       videoAttempts: 0,
     }
 
+    // cast через unknown — max_record_seconds добавлен миграцией add_max_record_seconds_to_locations,
+    // ещё не в сгенерированных types.ts
+    const locWithMax = loc as unknown as { max_record_seconds?: number | null }
     return {
       id: loc.id,
       reference: loc.reference,
@@ -150,6 +153,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       check_mode: loc.check_mode,
       topic_label: loc.topic_label ?? null,
       order_index: loc.order_index,
+      max_record_seconds: locWithMax.max_record_seconds ?? 60,
       audio_passed: prog.audioPassed,
       video_passed: prog.videoPassed,
       audio_attempts: prog.audioAttempts,
