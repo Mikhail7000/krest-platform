@@ -3,6 +3,8 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 
 // TODO: replace with import from @/types when database-architect adds these tables
+export type PracticeMode = 'daily_understanding' | 'single_understanding' | null
+
 export interface LocationItem {
   id: string
   reference: string
@@ -11,10 +13,14 @@ export interface LocationItem {
   topic_label: string | null
   order_index: number
   max_record_seconds: number
+  practice_mode: PracticeMode
   audio_passed: boolean
   video_passed: boolean
   audio_attempts: number
   video_attempts: number
+  daily_days_passed: number
+  daily_days_required: number | null
+  today_done: boolean
 }
 
 interface UploadResult {
@@ -375,13 +381,27 @@ export function LocationCard({ item }: Props) {
   const [videoAttempts, setVideoAttempts] = useState(item.video_attempts)
   const [lastAudioFeedback, setLastAudioFeedback] = useState<string | null>(null)
   const [lastVideoFeedback, setLastVideoFeedback] = useState<string | null>(null)
+  // Локальный счётчик дней для recurring-режима, чтобы UI обновлялся сразу
+  const [dailyDaysPassed, setDailyDaysPassed] = useState(item.daily_days_passed)
+  const [todayDone, setTodayDone] = useState(item.today_done)
+
+  const practiceMode = item.practice_mode
+  const isDaily = practiceMode === 'daily_understanding'
+  const isSingle = practiceMode === 'single_understanding'
+  const daysRequired = item.daily_days_required ?? 7
 
   const handleAudioResult = useCallback((res: UploadResult) => {
     setAudioAttempts(res.attempts.audio)
     setVideoAttempts(res.attempts.video)
-    if (res.passed) setAudioPassed(true)
+    if (res.passed) {
+      setAudioPassed(true)
+      if (isDaily && !todayDone) {
+        setDailyDaysPassed((d) => Math.min(d + 1, daysRequired))
+        setTodayDone(true)
+      }
+    }
     if (res.ai_comment) setLastAudioFeedback(res.ai_comment)
-  }, [])
+  }, [isDaily, todayDone, daysRequired])
 
   const handleVideoResult = useCallback((res: UploadResult) => {
     setAudioAttempts(res.attempts.audio)
@@ -390,11 +410,22 @@ export function LocationCard({ item }: Props) {
     if (res.ai_comment) setLastVideoFeedback(res.ai_comment)
   }, [])
 
-  const cardClass = videoPassed
-    ? 'location-card location-card--complete'
-    : audioPassed
-    ? 'location-card location-card--audio-done'
-    : 'location-card'
+  // Класс карточки: для recurring/single — отдельная логика «complete»
+  const dailyComplete = isDaily && dailyDaysPassed >= daysRequired
+  const singleComplete = isSingle && audioPassed
+  const cardClass =
+    dailyComplete || singleComplete || (videoPassed && !isDaily && !isSingle)
+      ? 'location-card location-card--complete'
+      : audioPassed
+      ? 'location-card location-card--audio-done'
+      : 'location-card'
+
+  const headerIcon =
+    dailyComplete || singleComplete || (videoPassed && !isDaily && !isSingle)
+      ? <span className="location-card__status-icon">✅</span>
+      : audioPassed
+      ? <span className="location-card__status-icon" style={{ color: 'var(--tg-button, #C9A961)' }}>🎤</span>
+      : null
 
   return (
     <div className={cardClass}>
@@ -403,30 +434,60 @@ export function LocationCard({ item }: Props) {
           <p className="location-card__ref">{item.reference}</p>
           {item.topic_label && <p className="location-card__topic">{item.topic_label}</p>}
         </div>
-        {videoPassed ? (
-          <span className="location-card__status-icon">✅</span>
-        ) : audioPassed ? (
-          <span className="location-card__status-icon" style={{ color: 'var(--tg-button, #C9A961)' }}>🎤</span>
-        ) : null}
+        {headerIcon}
       </div>
 
       <blockquote className="location-card__text">{item.exact_text}</blockquote>
 
-      {/* Stage A — Audio */}
-      {!audioPassed && (
+      {/* Daily understanding — ежедневный пересказ 7 дней */}
+      {isDaily && (
         <div>
-          <p className="location-stage-label location-stage-label--active">Этап А — Аудио</p>
-          <p className="location-card__hint">{audioHint}</p>
-          <RecordStage
-            locationId={item.id}
-            medium="audio"
-            maxRecordSecs={item.max_record_seconds || DEFAULT_MAX_RECORD_SECS}
-            onResult={handleAudioResult}
-            accept="audio/*"
-            label="Записать голосовое"
-          />
-          {audioAttempts > 0 && (
-            <p className="location-attempts">Попытки аудио: {audioAttempts}</p>
+          <p className="location-stage-label location-stage-label--active">Притча — пересказ своими словами</p>
+          <p className="location-card__hint">
+            Расскажи аудио, что ты понял из этой притчи. Запись каждый день, 7 дней подряд.
+          </p>
+
+          <div className="location-daily-progress">
+            <div className="location-daily-progress__row">
+              {Array.from({ length: daysRequired }).map((_, i) => (
+                <span
+                  key={i}
+                  className={
+                    i < dailyDaysPassed
+                      ? 'location-daily-progress__dot location-daily-progress__dot--done'
+                      : 'location-daily-progress__dot'
+                  }
+                />
+              ))}
+            </div>
+            <p className="location-daily-progress__label">
+              Сдано дней: {dailyDaysPassed} из {daysRequired}
+            </p>
+          </div>
+
+          {dailyComplete ? (
+            <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
+              <span className="location-pass-row__icon">✓</span>
+              <span className="location-pass-row__text">Пересказ закрыт — все 7 дней сданы</span>
+            </div>
+          ) : todayDone ? (
+            <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
+              <span className="location-pass-row__icon">✓</span>
+              <span className="location-pass-row__text">Сегодня сдано. Возвращайся завтра.</span>
+            </div>
+          ) : (
+            <RecordStage
+              locationId={item.id}
+              medium="audio"
+              maxRecordSecs={item.max_record_seconds || DEFAULT_MAX_RECORD_SECS}
+              onResult={handleAudioResult}
+              accept="audio/*"
+              label="Записать пересказ"
+            />
+          )}
+
+          {audioAttempts > 0 && !dailyComplete && (
+            <p className="location-attempts">Всего попыток: {audioAttempts}</p>
           )}
           {lastAudioFeedback && (
             <div className="location-feedback">
@@ -437,41 +498,104 @@ export function LocationCard({ item }: Props) {
         </div>
       )}
 
-      {audioPassed && !videoPassed && (
+      {/* Single understanding — один раз освежить притчу */}
+      {isSingle && (
         <div>
-          <div className="location-pass-row">
-            <span className="location-pass-row__icon">✓</span>
-            <span className="location-pass-row__text">Аудио сдано</span>
-          </div>
-          <p className="location-stage-label location-stage-label--active" style={{ marginTop: '0.875rem' }}>
-            Этап Б — Видеокружок
+          <p className="location-stage-label location-stage-label--active">Освежи притчу — расскажи своими словами</p>
+          <p className="location-card__hint">
+            Один раз перескажи аудио, что ты понял из этой притчи.
           </p>
-          <p className="location-card__hint">{videoHint}</p>
-          <RecordStage
-            locationId={item.id}
-            medium="video_note"
-            maxRecordSecs={item.max_record_seconds || DEFAULT_MAX_RECORD_SECS}
-            onResult={handleVideoResult}
-            accept="video/*"
-            label="Записать кружок"
-          />
-          {videoAttempts > 0 && (
-            <p className="location-attempts">Попытки видео: {videoAttempts}</p>
+          {audioPassed ? (
+            <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
+              <span className="location-pass-row__icon">✓</span>
+              <span className="location-pass-row__text">Пересказ сдан</span>
+            </div>
+          ) : (
+            <RecordStage
+              locationId={item.id}
+              medium="audio"
+              maxRecordSecs={item.max_record_seconds || DEFAULT_MAX_RECORD_SECS}
+              onResult={handleAudioResult}
+              accept="audio/*"
+              label="Записать пересказ"
+            />
           )}
-          {lastVideoFeedback && (
+          {audioAttempts > 0 && !audioPassed && (
+            <p className="location-attempts">Попыток: {audioAttempts}</p>
+          )}
+          {lastAudioFeedback && (
             <div className="location-feedback">
               <span className="location-feedback__label">Комментарий AI</span>
-              <p>{lastVideoFeedback}</p>
+              <p>{lastAudioFeedback}</p>
             </div>
           )}
         </div>
       )}
 
-      {audioPassed && videoPassed && (
-        <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
-          <span className="location-pass-row__icon">✓</span>
-          <span className="location-pass-row__text">Видеокружок сдан — местописание закрыто</span>
-        </div>
+      {/* Default — двухэтапная сдача наизусть (короткие стихи) */}
+      {!isDaily && !isSingle && (
+        <>
+          {!audioPassed && (
+            <div>
+              <p className="location-stage-label location-stage-label--active">Этап А — Аудио</p>
+              <p className="location-card__hint">{audioHint}</p>
+              <RecordStage
+                locationId={item.id}
+                medium="audio"
+                maxRecordSecs={item.max_record_seconds || DEFAULT_MAX_RECORD_SECS}
+                onResult={handleAudioResult}
+                accept="audio/*"
+                label="Записать голосовое"
+              />
+              {audioAttempts > 0 && (
+                <p className="location-attempts">Попытки аудио: {audioAttempts}</p>
+              )}
+              {lastAudioFeedback && (
+                <div className="location-feedback">
+                  <span className="location-feedback__label">Комментарий AI</span>
+                  <p>{lastAudioFeedback}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {audioPassed && !videoPassed && (
+            <div>
+              <div className="location-pass-row">
+                <span className="location-pass-row__icon">✓</span>
+                <span className="location-pass-row__text">Аудио сдано</span>
+              </div>
+              <p className="location-stage-label location-stage-label--active" style={{ marginTop: '0.875rem' }}>
+                Этап Б — Видеокружок
+              </p>
+              <p className="location-card__hint">{videoHint}</p>
+              <RecordStage
+                locationId={item.id}
+                medium="video_note"
+                maxRecordSecs={item.max_record_seconds || DEFAULT_MAX_RECORD_SECS}
+                onResult={handleVideoResult}
+                accept="video/*"
+                label="Записать кружок"
+              />
+              {videoAttempts > 0 && (
+                <p className="location-attempts">Попытки видео: {videoAttempts}</p>
+              )}
+              {lastVideoFeedback && (
+                <div className="location-feedback">
+                  <span className="location-feedback__label">Комментарий AI</span>
+                  <p>{lastVideoFeedback}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {audioPassed && videoPassed && (
+            <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
+              <span className="location-pass-row__icon">✓</span>
+              <span className="location-pass-row__text">Видеокружок сдан — местописание закрыто</span>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

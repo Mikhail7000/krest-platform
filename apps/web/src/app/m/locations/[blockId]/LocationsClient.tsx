@@ -104,7 +104,16 @@ export function LocationsClient({ blockId }: Props) {
     )
   }
 
-  const passedCount = locations.filter((l) => l.video_passed).length
+  const isLocationDone = (l: LocationItem): boolean => {
+    if (l.practice_mode === 'daily_understanding') {
+      return l.daily_days_passed >= (l.daily_days_required ?? 7)
+    }
+    if (l.practice_mode === 'single_understanding') {
+      return l.audio_passed
+    }
+    return l.video_passed
+  }
+  const passedCount = locations.filter(isLocationDone).length
 
   return (
     <div>

@@ -92,12 +92,18 @@ export async function POST(req: NextRequest) {
   // 4. Load location (эталон)
   const { data: location, error: locErr } = await supabase
     .from('block_locations_to_recite')
-    .select('id, reference, exact_text, check_mode, similarity_threshold, is_required')
+    .select('id, reference, exact_text, check_mode, similarity_threshold, is_required, practice_mode')
     .eq('id', locationId)
     .maybeSingle()
 
   if (locErr || !location) {
     return err('Location not found', 'NOT_FOUND', 404)
+  }
+
+  // Практические режимы пересказа притчи — только аудио, видеокружок не нужен
+  const practiceMode = (location as unknown as { practice_mode?: string | null }).practice_mode ?? null
+  if (medium === 'video_note' && practiceMode !== null) {
+    return err('Этот этап только для аудио', 'VIDEO_NOT_ALLOWED', 400)
   }
 
   // 5. Upload file to Storage

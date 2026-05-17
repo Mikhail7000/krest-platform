@@ -31,11 +31,20 @@ function err(message: string, code: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status })
 }
 
-// local interface — medium column добавлен миграцией 20260510140000 (не в types.ts)
+// local interface — medium/created_at пробрасываются для подсчёта recurring-дней
 interface LocationAttemptRow {
   location_id: string
   medium: string
   passed: boolean
+  created_at: string
+}
+
+const DAILY_DAYS_REQUIRED = 7
+
+function dayKey(iso: string): string {
+  // YYYY-MM-DD по UTC — достаточно для подсчёта уникальных дней.
+  // Локализация по timezone профиля — задача на потом.
+  return iso.slice(0, 10)
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -85,7 +94,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   // 4. Загрузить местописания блока
   const { data: locations, error: locErr } = await supabase
     .from('block_locations_to_recite')
-    .select('id, reference, exact_text, check_mode, topic_label, order_index, is_required, max_record_seconds')
+    .select('id, reference, exact_text, check_mode, topic_label, order_index, is_required, max_record_seconds, practice_mode')
     .eq('block_id', blockId)
     .eq('is_required', true)
     .order('order_index', { ascending: true })
@@ -105,14 +114,24 @@ export async function POST(req: NextRequest, { params }: Params) {
   // cast через unknown — medium добавлен позже, не в сгенерированных типах
   const { data: attemptsRaw } = await supabase
     .from('student_location_attempts')
-    .select('location_id, medium, passed')
+    .select('location_id, medium, passed, created_at')
     .eq('user_id', userId)
     .in('location_id', locationIds)
 
   const attempts = (attemptsRaw ?? []) as LocationAttemptRow[]
 
-  // Агрегируем прогресс по (location_id, medium)
-  const progressMap = new Map<string, { audioPassed: boolean; videoPassed: boolean; audioAttempts: number; videoAttempts: number }>()
+  // Агрегируем прогресс по (location_id). Для recurring-режима собираем
+  // уникальные дни passed=true; для остального — обычные счётчики этапов.
+  interface LocProgress {
+    audioPassed: boolean
+    videoPassed: boolean
+    audioAttempts: number
+    videoAttempts: number
+    audioPassedDays: Set<string>
+    todayHasPassedAudio: boolean
+  }
+  const progressMap = new Map<string, LocProgress>()
+  const todayKey = dayKey(new Date().toISOString())
 
   for (const attempt of attempts) {
     const key = attempt.location_id
@@ -121,11 +140,18 @@ export async function POST(req: NextRequest, { params }: Params) {
       videoPassed: false,
       audioAttempts: 0,
       videoAttempts: 0,
+      audioPassedDays: new Set<string>(),
+      todayHasPassedAudio: false,
     }
 
     if (attempt.medium === 'audio') {
       cur.audioAttempts += 1
-      if (attempt.passed) cur.audioPassed = true
+      if (attempt.passed) {
+        cur.audioPassed = true
+        const d = dayKey(attempt.created_at)
+        cur.audioPassedDays.add(d)
+        if (d === todayKey) cur.todayHasPassedAudio = true
+      }
     } else if (attempt.medium === 'video_note') {
       cur.videoAttempts += 1
       if (attempt.passed) cur.videoPassed = true
@@ -143,9 +169,13 @@ export async function POST(req: NextRequest, { params }: Params) {
       videoAttempts: 0,
     }
 
-    // cast через unknown — max_record_seconds добавлен миграцией add_max_record_seconds_to_locations,
+    // cast через unknown — max_record_seconds + practice_mode добавлены миграциями,
     // ещё не в сгенерированных types.ts
-    const locWithMax = loc as unknown as { max_record_seconds?: number | null }
+    const locExt = loc as unknown as {
+      max_record_seconds?: number | null
+      practice_mode?: string | null
+    }
+    const practiceMode = locExt.practice_mode ?? null
     return {
       id: loc.id,
       reference: loc.reference,
@@ -153,11 +183,16 @@ export async function POST(req: NextRequest, { params }: Params) {
       check_mode: loc.check_mode,
       topic_label: loc.topic_label ?? null,
       order_index: loc.order_index,
-      max_record_seconds: locWithMax.max_record_seconds ?? 60,
+      max_record_seconds: locExt.max_record_seconds ?? 60,
+      practice_mode: practiceMode,
       audio_passed: prog.audioPassed,
       video_passed: prog.videoPassed,
       audio_attempts: prog.audioAttempts,
       video_attempts: prog.videoAttempts,
+      // recurring-режим: число уникальных дней с passed=true, цель и отметка сегодня
+      daily_days_passed: prog.audioPassedDays.size,
+      daily_days_required: practiceMode === 'daily_understanding' ? DAILY_DAYS_REQUIRED : null,
+      today_done: prog.todayHasPassedAudio,
     }
   })
 

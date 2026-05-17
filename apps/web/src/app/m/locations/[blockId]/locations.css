@@ -261,6 +261,30 @@
   margin-top: 0.5rem;
 }
 
+/* ── Daily progress (7 dots) ─────────────────────────────────────── */
+.location-daily-progress {
+  margin: 0.625rem 0 0.75rem;
+}
+.location-daily-progress__row {
+  display: flex;
+  gap: 0.375rem;
+  margin-bottom: 0.375rem;
+}
+.location-daily-progress__dot {
+  flex: 1;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.location-daily-progress__dot--done {
+  background: #4ADE80;
+}
+.location-daily-progress__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tg-hint, #9CA3AF);
+}
+
 /* ── Pass indicator ──────────────────────────────────────────────── */
 .location-pass-row {
   display: flex;
