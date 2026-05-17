@@ -75,12 +75,12 @@ e38f394 chore(telegram): убрать temp debug-logging из resolveUserId
 
 ### Расширение whitelist для тестов
 
-5. Когда Михаил подведёт книжку (Александр Алферев) и 2-3 тестовых ученика:
+5. Когда Алекс Манье (лидер Михаила, курирующий разработку) подтвердит демо и подойдут 2-3 тестовых ученика:
    - Они ищут бота по username **`@cross_notify_bot`**, отправляют `/start` → попадают в `profiles` (через webhook, если будет настроен; иначе вручную через SQL)
    - Получают свой chat_id через `@userinfobot`
    - SQL через MCP: `UPDATE profiles SET is_whitelisted=TRUE WHERE telegram_chat_id=<N>;`
 
-### Когда демо одобрено
+### Когда Алекс Манье одобрит демо
 
 6. **OpenRouter** для всех LLM-вызовов. См. `project_ai_providers_plan.md`.
 7. **Self-hosted Supabase на Beget VPS** для 152-ФЗ. См. `lessons15_18_20_21_for_krest.md` (Урок 21).
@@ -90,7 +90,7 @@ e38f394 chore(telegram): убрать temp debug-logging из resolveUserId
 
 | Задача | Когда |
 |---|---|
-| Сертификат PDF «Мастер Креста» с tg.downloadFile | После запуска книжке |
+| Сертификат PDF «Мастер Креста» с tg.downloadFile | После одобрения Алекса Манье |
 | Direct-to-Storage signed URL для recitation > 4 MB | Если ученик запишет аудио длиннее 10 мин |
 | Почистить унаследованные advisors WARN | Перед запуском с массовыми учениками |
 | Удалить legacy v2.0 cron-endpoints + сами таблицы (cohorts, weekly_submissions, journal_entries, bible_verses) | После запуска, когда не страшно |
@@ -161,4 +161,4 @@ e38f394 chore(telegram): убрать temp debug-logging из resolveUserId
 
 ---
 
-*Версия 14.0 | 2026-05-17 | Production live. MiniApp в Telegram работает end-to-end. Следующая сессия — мелкие UX-полировки и подготовка к показу книжке.*
+*Версия 14.0 | 2026-05-17 | Production live. MiniApp в Telegram работает end-to-end. Следующая сессия — мелкие UX-полировки и подготовка к показу Алексу Манье (лидер Михаила, курирует разработку).*

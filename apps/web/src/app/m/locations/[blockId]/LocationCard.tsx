@@ -53,6 +53,17 @@ function useTimer(running: boolean) {
   return secs
 }
 
+function pickMimeType(video: boolean): string {
+  if (typeof MediaRecorder === 'undefined') return ''
+  const candidates = video
+    ? ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm']
+    : ['audio/mp4', 'audio/webm']
+  for (const t of candidates) {
+    try { if (MediaRecorder.isTypeSupported(t)) return t } catch { /* noop */ }
+  }
+  return ''
+}
+
 interface StageProps {
   locationId: string
   medium: 'audio' | 'video_note'
@@ -67,6 +78,8 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
   const [error, setError] = useState<string | null>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
+  const [activeStream, setActiveStream] = useState<MediaStream | null>(null)
+  const [recordedMime, setRecordedMime] = useState<string>('')
   const mediaRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
@@ -74,6 +87,22 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
   const timerSecs = useTimer(state === 'recording')
   const hasMediaDevices = typeof navigator !== 'undefined' && !!navigator.mediaDevices
   const isVideo = medium === 'video_note'
+
+  // Stream привязывается к <video> только ПОСЛЕ рендера элемента —
+  // иначе livePreviewRef.current=null и preview остаётся чёрным.
+  useEffect(() => {
+    const el = livePreviewRef.current
+    if (!el || !activeStream) return
+    el.srcObject = activeStream
+    el.play().catch(() => undefined)
+    return () => {
+      try { el.srcObject = null } catch { /* noop */ }
+    }
+  }, [activeStream])
+
+  useEffect(() => () => {
+    if (blobUrl) URL.revokeObjectURL(blobUrl)
+  }, [blobUrl])
 
   function stopRecording() {
     mediaRef.current?.stop()
@@ -87,29 +116,27 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
       setBlobUrl(null)
     }
     try {
-      const constraints = isVideo
-        ? { audio: true, video: { width: 480, height: 480, facingMode: 'user' } }
+      const constraints: MediaStreamConstraints = isVideo
+        ? { audio: true, video: { width: { ideal: 720 }, height: { ideal: 720 }, facingMode: 'user' } }
         : { audio: true }
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      // Live preview только для видеокружка — показываем что снимает камера
-      if (isVideo && livePreviewRef.current) {
-        livePreviewRef.current.srcObject = stream
-        await livePreviewRef.current.play().catch(() => undefined)
-      }
-      const recorder = new MediaRecorder(stream)
+      const mimeType = pickMimeType(isVideo)
+      setRecordedMime(mimeType)
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
       chunksRef.current = []
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop())
-        if (livePreviewRef.current) livePreviewRef.current.srcObject = null
-        const mimeType = isVideo ? 'video/webm' : 'audio/webm'
-        const newBlob = new Blob(chunksRef.current, { type: mimeType })
+        setActiveStream(null)
+        const finalMime = mimeType || (isVideo ? 'video/webm' : 'audio/webm')
+        const newBlob = new Blob(chunksRef.current, { type: finalMime })
         setBlob(newBlob)
         setBlobUrl(URL.createObjectURL(newBlob))
         setState('idle')
       }
       recorder.start()
       mediaRef.current = recorder
+      if (isVideo) setActiveStream(stream)
       setState('recording')
       setTimeout(() => { if (mediaRef.current?.state === 'recording') mediaRef.current.stop() }, MAX_RECORD_SECS * 1000)
     } catch {
@@ -146,31 +173,113 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
 
   const isRecording = state === 'recording'
   const isSubmitting = state === 'submitting'
-  const ext = medium === 'video_note' ? 'webm' : 'webm'
+  const ext = recordedMime.startsWith('video/mp4')
+    ? 'mp4'
+    : recordedMime.startsWith('audio/mp4')
+    ? 'm4a'
+    : 'webm'
 
+  // ── Видео-кружок: запись и просмотр идут в fullscreen overlay,
+  //    чтобы текст местописания был скрыт (антипод-сматривание).
+  if (isVideo) {
+    const showOverlay = isRecording || (!!blob && state !== 'submitting' && state !== 'done')
+    return (
+      <>
+        {showOverlay && (
+          <div className="location-video-fullscreen" role="dialog" aria-modal="true">
+            {isRecording ? (
+              <video
+                ref={livePreviewRef}
+                className="location-video-fullscreen__el"
+                autoPlay
+                muted
+                playsInline
+              />
+            ) : blobUrl ? (
+              <video
+                key={blobUrl}
+                className="location-video-fullscreen__el"
+                src={blobUrl}
+                playsInline
+                controls
+              />
+            ) : null}
+
+            {isRecording && (
+              <div className="location-video-fullscreen__timer">
+                <span className="location-recording-dot" />
+                {timerSecs}с / {MAX_RECORD_SECS}с
+              </div>
+            )}
+
+            <div className="location-video-fullscreen__controls">
+              {isRecording ? (
+                <button
+                  type="button"
+                  className="location-btn location-btn--danger location-video-fullscreen__btn"
+                  onClick={stopRecording}
+                >
+                  Остановить
+                </button>
+              ) : blob ? (
+                <>
+                  <button
+                    type="button"
+                    className="location-btn location-btn--ghost location-video-fullscreen__btn"
+                    onClick={startRecording}
+                    disabled={isSubmitting}
+                  >
+                    Перезаписать
+                  </button>
+                  <button
+                    type="button"
+                    className="location-btn location-video-fullscreen__btn"
+                    onClick={() => submitBlob(blob, `recording.${ext}`)}
+                    disabled={isSubmitting}
+                  >
+                    Отправить запись
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {!showOverlay && (
+          <div className="location-btn-row">
+            {hasMediaDevices && (
+              <button type="button" className="location-btn" onClick={startRecording} disabled={isSubmitting}>
+                {label}
+              </button>
+            )}
+            <button
+              type="button"
+              className="location-btn location-btn--ghost"
+              onClick={() => fileRef.current?.click()}
+              disabled={isSubmitting}
+            >
+              Загрузить файл
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept={accept}
+              className="location-file-input"
+              onChange={handleFileChange}
+              {...(captureAttr ? { capture: captureAttr as 'environment' | 'user' } : {})}
+            />
+          </div>
+        )}
+
+        {isSubmitting && <p className="location-loading-hint">Отправляем…</p>}
+        {error && <p style={{ color: 'var(--tg-destructive, #EF4444)', fontSize: '0.8125rem', marginTop: '0.375rem' }}>{error}</p>}
+      </>
+    )
+  }
+
+  // ── Аудио-этап: inline, без overlay (подсматривать разрешено по hint)
   return (
     <div>
-      {isVideo && (isRecording || blobUrl) && (
-        <div className="location-video-preview">
-          {isRecording ? (
-            <video
-              ref={livePreviewRef}
-              className="location-video-preview__el"
-              autoPlay
-              muted
-              playsInline
-            />
-          ) : blobUrl ? (
-            <video
-              key={blobUrl}
-              className="location-video-preview__el"
-              src={blobUrl}
-              controls
-              playsInline
-            />
-          ) : null}
-        </div>
-      )}
       {isRecording && (
         <div className="location-recording-timer">
           <span className="location-recording-dot" />

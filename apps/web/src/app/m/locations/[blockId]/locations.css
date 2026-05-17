@@ -339,3 +339,57 @@
   display: block;
   background: #000;
 }
+
+/* ── Fullscreen overlay для video_note (запись и просмотр) ───────── */
+/* Скрывает текст местописания во время записи, чтобы было видно
+   что ученик смотрит в экран, а не подсматривает. */
+.location-video-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+}
+.location-video-fullscreen__el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+.location-video-fullscreen__timer {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 1rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  z-index: 2;
+}
+.location-video-fullscreen__controls {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100% - 2rem);
+  z-index: 2;
+}
+.location-video-fullscreen__btn {
+  font-size: 1rem;
+  padding: 0.75rem 1.25rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
