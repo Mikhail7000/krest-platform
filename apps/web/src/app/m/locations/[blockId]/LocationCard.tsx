@@ -154,13 +154,26 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
     fd.append('medium', medium)
     fd.append('file', fileBlob, filename)
     try {
+      const sizeKb = Math.round(fileBlob.size / 1024)
       const res = await fetch('/api/m/locations/upload', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) {
+        let serverMsg = ''
+        let serverCode = ''
+        try {
+          const body = await res.json() as { error?: { code?: string; message?: string } }
+          serverCode = body?.error?.code ?? ''
+          serverMsg = body?.error?.message ?? ''
+        } catch { /* not json */ }
+        const detail = serverMsg || serverCode || `HTTP ${res.status}`
+        throw new Error(`${detail} (status ${res.status}, ${sizeKb}KB ${fileBlob.type || 'no-mime'})`)
+      }
       const data = await res.json() as UploadResult
       onResult(data)
       setState('done')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки')
+      const msg = err instanceof Error ? err.message : 'Ошибка загрузки'
+      console.error('[locations] submit failed:', msg, { type: fileBlob.type, size: fileBlob.size })
+      setError(msg)
       setState('idle')
     }
   }
@@ -182,7 +195,7 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
   // ── Видео-кружок: запись и просмотр идут в fullscreen overlay,
   //    чтобы текст местописания был скрыт (антипод-сматривание).
   if (isVideo) {
-    const showOverlay = isRecording || (!!blob && state !== 'submitting' && state !== 'done')
+    const showOverlay = isRecording || isSubmitting || (!!blob && state !== 'done')
     return (
       <>
         {showOverlay && (
@@ -212,6 +225,10 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
               </div>
             )}
 
+            {error && !isRecording && (
+              <div className="location-video-fullscreen__error">{error}</div>
+            )}
+
             <div className="location-video-fullscreen__controls">
               {isRecording ? (
                 <button
@@ -221,13 +238,14 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
                 >
                   Остановить
                 </button>
+              ) : isSubmitting ? (
+                <div className="location-video-fullscreen__status">Отправляем…</div>
               ) : blob ? (
                 <>
                   <button
                     type="button"
                     className="location-btn location-btn--ghost location-video-fullscreen__btn"
                     onClick={startRecording}
-                    disabled={isSubmitting}
                   >
                     Перезаписать
                   </button>
@@ -235,7 +253,6 @@ function RecordStage({ locationId, medium, onResult, accept, label, captureAttr 
                     type="button"
                     className="location-btn location-video-fullscreen__btn"
                     onClick={() => submitBlob(blob, `recording.${ext}`)}
-                    disabled={isSubmitting}
                   >
                     Отправить запись
                   </button>
