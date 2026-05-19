@@ -1,14 +1,3 @@
-/**
- * Supabase Database Types for KREST Platform
- * Updated 2026-05-10 после применения 6 миграций Stage 4 AI-first flow:
- *   - student_location_attempts.medium
- *   - student_block_recitations (NEW)
- *   - student_block_daily_cross (NEW) + bucket student-cross-photos
- *   - profiles.can_skip_block_lock
- *   - student_block_progress: тайминги Этапа 4 + block_passed_at + daily_cross_count
- *   - функция is_block_unlocked(p_user_id, p_block_id)
- */
-
 export type Json =
   | string
   | number
@@ -18,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -73,6 +64,70 @@ export type Database = {
           },
         ]
       }
+      bible_verses: {
+        Row: {
+          block_id: number | null
+          created_at: string | null
+          id: number
+          lesson_id: number | null
+          memorized: boolean | null
+          order_num: number | null
+          reference: string | null
+          text_en: string | null
+          text_ru: string | null
+          user_id: string | null
+          verse_text: string | null
+        }
+        Insert: {
+          block_id?: number | null
+          created_at?: string | null
+          id?: number
+          lesson_id?: number | null
+          memorized?: boolean | null
+          order_num?: number | null
+          reference?: string | null
+          text_en?: string | null
+          text_ru?: string | null
+          user_id?: string | null
+          verse_text?: string | null
+        }
+        Update: {
+          block_id?: number | null
+          created_at?: string | null
+          id?: number
+          lesson_id?: number | null
+          memorized?: boolean | null
+          order_num?: number | null
+          reference?: string | null
+          text_en?: string | null
+          text_ru?: string | null
+          user_id?: string | null
+          verse_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bible_verses_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bible_verses_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bible_verses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       block_locations_to_recite: {
         Row: {
           block_id: number
@@ -81,7 +136,9 @@ export type Database = {
           exact_text: string
           id: string
           is_required: boolean
+          max_record_seconds: number
           order_index: number
+          practice_mode: string | null
           reference: string
           rubric: string | null
           similarity_threshold: number
@@ -95,7 +152,9 @@ export type Database = {
           exact_text: string
           id?: string
           is_required?: boolean
+          max_record_seconds?: number
           order_index?: number
+          practice_mode?: string | null
           reference: string
           rubric?: string | null
           similarity_threshold?: number
@@ -109,7 +168,9 @@ export type Database = {
           exact_text?: string
           id?: string
           is_required?: boolean
+          max_record_seconds?: number
           order_index?: number
+          practice_mode?: string | null
           reference?: string
           rubric?: string | null
           similarity_threshold?: number
@@ -503,6 +564,188 @@ export type Database = {
             columns: ["unlock_after_course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entries: {
+        Row: {
+          block_id: number | null
+          content: string | null
+          created_at: string | null
+          id: number
+          leader_feedback: string | null
+          lesson_id: number | null
+          submitted_at: string | null
+          submitted_to_leader: boolean | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          block_id?: number | null
+          content?: string | null
+          created_at?: string | null
+          id?: number
+          leader_feedback?: string | null
+          lesson_id?: number | null
+          submitted_at?: string | null
+          submitted_to_leader?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          block_id?: number | null
+          content?: string | null
+          created_at?: string | null
+          id?: number
+          leader_feedback?: string | null
+          lesson_id?: number | null
+          submitted_at?: string | null
+          submitted_to_leader?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leader_materials: {
+        Row: {
+          access_role: string
+          created_at: string
+          description_ru: string | null
+          duration_sec: number | null
+          id: string
+          kinescope_id: string
+          order_num: number
+          title_ru: string
+          updated_at: string
+        }
+        Insert: {
+          access_role?: string
+          created_at?: string
+          description_ru?: string | null
+          duration_sec?: number | null
+          id?: string
+          kinescope_id: string
+          order_num?: number
+          title_ru: string
+          updated_at?: string
+        }
+        Update: {
+          access_role?: string
+          created_at?: string
+          description_ru?: string | null
+          duration_sec?: number | null
+          id?: string
+          kinescope_id?: string
+          order_num?: number
+          title_ru?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lessons: {
+        Row: {
+          block_id: number | null
+          content_en: string | null
+          content_ru: string | null
+          id: number
+          order_num: number | null
+          title_en: string | null
+          title_ru: string | null
+          verses: Json | null
+          youtube_url: string | null
+        }
+        Insert: {
+          block_id?: number | null
+          content_en?: string | null
+          content_ru?: string | null
+          id?: number
+          order_num?: number | null
+          title_en?: string | null
+          title_ru?: string | null
+          verses?: Json | null
+          youtube_url?: string | null
+        }
+        Update: {
+          block_id?: number | null
+          content_en?: string | null
+          content_ru?: string | null
+          id?: number
+          order_num?: number | null
+          title_en?: string | null
+          title_ru?: string | null
+          verses?: Json | null
+          youtube_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications_log: {
+        Row: {
+          channel: string
+          created_at: string
+          error_message: string | null
+          id: string
+          payload: Json | null
+          status: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          status?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          status?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1025,6 +1268,77 @@ export type Database = {
           },
         ]
       }
+      student_progress: {
+        Row: {
+          admin_approved: boolean | null
+          approved_at: string | null
+          approved_by: string | null
+          block_id: number | null
+          completed: boolean | null
+          completed_at: string | null
+          id: number
+          last_visited: string | null
+          lesson_id: number | null
+          rejection_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          block_id?: number | null
+          completed?: boolean | null
+          completed_at?: string | null
+          id?: number
+          last_visited?: string | null
+          lesson_id?: number | null
+          rejection_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_approved?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          block_id?: number | null
+          completed?: boolean | null
+          completed_at?: string | null
+          id?: number
+          last_visited?: string | null
+          lesson_id?: number | null
+          rejection_count?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_progress_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_progress_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_quiz_attempts: {
         Row: {
           ai_call_id: string | null
@@ -1083,6 +1397,48 @@ export type Database = {
           },
         ]
       }
+      uploads: {
+        Row: {
+          created_at: string | null
+          file_name: string | null
+          file_url: string | null
+          id: number
+          journal_entry_id: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: number
+          journal_entry_id?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: number
+          journal_entry_id?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uploads_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uploads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       video_watch_progress: {
         Row: {
           block_resource_id: string
@@ -1131,261 +1487,6 @@ export type Database = {
           },
         ]
       }
-      bible_verses: {
-        Row: {
-          block_id: number | null
-          created_at: string | null
-          id: number
-          lesson_id: number | null
-          memorized: boolean | null
-          order_num: number | null
-          reference: string | null
-          text_en: string | null
-          text_ru: string | null
-          user_id: string | null
-          verse_text: string | null
-        }
-        Insert: {
-          block_id?: number | null
-          created_at?: string | null
-          id?: number
-          lesson_id?: number | null
-          memorized?: boolean | null
-          order_num?: number | null
-          reference?: string | null
-          text_en?: string | null
-          text_ru?: string | null
-          user_id?: string | null
-          verse_text?: string | null
-        }
-        Update: {
-          block_id?: number | null
-          created_at?: string | null
-          id?: number
-          lesson_id?: number | null
-          memorized?: boolean | null
-          order_num?: number | null
-          reference?: string | null
-          text_en?: string | null
-          text_ru?: string | null
-          user_id?: string | null
-          verse_text?: string | null
-        }
-        Relationships: []
-      }
-      journal_entries: {
-        Row: {
-          block_id: number | null
-          content: string | null
-          created_at: string | null
-          id: number
-          leader_feedback: string | null
-          lesson_id: number | null
-          submitted_at: string | null
-          submitted_to_leader: boolean | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          block_id?: number | null
-          content?: string | null
-          created_at?: string | null
-          id?: number
-          leader_feedback?: string | null
-          lesson_id?: number | null
-          submitted_at?: string | null
-          submitted_to_leader?: boolean | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          block_id?: number | null
-          content?: string | null
-          created_at?: string | null
-          id?: number
-          leader_feedback?: string | null
-          lesson_id?: number | null
-          submitted_at?: string | null
-          submitted_to_leader?: boolean | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      leader_materials: {
-        Row: {
-          access_role: string
-          created_at: string
-          description_ru: string | null
-          duration_sec: number | null
-          id: string
-          kinescope_id: string
-          order_num: number
-          title_ru: string
-          updated_at: string
-        }
-        Insert: {
-          access_role?: string
-          created_at?: string
-          description_ru?: string | null
-          duration_sec?: number | null
-          id?: string
-          kinescope_id: string
-          order_num?: number
-          title_ru: string
-          updated_at?: string
-        }
-        Update: {
-          access_role?: string
-          created_at?: string
-          description_ru?: string | null
-          duration_sec?: number | null
-          id?: string
-          kinescope_id?: string
-          order_num?: number
-          title_ru?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      lessons: {
-        Row: {
-          block_id: number | null
-          content_en: string | null
-          content_ru: string | null
-          id: number
-          order_num: number | null
-          title_en: string | null
-          title_ru: string | null
-          verses: Json | null
-          youtube_url: string | null
-        }
-        Insert: {
-          block_id?: number | null
-          content_en?: string | null
-          content_ru?: string | null
-          id?: number
-          order_num?: number | null
-          title_en?: string | null
-          title_ru?: string | null
-          verses?: Json | null
-          youtube_url?: string | null
-        }
-        Update: {
-          block_id?: number | null
-          content_en?: string | null
-          content_ru?: string | null
-          id?: number
-          order_num?: number | null
-          title_en?: string | null
-          title_ru?: string | null
-          verses?: Json | null
-          youtube_url?: string | null
-        }
-        Relationships: []
-      }
-      notifications_log: {
-        Row: {
-          channel: string
-          created_at: string
-          error_message: string | null
-          id: string
-          payload: Json | null
-          status: string | null
-          type: string
-          user_id: string | null
-        }
-        Insert: {
-          channel: string
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          payload?: Json | null
-          status?: string | null
-          type: string
-          user_id?: string | null
-        }
-        Update: {
-          channel?: string
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          payload?: Json | null
-          status?: string | null
-          type?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      student_progress: {
-        Row: {
-          admin_approved: boolean | null
-          approved_at: string | null
-          approved_by: string | null
-          block_id: number | null
-          completed: boolean | null
-          completed_at: string | null
-          id: number
-          last_visited: string | null
-          lesson_id: number | null
-          rejection_count: number | null
-          user_id: string | null
-        }
-        Insert: {
-          admin_approved?: boolean | null
-          approved_at?: string | null
-          approved_by?: string | null
-          block_id?: number | null
-          completed?: boolean | null
-          completed_at?: string | null
-          id?: number
-          last_visited?: string | null
-          lesson_id?: number | null
-          rejection_count?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          admin_approved?: boolean | null
-          approved_at?: string | null
-          approved_by?: string | null
-          block_id?: number | null
-          completed?: boolean | null
-          completed_at?: string | null
-          id?: number
-          last_visited?: string | null
-          lesson_id?: number | null
-          rejection_count?: number | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      uploads: {
-        Row: {
-          created_at: string | null
-          file_name: string | null
-          file_url: string | null
-          id: number
-          journal_entry_id: number | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          file_name?: string | null
-          file_url?: string | null
-          id?: number
-          journal_entry_id?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          file_name?: string | null
-          file_url?: string | null
-          id?: number
-          journal_entry_id?: number | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       weekly_submissions: {
         Row: {
           block_id: number | null
@@ -1417,17 +1518,167 @@ export type Database = {
           user_id?: string | null
           week_number?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "weekly_submissions_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
-    Views: { [_ in never]: never }
+    Views: {
+      [_ in never]: never
+    }
     Functions: {
       get_leader_chat_id: { Args: { student_id: string }; Returns: number }
       is_admin: { Args: never; Returns: boolean }
-      is_block_unlocked: { Args: { p_user_id: string; p_block_id: number }; Returns: boolean }
-      is_visible_to: { Args: { target_id: string; viewer_id: string }; Returns: boolean }
+      is_block_unlocked: {
+        Args: { p_block_id: number; p_user_id: string }
+        Returns: boolean
+      }
+      is_visible_to: {
+        Args: { target_id: string; viewer_id: string }
+        Returns: boolean
+      }
     }
-    Enums: { [_ in never]: never }
-    CompositeTypes: { [_ in never]: never }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
