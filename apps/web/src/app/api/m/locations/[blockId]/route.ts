@@ -167,6 +167,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       videoPassed: false,
       audioAttempts: 0,
       videoAttempts: 0,
+      audioPassedDays: new Set<string>(),
+      todayHasPassedAudio: false,
     }
 
     // cast через unknown — max_record_seconds + practice_mode добавлены миграциями,
