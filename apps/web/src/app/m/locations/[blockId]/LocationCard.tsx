@@ -437,10 +437,6 @@ export function LocationCard({ item }: Props) {
         {headerIcon}
       </div>
 
-      <p style={{ fontSize: '0.7rem', color: '#9CA3AF', marginBottom: '0.25rem', fontFamily: 'monospace' }}>
-        debug: mode={String(practiceMode)}, max={item.max_record_seconds}s
-      </p>
-
       <blockquote className="location-card__text">{item.exact_text}</blockquote>
 
       {/* Daily understanding — ежедневный пересказ 7 дней */}
