@@ -1,7 +1,13 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
 export type ValidatedInitData =
-  | { ok: true; chatId: number }
+  | {
+      ok: true
+      chatId: number
+      username: string | null
+      firstName: string | null
+      lastName: string | null
+    }
   | { ok: false; reason: string }
 
 const DEFAULT_MAX_AGE_SECONDS = 8 * 60 * 60 // 8 часов = одна учебная сессия (рекомендация Алекса)
@@ -64,9 +70,20 @@ export function validateTelegramInitData(
   if (!userJson) return { ok: false, reason: 'no_user' }
 
   try {
-    const u = JSON.parse(userJson) as { id?: number }
+    const u = JSON.parse(userJson) as {
+      id?: number
+      username?: string
+      first_name?: string
+      last_name?: string
+    }
     if (!u.id) return { ok: false, reason: 'bad_user' }
-    return { ok: true, chatId: u.id }
+    return {
+      ok: true,
+      chatId: u.id,
+      username: u.username ?? null,
+      firstName: u.first_name ?? null,
+      lastName: u.last_name ?? null,
+    }
   } catch {
     return { ok: false, reason: 'bad_user' }
   }
