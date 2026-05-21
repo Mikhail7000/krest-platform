@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<Student['status'], { label: string; color: string }>
 }
 
 export default function CuratorDashboard() {
-  const { profile, loading } = useTelegram()
+  const { status } = useTelegram()
   const { impact } = useHaptic()
   const [students, setStudents] = useState<Student[]>([])
   const [loadingStudents, setLoadingStudents] = useState(true)
@@ -35,13 +35,15 @@ export default function CuratorDashboard() {
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'pending' | 'silent'>('all')
 
   useEffect(() => {
-    if (!profile?.id) return
-
     const fetchStudents = async () => {
       try {
-        const params = new URLSearchParams()
-        const res = await fetch(`/api/curator/students?${params.toString()}`)
-        if (!res.ok) throw new Error('Failed to load students')
+        const res = await fetch(`/api/curator/students`)
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            throw new Error('Curator role required')
+          }
+          throw new Error('Failed to load students')
+        }
 
         const data = await res.json()
         setStudents(data.data || [])
@@ -54,9 +56,9 @@ export default function CuratorDashboard() {
 
     setLoadingStudents(true)
     fetchStudents()
-  }, [profile?.id, selectedFilter])
+  }, [selectedFilter])
 
-  if (loading) {
+  if (status === 'init') {
     return (
       <div className="w-full max-w-md mx-auto px-4 py-12 text-center">
         <div className="animate-pulse">
@@ -67,7 +69,7 @@ export default function CuratorDashboard() {
     )
   }
 
-  if (!profile) {
+  if (status === 'forbidden') {
     return (
       <div className="w-full max-w-md mx-auto px-4 py-12 text-center text-red-600">
         <p className="text-lg font-semibold">Access Denied</p>

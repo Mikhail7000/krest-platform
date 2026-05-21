@@ -1,5 +1,6 @@
 import Script from 'next/script'
 import { TelegramProvider } from '@/components/telegram/TelegramProvider'
+import { MiniAppGate } from './_components/MiniAppGate'
 import './miniapp.css'
 
 export const metadata = {
@@ -12,7 +13,9 @@ export default function MiniAppLayout({ children }: { children: React.ReactNode 
     <>
       <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       <TelegramProvider>
-        <div className="miniapp-root">{children}</div>
+        <div className="miniapp-root">
+          <MiniAppGate>{children}</MiniAppGate>
+        </div>
       </TelegramProvider>
     </>
   )

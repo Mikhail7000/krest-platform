@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           error: {
             code: 'ACCESS_DENIED',
-            message: 'Доступ запрещен. Пожалуйста свяжитесь с вашим наставником либо напишите в поддержку @Rogue02',
+            message: 'Доступ запрещен. Пожалуйста обратитесь к вашему наставнику',
           },
         }, { status: 403 })
       }

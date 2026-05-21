@@ -22,7 +22,6 @@ interface StudentProgress {
 export default function StudentDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { profile } = useTelegram()
   const { impact } = useHaptic()
   const studentId = params.id as string
 

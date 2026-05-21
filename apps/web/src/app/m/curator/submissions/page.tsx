@@ -31,7 +31,6 @@ const ASSIGNMENT_LABELS: Record<string, string> = {
 }
 
 export default function SubmissionsPage() {
-  const { profile } = useTelegram()
   const { impact } = useHaptic()
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
@@ -145,7 +144,7 @@ interface SubmissionDetailProps {
 }
 
 function SubmissionDetail({ submission, onBack, onApproved }: SubmissionDetailProps) {
-  const { impact } = useHaptic()
+  const { impact, notification } = useHaptic()
   const [approving, setApproving] = useState(false)
   const [rejecting, setRejecting] = useState(false)
   const [rejectComment, setRejectComment] = useState('')
@@ -159,11 +158,11 @@ function SubmissionDetail({ submission, onBack, onApproved }: SubmissionDetailPr
         method: 'POST',
       })
       if (!res.ok) throw new Error('Failed to approve')
-      impact('success')
+      notification('success')
       onApproved()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
-      impact('error')
+      notification('error')
     } finally {
       setApproving(false)
     }
@@ -184,11 +183,11 @@ function SubmissionDetail({ submission, onBack, onApproved }: SubmissionDetailPr
         body: JSON.stringify({ reviewer_comment: rejectComment }),
       })
       if (!res.ok) throw new Error('Failed to reject')
-      impact('success')
+      notification('success')
       onApproved()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
-      impact('error')
+      notification('error')
     } finally {
       setRejecting(false)
     }
