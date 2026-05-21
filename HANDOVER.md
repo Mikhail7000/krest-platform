@@ -1,24 +1,37 @@
 # HANDOVER — КРЕСТ
 
-> Дата: **2026-05-21 (вечер)** | Сессия: ✅ **Curator Dashboard UI завершён. Два больших коммита: API + English Placeholder, затем UI (3 страницы куратора). Готово для демо Алексу Манье.**
+> Дата: **2026-05-21 (ночь)** | Сессия: ✅ **Русский многошаговый онбординг (язык → страна → город → куратор → имя) реализован. API endpoints + React компоненты готовы к тестированию.**
 
 ---
 
 ## 🎯 Главное (читать первым)
 
-1. **Ветка main = `5fcdc4d`** — два новых коммита за сессию (Curator API + English Placeholder, затем Dashboard UI)
-2. **Production deployment**: https://krest-platform-web.vercel.app работает через `@cross_notify_bot`
-3. **Тестовая фаза активна**: Telegram whitelist в таблице `testing_whitelist`, первый юзер @Rogue02 (Михаил)
-4. **English Placeholder готов** ✅: `/m/onboarding` с LanguageSelect → "Still Cooking" экран
-5. **Curator Dashboard готов** ✅:
-   - `/m/curator` — список студентов с фильтрами (All/Pending/Silent)
-   - `/m/curator/students/[id]` — детальный прогресс студента
-   - `/m/curator/submissions` — очередь сабмишенов для одобрения/отклонения
-6. **В БД (`aejhlmoydnhgedgfndql`)**: 
-   - `placeholder_bible_verses` (20 NIV стихов)
-   - `testing_whitelist` (Telegram usernames)
-   - `submissions` (с assignment_type enum)
-   - `notifications_log` (для уведомлений)
+### Русский онбординг (2026-05-21 ночь)
+
+1. **Критичный fix в telegram-auth**: Убрана `onboarding_done: true` для новых пользователей
+   - Теперь новые пользователи попадают на `/m/onboarding` вместо прямого доступа к dashboard
+2. **Новые API endpoints** ✅:
+   - `POST /api/miniapp/onboarding` — сохранение выбора страны, города, куратора, имени
+   - `GET /api/miniapp/profile` — проверка статуса онбординга (используется MiniAppGate)
+3. **Обновлена MiniAppGate.tsx** ✅:
+   - После `status === 'ready'` делает GET запрос к `/api/miniapp/profile`
+   - Если `onboarding_done === false` → редирект на `/m/onboarding`
+4. **Многошаговый flow в /m/onboarding/page.tsx** ✅:
+   - State machine: `language → country → city → curator → name → saving → done`
+   - Собирает `{ countryId, cityId, curatorId, fullName }` → POST на `/api/miniapp/onboarding`
+5. **Новые React компоненты** ✅:
+   - `CountrySelect.tsx` — загружает `countries WHERE status='active'`
+   - `CitySelect.tsx` — загружает `cities WHERE country_id=X AND status='active'`
+   - `CuratorSelect.tsx` — загружает кураторов `WHERE role='curator' AND city_id=Y`
+   - `NameInput.tsx` — предзаполняет именем из Telegram, можно изменить
+6. **Кнопка "Написать в поддержку"** ✅ для случаев:
+   - Нет активных городов в стране
+   - Нет кураторов в городе (редиректит на `/m/support`)
+7. **Поля в profiles уже есть** ✅:
+   - `country_id` (integer)
+   - `city_id` (integer)
+   - `curator_id` (uuid)
+   - `onboarding_done` (boolean, default=false)
 
 ---
 

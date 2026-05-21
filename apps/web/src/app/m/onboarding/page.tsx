@@ -1,33 +1,150 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { EnglishPlaceholder } from './EnglishPlaceholder'
 import { LanguageSelect } from './LanguageSelect'
+import { CountrySelect } from './steps/CountrySelect'
+import { CitySelect } from './steps/CitySelect'
+import { CuratorSelect } from './steps/CuratorSelect'
+import { NameInput } from './steps/NameInput'
+
+type OnboardingStep = 'language' | 'country' | 'city' | 'curator' | 'name' | 'saving' | 'done'
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [selectedLanguage, setSelectedLanguage] = useState<'ru' | 'en' | null>(null)
+  const { initData } = useTelegram()
+
+  const [step, setStep] = useState<OnboardingStep>('language')
+  const [countryId, setCountryId] = useState<string | null>(null)
+  const [cityId, setCityId] = useState<string | null>(null)
+  const [curatorId, setCuratorId] = useState<string | null>(null)
+  const [fullName, setFullName] = useState<string | null>(null)
 
   const handleLanguageSelect = (lang: 'ru' | 'en') => {
-    setSelectedLanguage(lang)
+    if (lang === 'en') {
+      setStep('language') // Stays on language, shows English placeholder
+    } else {
+      setStep('country')
+    }
   }
 
-  const handleBack = () => {
-    setSelectedLanguage(null)
+  const handleBack = useCallback(() => {
+    if (step === 'country') {
+      setStep('language')
+    } else if (step === 'city') {
+      setCountryId(null)
+      setStep('country')
+    } else if (step === 'curator') {
+      setCityId(null)
+      setStep('city')
+    } else if (step === 'name') {
+      setCuratorId(null)
+      setStep('curator')
+    }
+  }, [step])
+
+  const handleCountrySelect = useCallback((cId: string) => {
+    setCountryId(cId)
+    setStep('city')
+  }, [])
+
+  const handleCitySelect = useCallback((cId: string) => {
+    setCityId(cId)
+    setStep('curator')
+  }, [])
+
+  const handleCuratorSelect = useCallback((cId: string) => {
+    setCuratorId(cId)
+    setStep('name')
+  }, [])
+
+  const handleNameSubmit = useCallback(
+    async (name: string) => {
+      if (!countryId || !cityId || !curatorId || !initData) {
+        console.error('Missing required fields')
+        return
+      }
+
+      setFullName(name)
+      setStep('saving')
+
+      try {
+        const res = await fetch('/api/miniapp/onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            initData,
+            country_id: countryId,
+            city_id: cityId,
+            curator_id: curatorId,
+            full_name: name,
+          }),
+        })
+
+        if (!res.ok) {
+          const error = await res.json()
+          throw new Error(error.error?.message || 'Failed to save onboarding')
+        }
+
+        setStep('done')
+        setTimeout(() => {
+          router.push('/m/dashboard')
+        }, 500)
+      } catch (err) {
+        console.error('Onboarding save error:', err)
+        setStep('name')
+      }
+    },
+    [countryId, cityId, curatorId, initData, router]
+  )
+
+  // English placeholder
+  if (step === 'language') {
+    const lang = 'ru' // Since we're at language selection
+    return <LanguageSelect onSelect={handleLanguageSelect} />
   }
 
-  // English selected → show "Still Cooking" placeholder
-  if (selectedLanguage === 'en') {
-    return <EnglishPlaceholder onBack={handleBack} />
+  // Country selection
+  if (step === 'country') {
+    return (
+      <CountrySelect onSelect={handleCountrySelect} onBack={handleBack} />
+    )
   }
 
-  // Russian selected → continue to country selection (future)
-  if (selectedLanguage === 'ru') {
-    // TODO: Navigate to country selection or create OnboardingFlow component
-    return <div className="min-h-screen flex items-center justify-center">Russian onboarding coming soon...</div>
+  // City selection
+  if (step === 'city' && countryId) {
+    return (
+      <CitySelect countryId={countryId} onSelect={handleCitySelect} onBack={handleBack} />
+    )
   }
 
-  // Show language selection
-  return <LanguageSelect onSelect={handleLanguageSelect} />
+  // Curator selection
+  if (step === 'curator' && cityId) {
+    return (
+      <CuratorSelect cityId={cityId} onSelect={handleCuratorSelect} onBack={handleBack} />
+    )
+  }
+
+  // Name input
+  if (step === 'name') {
+    return (
+      <NameInput onSubmit={handleNameSubmit} onBack={handleBack} />
+    )
+  }
+
+  // Saving
+  if (step === 'saving') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-gray-600">Сохранение данных...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return null
 }

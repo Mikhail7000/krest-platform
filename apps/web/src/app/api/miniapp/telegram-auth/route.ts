@@ -197,7 +197,6 @@ export async function POST(request: NextRequest) {
       nastavnik_id: nastavnikId,
       referral_source: 'telegram',
       contact_info: tgUser.username ? `@${tgUser.username}` : null,
-      onboarding_done: true,
     }
     // Админ через Telegram → ставим role='admin'
     if (isAdmin) profileUpdate.role = 'admin'
