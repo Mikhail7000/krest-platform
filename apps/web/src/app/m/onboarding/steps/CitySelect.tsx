@@ -66,7 +66,7 @@ export function CitySelect({
 
   if (cities.length === 0) {
     return (
-      <div className="min-h-screen bg-white p-6 flex flex-col justify-center">
+      <div className="min-h-screen bg-white text-gray-900 p-6 flex flex-col justify-center">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold mb-2">Нет активных городов</h1>
           <p className="text-gray-600">
@@ -93,7 +93,7 @@ export function CitySelect({
   }
 
   return (
-    <div className="min-h-screen bg-white p-6 flex flex-col">
+    <div className="min-h-screen bg-white text-gray-900 p-6 flex flex-col">
       <div className="flex-1 flex flex-col justify-center">
         <h1 className="text-2xl font-bold text-center mb-2">Выберите город</h1>
         <p className="text-gray-600 text-center mb-8">Где вы находитесь?</p>
