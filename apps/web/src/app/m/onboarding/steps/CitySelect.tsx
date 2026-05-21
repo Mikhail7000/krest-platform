@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
-import { Button } from '@/components/ui/button'
 
 interface City {
   id: string
@@ -75,12 +74,20 @@ export function CitySelect({
           </p>
         </div>
 
-        <Button onClick={handleSupportClick} className="w-full mb-3">
+        <button
+          type="button"
+          onClick={handleSupportClick}
+          className="w-full mb-3 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition"
+        >
           Написать в поддержку
-        </Button>
-        <Button variant="outline" onClick={onBack} className="w-full">
+        </button>
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+        >
           Назад
-        </Button>
+        </button>
       </div>
     )
   }
@@ -104,9 +111,13 @@ export function CitySelect({
         </div>
       </div>
 
-      <Button variant="outline" onClick={onBack} className="w-full mt-6">
+      <button
+        type="button"
+        onClick={onBack}
+        className="w-full mt-6 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+      >
         Назад
-      </Button>
+      </button>
     </div>
   )
 }

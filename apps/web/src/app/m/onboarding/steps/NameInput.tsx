@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 
 export function NameInput({
   onSubmit,
@@ -18,8 +16,8 @@ export function NameInput({
 
   useEffect(() => {
     // Pre-fill with Telegram name
-    if (user?.first_name) {
-      const telegramName = [user.first_name, user.last_name]
+    if (user?.firstName) {
+      const telegramName = [user.firstName, user.lastName]
         .filter(Boolean)
         .join(' ')
       setName(telegramName)
@@ -49,33 +47,34 @@ export function NameInput({
         <p className="text-gray-600 text-center mb-8">Можете изменить имя из Telegram, если нужно</p>
 
         <div className="space-y-4">
-          <Input
+          <input
             type="text"
             placeholder="Введите ваше имя"
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={loading}
-            className="text-lg"
+            className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
           />
         </div>
       </div>
 
       <div className="space-y-3">
-        <Button
+        <button
+          type="button"
           onClick={handleSubmit}
           disabled={!isValid || loading}
-          className="w-full"
+          className="w-full px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50"
         >
           {loading ? 'Продолжить...' : 'Продолжить'}
-        </Button>
-        <Button
-          variant="outline"
+        </button>
+        <button
+          type="button"
           onClick={onBack}
           disabled={loading}
-          className="w-full"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
         >
           Назад
-        </Button>
+        </button>
       </div>
     </div>
   )

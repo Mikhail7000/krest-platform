@@ -10,7 +10,7 @@ import { CitySelect } from './steps/CitySelect'
 import { CuratorSelect } from './steps/CuratorSelect'
 import { NameInput } from './steps/NameInput'
 
-type OnboardingStep = 'language' | 'country' | 'city' | 'curator' | 'name' | 'saving' | 'done'
+type OnboardingStep = 'language' | 'english' | 'country' | 'city' | 'curator' | 'name' | 'saving' | 'done'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -20,11 +20,10 @@ export default function OnboardingPage() {
   const [countryId, setCountryId] = useState<string | null>(null)
   const [cityId, setCityId] = useState<string | null>(null)
   const [curatorId, setCuratorId] = useState<string | null>(null)
-  const [fullName, setFullName] = useState<string | null>(null)
 
   const handleLanguageSelect = (lang: 'ru' | 'en') => {
     if (lang === 'en') {
-      setStep('language') // Stays on language, shows English placeholder
+      setStep('english')
     } else {
       setStep('country')
     }
@@ -67,7 +66,6 @@ export default function OnboardingPage() {
         return
       }
 
-      setFullName(name)
       setStep('saving')
 
       try {
@@ -100,10 +98,14 @@ export default function OnboardingPage() {
     [countryId, cityId, curatorId, initData, router]
   )
 
-  // English placeholder
+  // Language selection
   if (step === 'language') {
-    const lang = 'ru' // Since we're at language selection
     return <LanguageSelect onSelect={handleLanguageSelect} />
+  }
+
+  // English placeholder ("Still Cooking")
+  if (step === 'english') {
+    return <EnglishPlaceholder onBack={() => setStep('language')} />
   }
 
   // Country selection

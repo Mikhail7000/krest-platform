@@ -29,6 +29,7 @@ type ContextValue = {
   user: TelegramUser | null
   errorMessage: string | null
   platform: string | null
+  initData: string | null
 }
 
 const Ctx = createContext<ContextValue>({
@@ -36,6 +37,7 @@ const Ctx = createContext<ContextValue>({
   user: null,
   errorMessage: null,
   platform: null,
+  initData: null,
 })
 
 export const useTelegram = () => useContext(Ctx)
@@ -50,6 +52,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<TelegramUser | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [platform, setPlatform] = useState<string | null>(null)
+  const [initData, setInitData] = useState<string | null>(null)
 
   useEffect(() => {
     const tg = getTg()
@@ -65,6 +68,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     applyTelegramTheme()
     const stopThemeListener = listenThemeChanges()
     setPlatform(tg.platform ?? null)
+    setInitData(tg.initData)
 
     const ac = new AbortController()
 
@@ -112,7 +116,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <Ctx.Provider value={{ status, user, errorMessage, platform }}>
+    <Ctx.Provider value={{ status, user, errorMessage, platform, initData }}>
       {children}
     </Ctx.Provider>
   )

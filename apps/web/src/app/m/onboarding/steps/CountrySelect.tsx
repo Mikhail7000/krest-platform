@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase-browser'
-import { Button } from '@/components/ui/button'
 
 interface Country {
   id: string
@@ -76,9 +75,13 @@ export function CountrySelect({
         </div>
       </div>
 
-      <Button variant="outline" onClick={onBack} className="w-full mt-6">
+      <button
+        type="button"
+        onClick={onBack}
+        className="w-full mt-6 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+      >
         Назад
-      </Button>
+      </button>
     </div>
   )
 }
