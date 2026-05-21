@@ -61,8 +61,8 @@ async function sendTelegramMessage(
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://krest-platform-web.vercel.app'
   const miniAppUrl = options?.refToken
-    ? `${baseUrl}/miniapp/index.html?ref=${options.refToken}`
-    : `${baseUrl}/miniapp/index.html`
+    ? `${baseUrl}/m/dashboard?ref=${options.refToken}`
+    : `${baseUrl}/m/dashboard`
 
   const body: Record<string, unknown> = {
     chat_id: chatId,
