@@ -37,15 +37,16 @@ export async function ensureWhitelistedProfile(params: {
     .eq('telegram_chat_id', chatId)
     .maybeSingle()
 
+  // Привилегированные/уже whitelisted — пускаем сразу
   if (existing) {
     const privileged = existing.role !== null && PRIVILEGED_ROLES.has(existing.role)
     if (privileged || existing.is_whitelisted === true) {
       return { ok: true, userId: existing.id }
     }
-    return { ok: false, status: 403, code: 'WAITLIST', message: WAITLIST_MESSAGE }
   }
 
-  // 2. Профиля нет — нужен username для проверки whitelist
+  // 2. Доступ ведётся по username — проверяем whitelist (и для новых, и для
+  //    уже существующих, но ещё не whitelisted профилей).
   if (!username) {
     return {
       ok: false,
@@ -75,7 +76,22 @@ export async function ensureWhitelistedProfile(params: {
     }
   }
 
-  // 3. Создаём auth-пользователя (профиль создаст триггер handle_new_user)
+  // 3a. Профиль уже есть — просто проставляем whitelist и занимаем слот
+  if (existing) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any)
+      .from('profiles')
+      .update({ is_whitelisted: true, contact_info: handle })
+      .eq('id', existing.id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any)
+      .from('testing_whitelist')
+      .update({ claimed_chat_id: chatId })
+      .eq('id', slot.id)
+    return { ok: true, userId: existing.id }
+  }
+
+  // 3b. Профиля нет — создаём auth-пользователя (профиль создаст триггер)
   const botToken = process.env.TELEGRAM_BOT_TOKEN
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
