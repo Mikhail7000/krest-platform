@@ -9,7 +9,7 @@ export function SupportRequestScreen() {
 
   const handleSubmit = async () => {
     if (!message || message.length < 10) {
-      setErrorMessage('Message must be at least 10 characters')
+      setErrorMessage('Сообщение должно содержать минимум 10 символов')
       return
     }
 
@@ -50,60 +50,64 @@ export function SupportRequestScreen() {
 
   if (status === 'success') {
     return (
-      <div className="w-full max-w-md mx-auto px-4 py-12 text-center">
-        <div className="mb-4 text-4xl">✅</div>
-        <h1 className="text-xl font-bold text-foreground mb-2">Запрос отправлен</h1>
-        <p className="text-sm text-muted-foreground mb-6">
-          Спасибо! Мы свяжемся с вами в ближайшее время.
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium"
-        >
-          Закрыть
-        </button>
+      <div className="min-h-screen w-full flex flex-col items-center justify-center px-5 py-12 text-center">
+        <div className="w-full max-w-xs">
+          <div className="mb-4 text-4xl">✅</div>
+          <h1 className="text-xl font-bold mb-2 wrap-break-word">Запрос отправлен</h1>
+          <p className="text-sm opacity-70 mb-6">
+            Спасибо! Мы свяжемся с вами в ближайшее время.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium"
+          >
+            Закрыть
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-6">
-      <div className="mb-6 text-center">
-        <div className="mb-4 text-4xl">⚠️</div>
-        <h1 className="text-xl font-bold text-foreground mb-2">Доступ запрещён</h1>
-        <p className="text-sm text-muted-foreground">
-          Обратитесь к вашему наставнику или напишите нам:
+    <div className="min-h-screen w-full flex flex-col items-center justify-center px-5 py-8">
+      <div className="w-full max-w-xs">
+        <div className="mb-6 text-center">
+          <div className="mb-4 text-4xl">⚠️</div>
+          <h1 className="text-xl font-bold mb-2 wrap-break-word">Доступ запрещён</h1>
+          <p className="text-sm opacity-70 wrap-break-word">
+            Обратитесь к вашему наставнику или напишите нам:
+          </p>
+        </div>
+
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-800 text-sm wrap-break-word">
+            {errorMessage}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Расскажите о вашем вопросе или проблеме..."
+            className="w-full bg-white text-gray-900 placeholder-gray-400 border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            rows={4}
+            disabled={status === 'loading'}
+          />
+
+          <button
+            onClick={handleSubmit}
+            disabled={status === 'loading' || !message.trim()}
+            className="w-full bg-primary text-white rounded-lg px-4 py-3 font-medium text-sm active:scale-95 transition disabled:opacity-50"
+          >
+            {status === 'loading' ? 'Отправляю...' : 'Отправить запрос'}
+          </button>
+        </div>
+
+        <p className="text-xs opacity-60 text-center mt-4 wrap-break-word">
+          Минимум 10 символов
         </p>
       </div>
-
-      {errorMessage && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-800 text-sm">
-          {errorMessage}
-        </div>
-      )}
-
-      <div className="space-y-3">
-        <textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Расскажите о вашем вопросе или проблеме..."
-          className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          rows={4}
-          disabled={status === 'loading'}
-        />
-
-        <button
-          onClick={handleSubmit}
-          disabled={status === 'loading' || !message.trim()}
-          className="w-full bg-primary text-primary-foreground rounded-lg px-4 py-3 font-medium text-sm active:scale-95 transition disabled:opacity-50"
-        >
-          {status === 'loading' ? '⏳ Отправляю...' : 'Отправить запрос'}
-        </button>
-      </div>
-
-      <p className="text-xs text-muted-foreground text-center mt-4">
-        Минимум 10 символов | Обязательно прочитайте нас
-      </p>
     </div>
   )
 }
