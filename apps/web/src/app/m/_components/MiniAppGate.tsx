@@ -6,16 +6,20 @@ import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { SupportRequestScreen } from './SupportRequestScreen'
 
 export function MiniAppGate({ children }: { children: React.ReactNode }) {
-  const { status } = useTelegram()
+  const { status, initData } = useTelegram()
   const router = useRouter()
   const [checkedOnboarding, setCheckedOnboarding] = useState(false)
 
   useEffect(() => {
-    if (status !== 'ready') return
+    if (status !== 'ready' || !initData) return
 
     const checkOnboarding = async () => {
       try {
-        const res = await fetch('/api/miniapp/profile')
+        const res = await fetch('/api/miniapp/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData }),
+        })
         if (!res.ok) {
           console.error('Failed to fetch profile')
           setCheckedOnboarding(true)
@@ -33,7 +37,7 @@ export function MiniAppGate({ children }: { children: React.ReactNode }) {
     }
 
     checkOnboarding()
-  }, [status, router])
+  }, [status, initData, router])
 
   // Show support screen when access is denied
   if (status === 'forbidden') {

@@ -1,36 +1,41 @@
-import { NextResponse } from 'next/server'
-import { createServerSupabase } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { resolveUserId } from '@/lib/telegram/resolve-user'
+import { createServiceSupabase } from '@/lib/supabase-service'
+
+export const dynamic = 'force-dynamic'
 
 /**
- * GET /api/miniapp/profile
+ * POST /api/miniapp/profile
  *
- * Возвращает профиль текущего пользователя для проверки онбординга и других данных.
+ * Возвращает профиль текущего пользователя для проверки онбординга.
  *
+ * Body: { initData }
  * Ответ: { onboarding_done, country_id, city_id, curator_id, full_name }
+ *
+ * Аутентификация — через Telegram initData + resolveUserId (как весь /m/*).
  */
-export async function GET() {
+export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabase()
-    const { data: userData, error: userError } = await supabase.auth.getUser()
+    const body = (await request.json().catch(() => ({}))) as { initData?: string }
 
-    if (userError || !userData.user) {
+    const auth = await resolveUserId(body.initData ?? '')
+    if (!auth.ok) {
       return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
-        { status: 401 }
+        { error: { code: auth.code, message: auth.message } },
+        { status: auth.status }
       )
     }
 
-    const userId = userData.user.id
-
+    const supabase = createServiceSupabase()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('onboarding_done, country_id, city_id, curator_id, full_name')
-      .eq('id', userId)
+      .eq('id', auth.userId)
       .maybeSingle()
 
     if (profileError) {
-      console.error('[profile GET] query error:', profileError)
+      console.error('[profile POST] query error:', profileError)
       return NextResponse.json(
         { error: { code: 'QUERY_ERROR', message: 'Failed to fetch profile' } },
         { status: 500 }
@@ -52,7 +57,7 @@ export async function GET() {
       full_name: profile.full_name,
     })
   } catch (err) {
-    console.error('[profile GET]', err)
+    console.error('[profile POST]', err)
     return NextResponse.json(
       { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } },
       { status: 500 }
