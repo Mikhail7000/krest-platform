@@ -71,11 +71,38 @@ export async function POST(request: NextRequest) {
     }
 
     const tgId = tgUser.id
+    const tgUsername = tgUser.username ? `@${tgUser.username}` : null
     const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || tgUser.username || `Telegram ${tgId}`
     const techEmail = `tg${tgId}@krest.local`
 
     // 3. Anon client для поиска и signup
     const supa = createClient(SUPA_URL, SERVICE_KEY)
+
+    // 3.5. TESTING PHASE: Проверка whitelist по Telegram username
+    if (tgUsername) {
+      const { data: whitelisted } = await supa
+        .from('testing_whitelist')
+        .select('id')
+        .eq('telegram_username', tgUsername)
+        .maybeSingle()
+
+      if (!whitelisted) {
+        return NextResponse.json({
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Доступ запрещен. Пожалуйста свяжитесь с вашим наставником либо напишите в поддержку @Rogue02',
+          },
+        }, { status: 403 })
+      }
+    } else {
+      // Если нет username — не можем проверить whitelist
+      return NextResponse.json({
+        error: {
+          code: 'NO_TELEGRAM_USERNAME',
+          message: 'Установите username в профиле Telegram',
+        },
+      }, { status: 400 })
+    }
 
     // Ищем профиль по telegram_chat_id
     const { data: existing } = await supa
