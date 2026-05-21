@@ -750,6 +750,45 @@ export type Database = {
           },
         ]
       }
+      placeholder_bible_verses: {
+        Row: {
+          book: string
+          chapter: number
+          created_at: string | null
+          id: number
+          reference: string
+          testament: string
+          text: string
+          translation: string
+          verse_end: number | null
+          verse_start: number
+        }
+        Insert: {
+          book: string
+          chapter: number
+          created_at?: string | null
+          id?: number
+          reference: string
+          testament: string
+          text: string
+          translation?: string
+          verse_end?: number | null
+          verse_start: number
+        }
+        Update: {
+          book?: string
+          chapter?: number
+          created_at?: string | null
+          id?: number
+          reference?: string
+          testament?: string
+          text?: string
+          translation?: string
+          verse_end?: number | null
+          verse_start?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1397,6 +1436,41 @@ export type Database = {
           },
         ]
       }
+      testing_whitelist: {
+        Row: {
+          added_at: string | null
+          added_by: string
+          display_name: string | null
+          id: number
+          telegram_username: string
+          updated_at: string | null
+        }
+        Insert: {
+          added_at?: string | null
+          added_by: string
+          display_name?: string | null
+          id?: number
+          telegram_username: string
+          updated_at?: string | null
+        }
+        Update: {
+          added_at?: string | null
+          added_by?: string
+          display_name?: string | null
+          id?: number
+          telegram_username?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "testing_whitelist_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       uploads: {
         Row: {
           created_at: string | null
@@ -1682,3 +1756,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
