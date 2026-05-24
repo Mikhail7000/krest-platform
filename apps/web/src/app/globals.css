@@ -26,6 +26,10 @@
   --accent-to: #6366F1;
   --accent-gradient: linear-gradient(135deg, #8B5CF6, #6366F1);
   --accent-solid: #7C5CF0;
+
+  /* Tailwind primary = фирменный акцент (bg-primary / text-primary-foreground) */
+  --color-primary: #7C5CF0;
+  --color-primary-foreground: #FFFFFF;
 }
 
 html {

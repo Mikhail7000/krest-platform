@@ -15,7 +15,7 @@
 /* ── Header ─────────────────────────────────────────────────────── */
 .quiz-header { margin-bottom: 1.25rem; }
 .quiz-header__eyebrow {
-  color: var(--tg-button, #C9A961);
+  color: var(--accent-solid);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -40,8 +40,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  background: rgba(201, 169, 97, 0.12);
-  color: var(--tg-button, #C9A961);
+  background: color-mix(in srgb, var(--accent-solid) 12%, transparent);
+  color: var(--accent-solid);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.25rem 0.625rem;
@@ -99,8 +99,8 @@
 }
 .quiz-option:active,
 .quiz-option--selected {
-  border-color: rgba(201, 169, 97, 0.5);
-  background: rgba(201, 169, 97, 0.08);
+  border-color: color-mix(in srgb, var(--accent-solid) 50%, transparent);
+  background: color-mix(in srgb, var(--accent-solid) 8%, transparent);
 }
 .quiz-option__mark {
   flex-shrink: 0;
@@ -115,8 +115,8 @@
   transition: border-color 0.15s, background 0.15s;
 }
 .quiz-option--selected .quiz-option__mark {
-  border-color: var(--tg-button, #C9A961);
-  background: var(--tg-button, #C9A961);
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
 }
 .quiz-option__mark-inner {
   width: 0.4rem;
@@ -151,7 +151,7 @@
   transition: border-color 0.15s;
 }
 .quiz-textarea:focus {
-  border-color: rgba(201, 169, 97, 0.5);
+  border-color: color-mix(in srgb, var(--accent-solid) 50%, transparent);
 }
 .quiz-textarea::placeholder {
   color: var(--tg-hint, #9CA3AF);
@@ -170,7 +170,7 @@
   display: block;
   width: 100%;
   padding: 0.875rem 1rem;
-  background: var(--tg-button, #C9A961);
+  background: var(--accent-solid);
   color: var(--tg-button-text, #FFFFFF);
   font-weight: 700;
   font-size: 1rem;
@@ -236,7 +236,7 @@
 .quiz-button {
   display: inline-block;
   padding: 0.625rem 1.25rem;
-  background: var(--tg-button, #C9A961);
+  background: var(--accent-solid);
   color: var(--tg-button-text, #FFFFFF);
   font-weight: 600;
   font-size: 0.9rem;
@@ -249,8 +249,8 @@
 .quiz-button:active { opacity: 0.8; }
 .quiz-button--ghost {
   background: transparent;
-  border: 1px solid rgba(201, 169, 97, 0.4);
-  color: var(--tg-button, #C9A961);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 40%, transparent);
+  color: var(--accent-solid);
 }
 
 /* ── Result screen ───────────────────────────────────────────────── */
@@ -262,7 +262,7 @@
   font-size: 3.5rem;
   font-weight: 900;
   line-height: 1;
-  color: var(--tg-button, #C9A961);
+  color: var(--accent-solid);
 }
 .quiz-result__score--fail {
   color: var(--tg-destructive, #EF4444);
@@ -284,8 +284,8 @@
 }
 
 .quiz-result__next-hint {
-  background: rgba(201, 169, 97, 0.08);
-  border: 1px solid rgba(201, 169, 97, 0.2);
+  background: color-mix(in srgb, var(--accent-solid) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 20%, transparent);
   border-radius: 10px;
   padding: 0.75rem 0.875rem;
   margin-top: 0.75rem;
@@ -294,7 +294,7 @@
   line-height: 1.5;
 }
 .quiz-result__next-hint strong {
-  color: var(--tg-button, #C9A961);
+  color: var(--accent-solid);
 }
 
 /* ── Per-question result ─────────────────────────────────────────── */
@@ -341,10 +341,10 @@
 .quiz-q-result__feedback {
   margin-top: 0.75rem;
   padding: 0.75rem 0.875rem;
-  background: linear-gradient(180deg, rgba(201, 169, 97, 0.14), rgba(201, 169, 97, 0.07));
-  border-left: 3px solid var(--tg-button, #C9A961);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-solid) 14%, transparent), color-mix(in srgb, var(--accent-solid) 7%, transparent));
+  border-left: 3px solid var(--accent-solid);
   border-radius: 0 10px 10px 0;
-  box-shadow: 0 1px 0 rgba(201, 169, 97, 0.18);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--accent-solid) 18%, transparent);
 }
 .quiz-q-result__feedback-label {
   display: block;
@@ -352,7 +352,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--tg-button, #C9A961);
+  color: var(--accent-solid);
   margin-bottom: 0.5rem;
 }
 .quiz-q-result__feedback p {
@@ -373,7 +373,7 @@
 .quiz-locked-until {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--tg-button, #C9A961);
+  color: var(--accent-solid);
   text-align: center;
   margin-bottom: 0.5rem;
 }
