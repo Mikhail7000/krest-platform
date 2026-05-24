@@ -13,6 +13,7 @@ export function NameInput({
   const { user } = useTelegram()
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     // Pre-fill with Telegram name
@@ -25,20 +26,19 @@ export function NameInput({
   }, [user])
 
   const handleSubmit = async () => {
-    const trimmedName = name.trim()
-    if (!trimmedName) {
-      return
-    }
+    // Запасное имя, если поле пустое — чтобы кнопка всегда работала
+    const finalName = name.trim() || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Ученик'
 
+    setErrorMessage(null)
     setLoading(true)
     try {
-      await onSubmit(trimmedName)
+      await onSubmit(finalName)
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Не удалось сохранить. Попробуйте ещё раз.')
     } finally {
       setLoading(false)
     }
   }
-
-  const isValid = name.trim().length > 0
 
   return (
     <div className="min-h-screen bg-white text-gray-900 p-6">
@@ -55,11 +55,17 @@ export function NameInput({
           className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 mb-4"
         />
 
-        {/* Кнопки сразу под полем, чтобы клавиатура их не перекрывала */}
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-800 text-sm">
+            {errorMessage}
+          </div>
+        )}
+
+        {/* Кнопка всегда активна (имя имеет запасное значение), сразу под полем */}
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!isValid || loading}
+          disabled={loading}
           className="w-full px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 mb-3"
         >
           {loading ? 'Сохранение…' : 'Продолжить'}

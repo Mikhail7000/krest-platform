@@ -10,7 +10,7 @@ import { CitySelect } from './steps/CitySelect'
 import { NameInput } from './steps/NameInput'
 
 // Шаг 'curator' временно убран на период теста (кураторов ещё нет).
-type OnboardingStep = 'language' | 'english' | 'country' | 'city' | 'name' | 'saving' | 'done'
+type OnboardingStep = 'language' | 'english' | 'country' | 'city' | 'name'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -52,39 +52,32 @@ export default function OnboardingPage() {
 
   const handleNameSubmit = useCallback(
     async (name: string) => {
-      if (!countryId || !cityId || !initData) {
-        console.error('Missing required fields')
-        return
+      // Ошибки пробрасываем наружу — NameInput их покажет (без молчаливого провала)
+      if (!countryId || !cityId) {
+        throw new Error('Не выбраны страна или город. Вернитесь назад.')
+      }
+      if (!initData) {
+        throw new Error('Нет данных Telegram. Откройте приложение через бота заново.')
       }
 
-      setStep('saving')
+      const res = await fetch('/api/miniapp/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          initData,
+          country_id: countryId,
+          city_id: cityId,
+          curator_id: null,
+          full_name: name,
+        }),
+      })
 
-      try {
-        const res = await fetch('/api/miniapp/onboarding', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            initData,
-            country_id: countryId,
-            city_id: cityId,
-            curator_id: null,
-            full_name: name,
-          }),
-        })
-
-        if (!res.ok) {
-          const error = await res.json()
-          throw new Error(error.error?.message || 'Failed to save onboarding')
-        }
-
-        setStep('done')
-        setTimeout(() => {
-          router.push('/m/dashboard')
-        }, 500)
-      } catch (err) {
-        console.error('Onboarding save error:', err)
-        setStep('name')
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}))
+        throw new Error(error?.error?.message || 'Не удалось сохранить данные')
       }
+
+      router.push('/m/dashboard')
     },
     [countryId, cityId, initData, router]
   )
@@ -117,18 +110,6 @@ export default function OnboardingPage() {
   if (step === 'name') {
     return (
       <NameInput onSubmit={handleNameSubmit} onBack={handleBack} />
-    )
-  }
-
-  // Saving
-  if (step === 'saving') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-gray-600">Сохранение данных...</p>
-        </div>
-      </div>
     )
   }
 
