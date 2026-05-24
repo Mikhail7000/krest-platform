@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { EnglishPlaceholder } from './EnglishPlaceholder'
 import { LanguageSelect } from './LanguageSelect'
-import { GlobeSelect } from './steps/GlobeSelect'
+import { CountrySelect } from './steps/CountrySelect'
 import { CitySelect } from './steps/CitySelect'
 import { CuratorSelect } from './steps/CuratorSelect'
 import { NameInput } from './steps/NameInput'
@@ -108,10 +108,10 @@ export default function OnboardingPage() {
     return <EnglishPlaceholder onBack={() => setStep('language')} />
   }
 
-  // Country selection (3D глобус)
+  // Country selection
   if (step === 'country') {
     return (
-      <GlobeSelect onSelect={handleCountrySelect} onBack={handleBack} />
+      <CountrySelect onSelect={handleCountrySelect} onBack={handleBack} />
     )
   }
 

@@ -6,6 +6,15 @@ import { supabase } from '@/lib/supabase-browser'
 interface Country {
   id: string
   name_ru: string
+  code: string
+}
+
+// ISO alpha-2 код → эмодзи-флаг (regional indicator symbols)
+function flagEmoji(code: string): string {
+  if (!code || code.length !== 2) return '🌍'
+  return code
+    .toUpperCase()
+    .replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)))
 }
 
 export function CountrySelect({
@@ -24,7 +33,7 @@ export function CountrySelect({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await (supabase as any)
           .from('countries')
-          .select('id, name_ru')
+          .select('id, name_ru, code')
           .eq('status', 'active')
           .order('name_ru')
 
@@ -68,7 +77,7 @@ export function CountrySelect({
               onClick={() => onSelect(country.id)}
               className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition"
             >
-              <span className="text-2xl">🌍</span>
+              <span className="text-2xl">{flagEmoji(country.code)}</span>
               <span className="text-left font-medium">{country.name_ru}</span>
             </button>
           ))}
