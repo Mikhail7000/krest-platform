@@ -51,10 +51,11 @@ export function DashboardClient() {
 
   return (
     <div className="miniapp-container">
-      <h1 className="miniapp-headline">✝️ КРЕСТ</h1>
-      <p className="miniapp-hint" style={{ marginBottom: 16 }}>
-        Привет, {user?.firstName ?? 'друг'}!
-      </p>
+      <header className="db-hero">
+        <p className="db-hero__eyebrow">Курс ученичества</p>
+        <h1 className="db-hero__title">КРЕСТ</h1>
+        <p className="db-hero__greeting">Привет, {user?.firstName ?? 'друг'}</p>
+      </header>
     </div>
   )
 }

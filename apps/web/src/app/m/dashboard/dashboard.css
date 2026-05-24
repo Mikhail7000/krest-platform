@@ -1,7 +1,34 @@
 /* Dashboard block list — дизайн-система брифа (адаптивный акцент --tg-button) */
 
+/* ── Hero-шапка дашборда ─────────────────────────────────────────── */
+.db-hero {
+  padding: 0.5rem 0 0.25rem;
+  margin-bottom: 0.5rem;
+}
+.db-hero__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tg-hint, #9CA3AF);
+  margin-bottom: 0.25rem;
+}
+.db-hero__title {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  color: var(--tg-text, #E5E7EB);
+  margin: 0;
+}
+.db-hero__greeting {
+  font-size: 1.0625rem;
+  color: var(--tg-hint, #9CA3AF);
+  margin-top: 0.625rem;
+}
+
 .db-section {
-  margin-top: 1.5rem;
+  margin-top: 1.75rem;
 }
 .db-section__title {
   font-size: 0.75rem;
