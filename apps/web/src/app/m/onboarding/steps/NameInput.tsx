@@ -41,31 +41,28 @@ export function NameInput({
   const isValid = name.trim().length > 0
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 flex flex-col">
-      <div className="flex-1 flex flex-col justify-center">
+    <div className="min-h-screen bg-white text-gray-900 p-6">
+      <div className="pt-16 max-w-md mx-auto">
         <h1 className="text-2xl font-bold text-center mb-2">Как вас зовут?</h1>
         <p className="text-gray-600 text-center mb-8">Можете изменить имя из Telegram, если нужно</p>
 
-        <div className="space-y-4">
-          <input
-            type="text"
-            placeholder="Введите ваше имя"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={loading}
-            className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-          />
-        </div>
-      </div>
+        <input
+          type="text"
+          placeholder="Введите ваше имя"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={loading}
+          className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 mb-4"
+        />
 
-      <div className="space-y-3">
+        {/* Кнопки сразу под полем, чтобы клавиатура их не перекрывала */}
         <button
           type="button"
           onClick={handleSubmit}
           disabled={!isValid || loading}
-          className="w-full px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50"
+          className="w-full px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 mb-3"
         >
-          {loading ? 'Продолжить...' : 'Продолжить'}
+          {loading ? 'Сохранение…' : 'Продолжить'}
         </button>
         <button
           type="button"
