@@ -45,6 +45,8 @@ export default async function LocationsPage({ params }: { params: Promise<{ bloc
       </header>
 
       <LocationsClient blockId={id} />
+
+      <Link href={`/m/lesson/${id}`} className="locations-back locations-back--bottom">← К уроку</Link>
     </div>
   )
 }
