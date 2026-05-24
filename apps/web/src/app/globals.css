@@ -20,6 +20,12 @@
   --color-warning: #EAB308;
   --color-error: #DC2626;
   --color-info: #0284C7;
+
+  /* Фирменный акцент — фиолетово-индиго градиент (premium tech) */
+  --accent-from: #8B5CF6;
+  --accent-to: #6366F1;
+  --accent-gradient: linear-gradient(135deg, #8B5CF6, #6366F1);
+  --accent-solid: #7C5CF0;
 }
 
 html {

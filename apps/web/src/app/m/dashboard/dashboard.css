@@ -14,12 +14,16 @@
   margin-bottom: 0.25rem;
 }
 .db-hero__title {
-  font-size: 3rem;
+  font-size: 3.25rem;
   font-weight: 800;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.05em;
   line-height: 0.95;
-  color: var(--tg-text, #E5E7EB);
   margin: 0;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  width: fit-content;
 }
 .db-hero__greeting {
   font-size: 1.0625rem;
@@ -55,36 +59,39 @@
 }
 .db-block-card:active {
   transform: scale(0.99);
-  border-color: color-mix(in srgb, var(--tg-button, #2563EB) 40%, transparent);
+  border-color: color-mix(in srgb, var(--accent-solid) 50%, transparent);
 }
 .db-block-card--locked {
-  opacity: 0.45;
+  opacity: 0.4;
   pointer-events: none;
 }
 .db-block-card--done {
-  border-color: color-mix(in srgb, var(--color-success, #16A34A) 35%, transparent);
+  border-color: color-mix(in srgb, var(--color-success, #16A34A) 40%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-success, #16A34A) 7%, transparent), var(--tg-section-bg, #1A1C1F));
 }
 
 .db-block-card__num {
   flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--tg-button, #2563EB) 14%, transparent);
-  color: var(--tg-button, #2563EB);
-  font-size: 0.875rem;
+  background: var(--accent-gradient);
+  color: #fff;
+  font-size: 0.9375rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-solid) 40%, transparent);
 }
 .db-block-card--done .db-block-card__num {
-  background: color-mix(in srgb, var(--color-success, #16A34A) 18%, transparent);
-  color: var(--color-success, #16A34A);
+  background: var(--color-success, #16A34A);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--color-success, #16A34A) 35%, transparent);
 }
 .db-block-card--locked .db-block-card__num {
-  background: var(--tg-section-separator, rgba(127, 127, 140, 0.12));
+  background: var(--tg-section-separator, rgba(127, 127, 140, 0.14));
   color: var(--tg-hint, #9CA3AF);
+  box-shadow: none;
 }
 
 .db-block-card__body {
@@ -107,7 +114,7 @@
   margin-top: 0.125rem;
 }
 .db-block-card__status--done { color: var(--color-success, #16A34A); font-weight: 600; }
-.db-block-card__status--active { color: var(--tg-button, #2563EB); font-weight: 600; }
+.db-block-card__status--active { color: var(--accent-solid); font-weight: 600; }
 
 .db-block-card__arrow {
   color: var(--tg-hint, #9CA3AF);
@@ -121,30 +128,31 @@
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  padding: 0.9375rem 1rem;
-  background: color-mix(in srgb, var(--tg-button, #2563EB) 7%, transparent);
+  padding: 1rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-from) 16%, transparent), color-mix(in srgb, var(--accent-to) 10%, transparent));
   border-radius: var(--radius-lg, 14px);
   margin-bottom: 0.5rem;
   text-decoration: none;
-  border: 1px solid color-mix(in srgb, var(--tg-button, #2563EB) 22%, transparent);
-  color: var(--tg-button, #2563EB);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 30%, transparent);
+  color: var(--tg-text, #E5E7EB);
   transition: border-color 0.15s, transform 0.1s;
 }
 .db-exam-card:active {
   transform: scale(0.99);
-  border-color: color-mix(in srgb, var(--tg-button, #2563EB) 45%, transparent);
+  border-color: color-mix(in srgb, var(--accent-solid) 55%, transparent);
 }
 .db-exam-card--locked {
   opacity: 0.4;
   pointer-events: none;
 }
-.db-exam-card__icon { font-size: 1.375rem; flex-shrink: 0; line-height: 1; }
+.db-exam-card__icon { font-size: 1.5rem; flex-shrink: 0; line-height: 1; }
 .db-exam-card__body { flex: 1; }
 .db-exam-card__title {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.3;
+  color: var(--tg-text, #E5E7EB);
 }
 .db-exam-card__hint {
   font-size: 0.8125rem;
@@ -152,7 +160,7 @@
   margin-top: 0.125rem;
 }
 .db-exam-card__arrow {
-  color: color-mix(in srgb, var(--tg-button, #2563EB) 60%, transparent);
+  color: var(--accent-solid);
   font-size: 1.25rem;
 }
 
