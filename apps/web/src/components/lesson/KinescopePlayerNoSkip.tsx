@@ -55,7 +55,7 @@ interface Props {
   initialMaxWatched: number
   initialTotal: number | null
   initialCompleted: boolean
-  disableNoSkip?: boolean
+  showWatchedButton?: boolean
 }
 
 export function KinescopePlayerNoSkip({
@@ -64,7 +64,7 @@ export function KinescopePlayerNoSkip({
   initialMaxWatched,
   initialTotal,
   initialCompleted,
-  disableNoSkip = false,
+  showWatchedButton = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<KinescopePlayer | null>(null)
@@ -135,13 +135,6 @@ export function KinescopePlayerNoSkip({
       }
       playerRef.current = player
 
-      // Тестировщик: видео сразу засчитано (без досмотра), перемотка свободна
-      if (disableNoSkip && !completedRef.current) {
-        completedRef.current = true
-        setCompleted(true)
-        void saveProgress(true)
-      }
-
       pollHandle = setInterval(async () => {
         try {
           const current = await Promise.resolve(player.getCurrentTime())
@@ -150,8 +143,8 @@ export function KinescopePlayerNoSkip({
             totalRef.current = Math.round(duration)
           }
 
-          // No-skip откат — только если функция не отключена (тестировщикам можно перематывать)
-          if (!disableNoSkip && !completedRef.current && current > maxWatchedRef.current + SKIP_TOLERANCE_SECONDS) {
+          // No-skip: при попытке перемотки вперёд откатываем назад (для всех, пока не просмотрено)
+          if (!completedRef.current && current > maxWatchedRef.current + SKIP_TOLERANCE_SECONDS) {
             await Promise.resolve(player.seekTo(maxWatchedRef.current))
             return
           }
@@ -196,7 +189,15 @@ export function KinescopePlayerNoSkip({
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pagehide', onPageHide)
     }
-  }, [blockResourceId, videoId, saveProgress, disableNoSkip])
+  }, [blockResourceId, videoId, saveProgress])
+
+  // Тестировщик: засчитать видео без досмотра (кнопка под плеером)
+  const markWatched = useCallback(() => {
+    if (completedRef.current) return
+    completedRef.current = true
+    setCompleted(true)
+    void saveProgress(true)
+  }, [saveProgress])
 
   return (
     <div className="kp">
@@ -207,6 +208,11 @@ export function KinescopePlayerNoSkip({
         </div>
       )}
       {completed && <div className="kp__badge">✓ Просмотрено — можно перематывать свободно</div>}
+      {showWatchedButton && !completed && (
+        <button type="button" className="kp__watched-btn" onClick={markWatched}>
+          Просмотрено
+        </button>
+      )}
       {error && <div className="kp__error">{error}</div>}
     </div>
   )

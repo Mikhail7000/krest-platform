@@ -77,11 +77,11 @@ export function LessonVideos({ videos }: { videos: VideoResource[] }) {
                 initialMaxWatched={p?.maxWatchedSeconds ?? 0}
                 initialTotal={p?.totalSeconds ?? null}
                 initialCompleted={!!p?.completedAt}
-                disableNoSkip={canSkip}
+                showWatchedButton={canSkip}
               />
             </div>
             {v.summary_md ? (
-              <details className="lesson-details" open>
+              <details className="lesson-details">
                 <summary>Конспект</summary>
                 <div className="lesson-summary">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{v.summary_md}</ReactMarkdown>

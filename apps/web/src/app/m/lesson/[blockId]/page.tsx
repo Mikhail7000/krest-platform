@@ -69,7 +69,7 @@ function PdfCard({ resource, url }: { resource: BlockResource; url: string | und
   )
 }
 
-function GuideCard({ resource, imageUrl }: { resource: BlockResource; imageUrl: string | undefined }) {
+function GuideCard({ resource }: { resource: BlockResource }) {
   return (
     <section className="lesson-card lesson-card--guide">
       <h2 className="lesson-card__title">
@@ -77,11 +77,6 @@ function GuideCard({ resource, imageUrl }: { resource: BlockResource; imageUrl: 
         {resource.is_required && <span className="lesson-badge">обязательно</span>}
       </h2>
       {resource.description_ru && <p className="lesson-card__desc">{resource.description_ru}</p>}
-      {imageUrl && (
-        <a href={imageUrl} target="_blank" rel="noopener noreferrer" download className="lesson-button">
-          Скачать гайд
-        </a>
-      )}
       {resource.transcript_md && (
         <details className="lesson-details">
           <summary>Развернуть текст гайда</summary>
@@ -142,7 +137,7 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
 
       {pdfs.length > 0 && (
         <div className="lesson-section">
-          <h3 className="lesson-section__title">PDF молитв</h3>
+          <h3 className="lesson-section__title">Молитва — текстовая версия</h3>
           {pdfs.map((r) => (
             <PdfCard key={r.id} resource={r} url={r.storage_path ? signedByPath[r.storage_path] : undefined} />
           ))}
@@ -150,7 +145,7 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
       )}
 
       {guides.map((r) => (
-        <GuideCard key={r.id} resource={r} imageUrl={r.storage_path ? signedByPath[r.storage_path] : undefined} />
+        <GuideCard key={r.id} resource={r} />
       ))}
 
       <Stage4Nav blockId={id} />

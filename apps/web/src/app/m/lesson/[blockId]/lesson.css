@@ -122,6 +122,22 @@
   z-index: 3;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
+.kp__watched-btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.625rem;
+  padding: 0.75rem 1rem;
+  background: var(--tg-button, #C9A961);
+  color: var(--tg-button-text, #fff);
+  border: 0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.kp__watched-btn:active {
+  opacity: 0.85;
+}
 .kp__error {
   position: absolute;
   inset: 0;
