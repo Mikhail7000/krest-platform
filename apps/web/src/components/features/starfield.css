@@ -1,58 +1,14 @@
-/* Звёздное небо — медленно плывущие звёзды на чёрном фоне.
-   Каждый слой: точка 1-3px + box-shadow «россыпь», дубль через ::after
-   со сдвигом на 2000px вниз → бесшовное зацикливание при движении вверх. */
+/* Звёздное небо на canvas — медленно плывущие вверх мерцающие звёзды
+   на почти чёрном фоне. Рендер через 2D canvas (см. Starfield.tsx),
+   надёжнее длинных box-shadow в Telegram WebView. */
 
-.starfield {
+.starfield-canvas {
   position: absolute;
   inset: 0;
-  overflow: hidden;
-  background: #05060A;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #05060a;
   z-index: 0;
   pointer-events: none;
-}
-
-.starfield__layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 50%;
-  background: transparent;
-}
-.starfield__layer::after {
-  content: '';
-  position: absolute;
-  top: 2000px;
-  left: 0;
-  width: inherit;
-  height: inherit;
-  border-radius: 50%;
-  box-shadow: inherit;
-}
-
-.starfield__layer--sm {
-  width: 1px;
-  height: 1px;
-  animation: starfield-drift 140s linear infinite;
-  opacity: 0.8;
-}
-.starfield__layer--md {
-  width: 2px;
-  height: 2px;
-  animation: starfield-drift 220s linear infinite;
-  opacity: 0.95;
-}
-.starfield__layer--lg {
-  width: 2.5px;
-  height: 2.5px;
-  animation: starfield-drift 320s linear infinite;
-  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
-}
-
-@keyframes starfield-drift {
-  from { transform: translateY(0); }
-  to { transform: translateY(-2000px); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .starfield__layer { animation: none; }
 }
