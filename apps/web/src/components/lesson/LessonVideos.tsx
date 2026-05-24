@@ -24,6 +24,7 @@ type ProgressMap = Record<string, ProgressEntry>
 
 export function LessonVideos({ videos }: { videos: VideoResource[] }) {
   const [progress, setProgress] = useState<ProgressMap>({})
+  const [canSkip, setCanSkip] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -39,8 +40,11 @@ export function LessonVideos({ videos }: { videos: VideoResource[] }) {
       body: JSON.stringify({ initData }),
     })
       .then((r) => r.json())
-      .then((d: { progress?: ProgressMap }) => {
-        if (!cancelled) setProgress(d.progress ?? {})
+      .then((d: { progress?: ProgressMap; canSkip?: boolean }) => {
+        if (!cancelled) {
+          setProgress(d.progress ?? {})
+          setCanSkip(Boolean(d.canSkip))
+        }
       })
       .catch(() => { /* без прогресса — на клиенте no-skip всё равно работает */ })
       .finally(() => {
@@ -73,6 +77,7 @@ export function LessonVideos({ videos }: { videos: VideoResource[] }) {
                 initialMaxWatched={p?.maxWatchedSeconds ?? 0}
                 initialTotal={p?.totalSeconds ?? null}
                 initialCompleted={!!p?.completedAt}
+                disableNoSkip={canSkip}
               />
             </div>
             {v.summary_md ? (

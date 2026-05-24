@@ -55,6 +55,7 @@ interface Props {
   initialMaxWatched: number
   initialTotal: number | null
   initialCompleted: boolean
+  disableNoSkip?: boolean
 }
 
 export function KinescopePlayerNoSkip({
@@ -63,6 +64,7 @@ export function KinescopePlayerNoSkip({
   initialMaxWatched,
   initialTotal,
   initialCompleted,
+  disableNoSkip = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<KinescopePlayer | null>(null)
@@ -133,6 +135,13 @@ export function KinescopePlayerNoSkip({
       }
       playerRef.current = player
 
+      // Тестировщик: видео сразу засчитано (без досмотра), перемотка свободна
+      if (disableNoSkip && !completedRef.current) {
+        completedRef.current = true
+        setCompleted(true)
+        void saveProgress(true)
+      }
+
       pollHandle = setInterval(async () => {
         try {
           const current = await Promise.resolve(player.getCurrentTime())
@@ -141,7 +150,8 @@ export function KinescopePlayerNoSkip({
             totalRef.current = Math.round(duration)
           }
 
-          if (!completedRef.current && current > maxWatchedRef.current + SKIP_TOLERANCE_SECONDS) {
+          // No-skip откат — только если функция не отключена (тестировщикам можно перематывать)
+          if (!disableNoSkip && !completedRef.current && current > maxWatchedRef.current + SKIP_TOLERANCE_SECONDS) {
             await Promise.resolve(player.seekTo(maxWatchedRef.current))
             return
           }
@@ -186,7 +196,7 @@ export function KinescopePlayerNoSkip({
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pagehide', onPageHide)
     }
-  }, [blockResourceId, videoId, saveProgress])
+  }, [blockResourceId, videoId, saveProgress, disableNoSkip])
 
   return (
     <div className="kp">

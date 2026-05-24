@@ -54,13 +54,16 @@ export async function POST(req: NextRequest) {
   // но прогресс не сохраняется.
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, can_skip_block_lock')
     .eq('telegram_chat_id', v.chatId)
     .maybeSingle()
 
   if (!profile) {
-    return NextResponse.json({ ok: true, persisted: false, reason: 'no_profile', progress: {} })
+    return NextResponse.json({ ok: true, persisted: false, reason: 'no_profile', progress: {}, canSkip: false })
   }
+
+  // Тестировщики (can_skip_block_lock) смотрят видео без no-skip — можно перематывать
+  const canSkip = Boolean((profile as { can_skip_block_lock?: boolean }).can_skip_block_lock)
 
   // Опциональное сохранение прогресса
   let persisted = false
@@ -98,7 +101,8 @@ export async function POST(req: NextRequest) {
       typeof totalSeconds === 'number' && totalSeconds > 0
         ? Math.round(totalSeconds)
         : current?.total_seconds ?? null
-    const isCompleted = newTotal && newMax / newTotal >= COMPLETED_THRESHOLD
+    // Тестировщику видео засчитывается сразу (без досмотра до 95%)
+    const isCompleted = canSkip || (newTotal && newMax / newTotal >= COMPLETED_THRESHOLD)
     const completedAt = current?.completed_at ?? (isCompleted ? new Date().toISOString() : null)
 
     const { error } = await supabase
@@ -133,5 +137,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, persisted, progress })
+  return NextResponse.json({ ok: true, persisted, progress, canSkip })
 }
