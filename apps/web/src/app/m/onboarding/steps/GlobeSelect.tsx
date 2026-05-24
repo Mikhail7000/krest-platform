@@ -88,15 +88,18 @@ export function GlobeSelect({
     return () => window.removeEventListener('resize', update)
   }, [])
 
-  // Автовращение + стартовая позиция камеры
-  useEffect(() => {
+  // Автовращение + камера — настраиваем когда глобус реально готов (onGlobeReady).
+  // useEffect не годится: Globe грузится через dynamic import, ref ещё пуст.
+  const configureControls = () => {
     const g = globeEl.current
     if (!g) return
-    g.controls().autoRotate = true
-    g.controls().autoRotateSpeed = 0.45
-    g.controls().enableZoom = true
+    const c = g.controls()
+    c.autoRotate = true
+    c.autoRotateSpeed = 0.6
+    c.enableZoom = true
+    c.enablePan = false
     g.pointOfView({ lat: 30, lng: 60, altitude: 2.4 })
-  }, [countries])
+  }
 
   const handleClick = (polygon: Feature) => {
     const code = ISO_NUM_TO_CODE[String(polygon.id)]
@@ -114,6 +117,7 @@ export function GlobeSelect({
 
       <Globe
         ref={globeEl}
+        onGlobeReady={configureControls}
         width={size.w}
         height={size.h}
         backgroundColor="rgba(0,0,0,0)"
