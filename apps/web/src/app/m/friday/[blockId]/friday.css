@@ -1,0 +1,95 @@
+.friday-back {
+  display: inline-block;
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.875rem;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+.friday-back--bottom {
+  display: block;
+  margin-top: 1.5rem;
+  margin-bottom: 0;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  border: 1px solid var(--tg-section-separator, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+}
+
+.friday-header { margin-bottom: 1.25rem; }
+.friday-header__eyebrow {
+  font-size: 0.8125rem;
+  color: var(--tg-hint, #9CA3AF);
+  margin-bottom: 0.375rem;
+}
+.friday-header__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--tg-text, #E5E7EB);
+}
+.friday-header__desc {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--tg-text, #E5E7EB);
+}
+
+.friday-loading, .friday-error { color: var(--tg-hint, #9CA3AF); }
+
+.friday-textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--tg-section-bg, rgba(255, 255, 255, 0.06));
+  color: var(--tg-text, #E5E7EB);
+  border: 1px solid var(--tg-section-separator, rgba(255, 255, 255, 0.14));
+  border-radius: 12px;
+  font-size: 1rem;
+  line-height: 1.4;
+  resize: vertical;
+  margin-bottom: 0.875rem;
+}
+.friday-textarea:focus {
+  outline: none;
+  border-color: var(--tg-button, #C9A961);
+}
+
+.friday-submit-btn, .friday-edit-btn, .friday-btn {
+  display: block;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--tg-button, #C9A961);
+  color: var(--tg-button-text, #fff);
+  border: 0;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.friday-submit-btn:active, .friday-edit-btn:active { opacity: 0.85; }
+.friday-submit-btn:disabled { opacity: 0.5; }
+
+.friday-edit-btn {
+  margin-top: 0.875rem;
+  background: transparent;
+  color: var(--tg-hint, #9CA3AF);
+  border: 1px solid var(--tg-section-separator, rgba(255, 255, 255, 0.14));
+}
+
+.friday-done__badge {
+  display: inline-block;
+  padding: 0.375rem 0.875rem;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 999px;
+  color: #4ADE80;
+  font-weight: 700;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+.friday-done__text {
+  white-space: pre-wrap;
+  line-height: 1.45;
+  color: var(--tg-text, #E5E7EB);
+  background: var(--tg-section-bg, rgba(255, 255, 255, 0.06));
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+}

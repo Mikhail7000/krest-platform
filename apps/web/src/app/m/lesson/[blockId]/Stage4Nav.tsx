@@ -43,6 +43,14 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
+      <Link href={`/m/friday/${blockId}`} className="lesson-stage4-card">
+        <span className="lesson-stage4-card__icon">🤝</span>
+        <span className="lesson-stage4-card__body">
+          <span className="lesson-stage4-card__title">Эпоха пятницы</span>
+          <span className="lesson-stage4-card__desc">Передать «Малый крест» и поделиться впечатлениями</span>
+        </span>
+        <span className="lesson-stage4-card__arrow">›</span>
+      </Link>
     </div>
   )
 }
