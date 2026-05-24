@@ -192,7 +192,12 @@ export async function POST(req: NextRequest, { params }: Params) {
       audio_attempts: prog.audioAttempts,
       video_attempts: prog.videoAttempts,
       // recurring-режим: число уникальных дней с passed=true, цель и отметка сегодня
-      daily_days_passed: prog.audioPassedDays.size,
+      // Тестировщику (canSkip) неделя засчитывается целиком — но только после первой
+      // успешной сдачи (нужно реально проверить хотя бы одну запись)
+      daily_days_passed:
+        canSkip && practiceMode === 'daily_understanding' && prog.audioPassedDays.size >= 1
+          ? DAILY_DAYS_REQUIRED
+          : prog.audioPassedDays.size,
       daily_days_required: practiceMode === 'daily_understanding' ? DAILY_DAYS_REQUIRED : null,
       today_done: prog.todayHasPassedAudio,
     }

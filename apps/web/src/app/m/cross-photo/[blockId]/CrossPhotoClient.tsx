@@ -170,6 +170,8 @@ export function CrossPhotoClient({ blockId }: Props) {
     )
     if (result.completed_count !== undefined) setCompletedCount(result.completed_count)
     else if (result.submitted ?? true) setCompletedCount((c) => c + 1)
+    // Перечитываем состояние: тестировщику после первого фото засчитается вся неделя
+    void load()
   }
 
   if (view === 'loading') {
@@ -203,7 +205,6 @@ export function CrossPhotoClient({ blockId }: Props) {
       {testMode && (
         <div className="cp-test-banner">
           🧪 Тестовый режим: система засчитала вам всю неделю автоматически.
-          Лидеры это и так знают, но напомнить не лишнее =)
         </div>
       )}
 

@@ -196,9 +196,11 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
   }
 
-  // Тестировщику (can_skip_block_lock) неделя засчитывается целиком — без ожидания 7 дней
-  const testMode = Boolean(profile?.can_skip_block_lock)
-  const completedCount = testMode ? 7 : rows.length
+  // Тестировщику (can_skip_block_lock) неделя засчитывается целиком — но только
+  // после первой загрузки фото (нужно реально проверить хотя бы одно фото)
+  const isTester = Boolean(profile?.can_skip_block_lock)
+  const weekCounted = isTester && rows.length >= 1
+  const completedCount = weekCounted ? 7 : rows.length
 
   return NextResponse.json({
     ok: true,
@@ -206,6 +208,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     today_index: todayIndex,
     days,
     completed_count: completedCount,
-    test_mode: testMode,
+    test_mode: weekCounted,
   })
 }
