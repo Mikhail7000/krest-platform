@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
 
     const { initData, country_id, city_id, curator_id, full_name } = body
 
-    if (!country_id || !city_id || !curator_id || !full_name) {
+    // curator_id необязателен (на время теста шаг куратора убран)
+    if (!country_id || !city_id || !full_name) {
       return NextResponse.json(
         { error: { code: 'BAD_REQUEST', message: 'Missing required fields' } },
         { status: 400 }

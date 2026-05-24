@@ -7,10 +7,10 @@ import { EnglishPlaceholder } from './EnglishPlaceholder'
 import { LanguageSelect } from './LanguageSelect'
 import { CountrySelect } from './steps/CountrySelect'
 import { CitySelect } from './steps/CitySelect'
-import { CuratorSelect } from './steps/CuratorSelect'
 import { NameInput } from './steps/NameInput'
 
-type OnboardingStep = 'language' | 'english' | 'country' | 'city' | 'curator' | 'name' | 'saving' | 'done'
+// Шаг 'curator' временно убран на период теста (кураторов ещё нет).
+type OnboardingStep = 'language' | 'english' | 'country' | 'city' | 'name' | 'saving' | 'done'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -19,7 +19,6 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<OnboardingStep>('language')
   const [countryId, setCountryId] = useState<string | null>(null)
   const [cityId, setCityId] = useState<string | null>(null)
-  const [curatorId, setCuratorId] = useState<string | null>(null)
 
   const handleLanguageSelect = (lang: 'ru' | 'en') => {
     if (lang === 'en') {
@@ -35,12 +34,9 @@ export default function OnboardingPage() {
     } else if (step === 'city') {
       setCountryId(null)
       setStep('country')
-    } else if (step === 'curator') {
+    } else if (step === 'name') {
       setCityId(null)
       setStep('city')
-    } else if (step === 'name') {
-      setCuratorId(null)
-      setStep('curator')
     }
   }, [step])
 
@@ -51,17 +47,12 @@ export default function OnboardingPage() {
 
   const handleCitySelect = useCallback((cId: string) => {
     setCityId(cId)
-    setStep('curator')
-  }, [])
-
-  const handleCuratorSelect = useCallback((cId: string) => {
-    setCuratorId(cId)
     setStep('name')
   }, [])
 
   const handleNameSubmit = useCallback(
     async (name: string) => {
-      if (!countryId || !cityId || !curatorId || !initData) {
+      if (!countryId || !cityId || !initData) {
         console.error('Missing required fields')
         return
       }
@@ -76,7 +67,7 @@ export default function OnboardingPage() {
             initData,
             country_id: countryId,
             city_id: cityId,
-            curator_id: curatorId,
+            curator_id: null,
             full_name: name,
           }),
         })
@@ -95,7 +86,7 @@ export default function OnboardingPage() {
         setStep('name')
       }
     },
-    [countryId, cityId, curatorId, initData, router]
+    [countryId, cityId, initData, router]
   )
 
   // Language selection
@@ -119,13 +110,6 @@ export default function OnboardingPage() {
   if (step === 'city' && countryId) {
     return (
       <CitySelect countryId={countryId} onSelect={handleCitySelect} onBack={handleBack} />
-    )
-  }
-
-  // Curator selection
-  if (step === 'curator' && cityId) {
-    return (
-      <CuratorSelect cityId={cityId} onSelect={handleCuratorSelect} onBack={handleBack} />
     )
   }
 
