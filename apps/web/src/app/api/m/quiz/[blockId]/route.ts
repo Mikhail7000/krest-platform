@@ -32,6 +32,14 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const supabase = createServiceSupabase()
 
+  // Тестовый байпас: тестировщики не видят lock
+  const { data: bypassProfile } = await supabase
+    .from('profiles')
+    .select('can_skip_block_lock')
+    .eq('id', userId)
+    .maybeSingle()
+  const canSkip = Boolean((bypassProfile as { can_skip_block_lock?: boolean } | null)?.can_skip_block_lock)
+
   // 5. Read student_block_progress
   const { data: progress } = await supabase
     .from('student_block_progress')
@@ -46,7 +54,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const attemptsRemaining = Math.max(0, MAX_QUIZ_ATTEMPTS - attemptsUsed)
 
   // Locked?
-  if (progress?.quiz_locked_until) {
+  if (!canSkip && progress?.quiz_locked_until) {
     const lockedUntil = new Date(progress.quiz_locked_until)
     if (lockedUntil > new Date()) {
       return NextResponse.json(

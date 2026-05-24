@@ -76,12 +76,12 @@ export async function ensureWhitelistedProfile(params: {
     }
   }
 
-  // 3a. Профиль уже есть — просто проставляем whitelist и занимаем слот
+  // 3a. Профиль уже есть — проставляем whitelist + тестовый байпас, занимаем слот
   if (existing) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (service as any)
       .from('profiles')
-      .update({ is_whitelisted: true, contact_info: handle })
+      .update({ is_whitelisted: true, can_skip_block_lock: true, contact_info: handle })
       .eq('id', existing.id)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (service as any)
@@ -130,6 +130,7 @@ export async function ensureWhitelistedProfile(params: {
       telegram_chat_id: chatId,
       full_name: fullName,
       is_whitelisted: true,
+      can_skip_block_lock: true,
       contact_info: handle,
     })
     .eq('id', userId)

@@ -57,6 +57,14 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceSupabase()
 
+  // Тестовый байпас: тестировщики (can_skip_block_lock) пересдают без лимита и без lock
+  const { data: bypassProfile } = await supabase
+    .from('profiles')
+    .select('can_skip_block_lock')
+    .eq('id', userId)
+    .maybeSingle()
+  const canSkip = Boolean((bypassProfile as { can_skip_block_lock?: boolean } | null)?.can_skip_block_lock)
+
   // 4. Read or create student_block_progress
   let { data: progress } = await supabase
     .from('student_block_progress')
@@ -83,8 +91,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: { code: 'ALREADY_PASSED', message: 'Quiz already passed' } }, { status: 409 })
   }
 
-  // 6. Guard: currently locked?
-  if (progress.quiz_locked_until) {
+  // 6. Guard: currently locked? (тестировщики не блокируются)
+  if (!canSkip && progress.quiz_locked_until) {
     const lockedUntil = new Date(progress.quiz_locked_until)
     if (lockedUntil > new Date()) {
       return NextResponse.json(
@@ -161,7 +169,8 @@ export async function POST(req: NextRequest) {
   // 11. Update student_block_progress
   const currentAttempts = progress.quiz_attempts ?? 0
   const newAttempts = currentAttempts + 1
-  const exhausted = newAttempts >= MAX_QUIZ_ATTEMPTS && !passed
+  // Тестировщики: попытки не исчерпываются, lock не ставится
+  const exhausted = !canSkip && newAttempts >= MAX_QUIZ_ATTEMPTS && !passed
 
   const lockUntil = exhausted
     ? new Date(Date.now() + LOCK_DURATION_HOURS * 60 * 60 * 1000).toISOString()

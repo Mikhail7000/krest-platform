@@ -92,8 +92,43 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceSupabase()
 
+  // Тестовый байпас: тестировщику (can_skip_block_lock) засчитываем дни подряд —
+  // каждая загрузка = следующий «день» (виртуальная дата = старт + N), без ожидания суток.
+  let dateStr = todayDateStr()
+  const { data: bypassProfile } = await supabase
+    .from('profiles')
+    .select('can_skip_block_lock')
+    .eq('id', userId)
+    .maybeSingle()
+  const canSkip = Boolean((bypassProfile as { can_skip_block_lock?: boolean } | null)?.can_skip_block_lock)
+  if (canSkip) {
+    const { data: prog } = await supabase
+      .from('student_block_progress')
+      .select('block_unlocked_at')
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+      .maybeSingle()
+    const { count: existing } = await (supabase as unknown as {
+      from: (t: string) => {
+        select: (cols: string, opts: { count: 'exact'; head: boolean }) => {
+          eq: (col: string, val: unknown) => {
+            eq: (col: string, val: unknown) => Promise<{ count: number | null }>
+          }
+        }
+      }
+    })
+      .from('student_block_daily_cross')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+    const unlockedAt = (prog as { block_unlocked_at?: string | null } | null)?.block_unlocked_at
+    const start = unlockedAt ? new Date(unlockedAt) : new Date()
+    start.setUTCHours(0, 0, 0, 0)
+    start.setUTCDate(start.getUTCDate() + (existing ?? 0))
+    dateStr = start.toISOString().slice(0, 10)
+  }
+
   // 4. Upload to Storage
-  const dateStr = todayDateStr()
   const ext = mimeToExt(mimeType)
   const storagePath = `${userId}/${blockId}/${dateStr}.${ext}`
 

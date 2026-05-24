@@ -31,6 +31,14 @@ export async function POST(req: NextRequest, { params }: Params) {
   const passPct = type === 'mid' ? MID_EXAM_PASS_PCT : FINAL_EXAM_PASS_PCT
   const supabase = createServiceSupabase()
 
+  // Тестовый байпас: тестировщики не видят lock
+  const { data: bypassProfile } = await supabase
+    .from('profiles')
+    .select('can_skip_block_lock')
+    .eq('id', userId)
+    .maybeSingle()
+  const canSkip = Boolean((bypassProfile as { can_skip_block_lock?: boolean } | null)?.can_skip_block_lock)
+
   // 3. Read student_exam_progress
   const { data: progress } = await supabase
     .from('student_exam_progress')
@@ -51,8 +59,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     })
   }
 
-  // 5. Locked?
-  if (progress?.exam_locked_until) {
+  // 5. Locked? (тестировщики не блокируются)
+  if (!canSkip && progress?.exam_locked_until) {
     const lockedUntil = new Date(progress.exam_locked_until)
     if (lockedUntil > new Date()) {
       return NextResponse.json(
