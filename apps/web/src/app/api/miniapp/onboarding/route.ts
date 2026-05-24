@@ -25,8 +25,9 @@ export async function POST(request: NextRequest) {
 
     const { initData, country_id, city_id, curator_id, full_name } = body
 
-    // curator_id необязателен (на время теста шаг куратора убран)
-    if (!country_id || !city_id || !full_name) {
+    // curator_id и full_name необязательны (шаги куратора/имени убраны на тест,
+    // имя уже сохранено в профиле из Telegram при первом входе)
+    if (!country_id || !city_id) {
       return NextResponse.json(
         { error: { code: 'BAD_REQUEST', message: 'Missing required fields' } },
         { status: 400 }
@@ -42,16 +43,19 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceSupabase()
+    const update: Record<string, unknown> = {
+      country_id: Number(country_id),
+      city_id: Number(city_id),
+      curator_id: curator_id ?? null,
+      onboarding_done: true,
+    }
+    // Имя обновляем только если передано — иначе оставляем уже сохранённое
+    if (full_name) update.full_name = full_name
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: updateError } = await (supabase as any)
       .from('profiles')
-      .update({
-        country_id: Number(country_id),
-        city_id: Number(city_id),
-        curator_id,
-        full_name,
-        onboarding_done: true,
-      })
+      .update(update)
       .eq('id', auth.userId)
 
     if (updateError) {
