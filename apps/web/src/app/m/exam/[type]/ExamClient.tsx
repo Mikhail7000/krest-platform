@@ -123,6 +123,7 @@ export function ExamClient({ examType }: Props) {
           index={i}
           answer={answers[q.id]}
           onChange={setAnswer}
+          audioAnswer={q.question_type === 'free_text'}
         />
       ))}
 

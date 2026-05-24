@@ -1,6 +1,7 @@
 'use client'
 
 import { type Answer } from './useQuiz'
+import { AudioAnswer } from '../../exam/[type]/AudioAnswer'
 
 export interface QuizQuestionData {
   id: string
@@ -15,9 +16,11 @@ interface Props {
   index: number
   answer: Answer | undefined
   onChange: (answer: Answer) => void
+  // В экзаменах развёрнутый ответ записывается голосом (аудио → транскрипт)
+  audioAnswer?: boolean
 }
 
-export function QuizQuestion({ question, index, answer, onChange }: Props) {
+export function QuizQuestion({ question, index, answer, onChange, audioAnswer }: Props) {
   const { id, question_text, question_type, options } = question
 
   function toggleSingle(optionIndex: number) {
@@ -87,7 +90,11 @@ export function QuizQuestion({ question, index, answer, onChange }: Props) {
         </div>
       )}
 
-      {question_type === 'free_text' && (
+      {question_type === 'free_text' && audioAnswer && (
+        <AudioAnswer currentText={freeText} onTranscript={onFreeText} />
+      )}
+
+      {question_type === 'free_text' && !audioAnswer && (
         <>
           <textarea
             className="quiz-textarea"
