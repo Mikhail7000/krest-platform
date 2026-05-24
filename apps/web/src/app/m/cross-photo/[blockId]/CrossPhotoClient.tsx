@@ -16,6 +16,7 @@ interface CrossPhotoApiResponse {
   today_index: number
   days: DayEntry[]
   completed_count: number
+  test_mode?: boolean
 }
 
 interface UploadResult {
@@ -128,6 +129,7 @@ export function CrossPhotoClient({ blockId }: Props) {
   const [todayIndex, setTodayIndex] = useState(0)
   const [days, setDays] = useState<DayEntry[]>([])
   const [completedCount, setCompletedCount] = useState(0)
+  const [testMode, setTestMode] = useState(false)
 
   const load = useCallback(async () => {
     setView('loading')
@@ -143,6 +145,7 @@ export function CrossPhotoClient({ blockId }: Props) {
       setTodayIndex(data.today_index)
       setDays(data.days)
       setCompletedCount(data.completed_count)
+      setTestMode(Boolean(data.test_mode))
       setView('idle')
     } catch {
       setErrorMsg('Не удалось загрузить данные.')
@@ -196,6 +199,13 @@ export function CrossPhotoClient({ blockId }: Props) {
       <div className="cp-progress-bar">
         <div className="cp-progress-bar__fill" style={{ width: `${progressPct}%` }} />
       </div>
+
+      {testMode && (
+        <div className="cp-test-banner">
+          🧪 Тестовый режим: система засчитала вам всю неделю автоматически.
+          Лидеры это и так знают, но напомнить не лишнее =)
+        </div>
+      )}
 
       {days.map((day) => (
         <DayCard
