@@ -23,7 +23,15 @@ export function Stage4Nav({ blockId }: Props) {
         <span className="lesson-stage4-card__icon">🎙️</span>
         <span className="lesson-stage4-card__body">
           <span className="lesson-stage4-card__title">Пересказ блока</span>
-          <span className="lesson-stage4-card__desc">Аудио + видеокружки своими словами</span>
+          <span className="lesson-stage4-card__desc">Аудио-пересказ своими словами</span>
+        </span>
+        <span className="lesson-stage4-card__arrow">›</span>
+      </Link>
+      <Link href={`/m/prayer/${blockId}`} className="lesson-stage4-card">
+        <span className="lesson-stage4-card__icon">🙏</span>
+        <span className="lesson-stage4-card__body">
+          <span className="lesson-stage4-card__title">Молитва по кресту</span>
+          <span className="lesson-stage4-card__desc">Каждый день — отметка, что помолился</span>
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
