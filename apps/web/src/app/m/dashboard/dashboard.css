@@ -97,6 +97,9 @@
 .db-block-card__body {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
 }
 .db-block-card__title {
   font-size: 1rem;
@@ -146,7 +149,7 @@
   pointer-events: none;
 }
 .db-exam-card__icon { font-size: 1.5rem; flex-shrink: 0; line-height: 1; }
-.db-exam-card__body { flex: 1; }
+.db-exam-card__body { flex: 1; display: flex; flex-direction: column; gap: 0.125rem; }
 .db-exam-card__title {
   font-size: 1rem;
   font-weight: 700;
