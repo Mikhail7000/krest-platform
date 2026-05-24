@@ -29,7 +29,6 @@ interface UploadResult {
 type RecordingState = 'idle' | 'recording' | 'submitting'
 
 const AUDIO_MAX_SECS = 600 // 10 min
-const VIDEO_MAX_SECS = 60
 
 function getInitData(): string {
   if (typeof window === 'undefined') return ''
@@ -205,7 +204,6 @@ export function RecitationClient({ blockId }: Props) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [audioPassed, setAudioPassed] = useState(false)
   const [audioComment, setAudioComment] = useState<string | null>(null)
-  const [videos, setVideos] = useState<VideoEntry[]>([])
 
   const load = useCallback(async () => {
     setView('loading')
@@ -220,7 +218,6 @@ export function RecitationClient({ blockId }: Props) {
       const data = await res.json() as RecitationApiResponse
       setAudioPassed(!!data.audio?.passed)
       setAudioComment(data.audio?.ai_comment ?? null)
-      setVideos(data.videos)
       setView('idle')
     } catch {
       setErrorMsg('Не удалось загрузить данные.')
@@ -233,13 +230,6 @@ export function RecitationClient({ blockId }: Props) {
   function handleAudioResult(res: UploadResult) {
     if (res.passed) setAudioPassed(true)
     if (res.ai_comment) setAudioComment(res.ai_comment)
-  }
-
-  function handleVideoResult(res: UploadResult) {
-    setVideos((prev) => [
-      ...prev,
-      { id: Date.now().toString(), ai_comment: res.ai_comment || null, passed: res.passed, created_at: new Date().toISOString() },
-    ])
   }
 
   if (view === 'loading') {
@@ -265,10 +255,7 @@ export function RecitationClient({ blockId }: Props) {
     <div>
       <div className="recitation-progress">
         <span className={`recitation-progress__item${audioPassed ? ' recitation-progress__item--pass' : ''}`}>
-          {audioPassed ? '✓' : '—'} Аудио
-        </span>
-        <span className={`recitation-progress__item${videos.length > 0 ? ' recitation-progress__item--pass' : ''}`}>
-          Кружки: {videos.length}
+          {audioPassed ? '✓' : '—'} Аудио-пересказ
         </span>
       </div>
 
@@ -299,35 +286,6 @@ export function RecitationClient({ blockId }: Props) {
             <p>{audioComment}</p>
           </div>
         )}
-      </div>
-
-      {/* Video notes section */}
-      <div className="recitation-card">
-        <p className="recitation-card__title">Видеокружки</p>
-        <p className="recitation-card__desc">
-          Можно записать несколько кружков — по одному, до 60 секунд каждый. Говори свободно, своими словами.
-        </p>
-        {videos.length > 0 && (
-          <div className="recitation-video-list">
-            {videos.map((v, i) => (
-              <div key={v.id} className="recitation-video-item">
-                <span className="recitation-video-item__num">#{i + 1}</span>
-                <span className="recitation-video-item__comment">
-                  {v.ai_comment ?? (v.passed ? 'Принято' : 'Загружено')}
-                </span>
-                {v.passed && <span style={{ color: '#4ADE80', fontSize: '0.875rem' }}>✓</span>}
-              </div>
-            ))}
-          </div>
-        )}
-        <RecordBlock
-          blockId={blockId}
-          medium="video_note"
-          maxSecs={VIDEO_MAX_SECS}
-          onResult={handleVideoResult}
-          label="Записать кружок"
-          accept="video/*"
-        />
       </div>
     </div>
   )

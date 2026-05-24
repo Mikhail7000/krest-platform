@@ -1,11 +1,19 @@
+'use client'
+
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import type { Database } from '../../../../../../packages/supabase/src/types'
-import { loadDashboardData } from './loadDashboard'
+import type { DashboardData } from './loadDashboard'
 
 type Block = Database['public']['Tables']['blocks']['Row']
 type BlockProgress = Database['public']['Tables']['student_block_progress']['Row']
 
 type StatusVariant = 'done' | 'active' | 'locked' | 'default'
+
+function getInitData(): string {
+  if (typeof window === 'undefined') return ''
+  return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp?.initData ?? ''
+}
 
 function blockStatus(
   block: Block,
@@ -87,11 +95,41 @@ function ExamCard({ href, icon, title, hint, active, passed }: ExamCardProps) {
   )
 }
 
-export async function BlockList() {
+export function BlockList() {
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const initData = getInitData()
+    let cancelled = false
+    fetch('/api/m/dashboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: DashboardData | null) => {
+        if (!cancelled && d) setData(d)
+      })
+      .catch(() => { /* оставим пустой дашборд */ })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  if (loading || !data) {
+    return (
+      <div className="miniapp-container" style={{ paddingTop: 0 }}>
+        <p className="miniapp-hint">Загружаем блоки…</p>
+      </div>
+    )
+  }
+
   const {
     blocks, progressByBlockId, canSkip,
     midExamPassed, finalExamPassed, courseDone,
-  } = await loadDashboardData()
+  } = data
 
   const blocks1to5 = blocks.filter((b) => (b.order_num ?? 0) <= 5)
   const blocks6to10 = blocks.filter((b) => (b.order_num ?? 0) >= 6)

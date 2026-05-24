@@ -20,26 +20,14 @@ const adminClient = () =>
     { auth: { persistSession: false } },
   )
 
-export async function loadDashboardData(): Promise<DashboardData> {
+export async function loadDashboardData(userId: string): Promise<DashboardData> {
   const supabase = adminClient()
-  const userId = process.env.DEV_BYPASS_USER_ID
 
   const { data: blocks } = await supabase
     .from('blocks')
     .select('id, title_ru, order_num, course_id')
     .eq('course_id', 1)
     .order('order_num', { ascending: true })
-
-  if (!userId) {
-    return {
-      blocks: (blocks ?? []) as Block[],
-      progressByBlockId: {},
-      canSkip: false,
-      midExamPassed: false,
-      finalExamPassed: false,
-      courseDone: false,
-    }
-  }
 
   const [
     { data: progressRows },
