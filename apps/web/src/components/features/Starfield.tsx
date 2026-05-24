@@ -3,13 +3,26 @@
 import { useMemo } from 'react'
 import './starfield.css'
 
-// Генерируем набор «звёзд» как box-shadow точек на области 2000×2000px.
-// Слой дублируется со сдвигом по Y для бесшовного зацикливания при движении.
-function buildShadow(count: number, area = 2000): string {
+// Детерминированный PRNG (mulberry32) — одинаковые координаты на сервере и
+// клиенте, чтобы не было hydration mismatch и звёзды не «прыгали».
+function mulberry32(seed: number) {
+  return function () {
+    seed |= 0
+    seed = (seed + 0x6d2b79f5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// Набор «звёзд» как box-shadow точек на области area×area.
+// Слой дублируется со сдвигом по Y (::after) для бесшовного зацикливания.
+function buildShadow(count: number, seed: number, area = 2000): string {
+  const rand = mulberry32(seed)
   const parts: string[] = []
   for (let i = 0; i < count; i++) {
-    const x = Math.floor(Math.random() * area)
-    const y = Math.floor(Math.random() * area)
+    const x = Math.floor(rand() * area)
+    const y = Math.floor(rand() * area)
     parts.push(`${x}px ${y}px #FFF`)
   }
   return parts.join(', ')
@@ -21,10 +34,9 @@ interface Props {
 }
 
 export function Starfield({ density = 1 }: Props) {
-  // useMemo + client-only → стабильно в пределах сессии, не прыгает между ре-рендерами
-  const small = useMemo(() => buildShadow(Math.round(160 * density)), [density])
-  const medium = useMemo(() => buildShadow(Math.round(50 * density)), [density])
-  const large = useMemo(() => buildShadow(Math.round(18 * density)), [density])
+  const small = useMemo(() => buildShadow(Math.round(800 * density), 1), [density])
+  const medium = useMemo(() => buildShadow(Math.round(240 * density), 2), [density])
+  const large = useMemo(() => buildShadow(Math.round(70 * density), 3), [density])
 
   return (
     <div className="starfield" aria-hidden="true">
