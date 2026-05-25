@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase-browser'
 
 interface Country {
@@ -55,39 +56,47 @@ export function CountrySelect({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="relative z-10 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-gray-600">Загрузка стран...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/15 border-t-primary mx-auto mb-4" />
+          <p className="text-white/55">Загрузка стран…</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 flex flex-col">
-      <div className="flex-1 flex flex-col justify-center">
-        <h1 className="text-2xl font-bold text-center mb-2">Выберите страну</h1>
-        <p className="text-gray-600 text-center mb-8">Где вы живёте?</p>
+    <div className="relative z-10 min-h-screen flex flex-col px-5 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto"
+      >
+        <h1 className="text-3xl font-extrabold text-white text-center mb-2 tracking-tight">
+          Выберите страну
+        </h1>
+        <p className="text-white/55 text-center mb-8">Где вы живёте?</p>
 
         <div className="space-y-3">
           {countries.map((country) => (
-            <button
+            <motion.button
               key={country.id}
               onClick={() => onSelect(country.id)}
-              className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition"
+              whileTap={{ scale: 0.98 }}
+              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-white/12 bg-white/5 backdrop-blur-sm text-left transition-colors hover:border-white/30"
             >
               <span className="text-2xl">{flagEmoji(country.code)}</span>
-              <span className="text-left font-medium">{country.name_ru}</span>
-            </button>
+              <span className="font-semibold text-white">{country.name_ru}</span>
+            </motion.button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       <button
         type="button"
         onClick={onBack}
-        className="w-full mt-6 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+        className="w-full max-w-sm mx-auto mt-6 px-4 py-3 rounded-2xl border border-white/15 font-medium text-white/80 hover:border-white/30 transition-colors"
       >
         Назад
       </button>

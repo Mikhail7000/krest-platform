@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase-browser'
 
 interface City {
@@ -55,10 +56,10 @@ export function CitySelect({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="relative z-10 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-gray-600">Загрузка городов...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/15 border-t-primary mx-auto mb-4" />
+          <p className="text-white/55">Загрузка городов…</p>
         </div>
       </div>
     )
@@ -66,55 +67,69 @@ export function CitySelect({
 
   if (cities.length === 0) {
     return (
-      <div className="min-h-screen bg-white text-gray-900 p-6 flex flex-col justify-center">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2">Нет активных городов</h1>
-          <p className="text-gray-600">
-            В выбранной стране пока нет активных локаций. Напишите в поддержку, и мы добавим ваш город.
-          </p>
-        </div>
+      <div className="relative z-10 min-h-screen flex flex-col justify-center px-5 py-8">
+        <div className="w-full max-w-sm mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-extrabold text-white mb-2 tracking-tight">
+              Нет активных городов
+            </h1>
+            <p className="text-white/55 leading-relaxed">
+              В выбранной стране пока нет активных локаций. Напишите в поддержку, и мы добавим ваш
+              город.
+            </p>
+          </div>
 
-        <button
-          type="button"
-          onClick={handleSupportClick}
-          className="w-full mb-3 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition"
-        >
-          Написать в поддержку
-        </button>
-        <button
-          type="button"
-          onClick={onBack}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
-        >
-          Назад
-        </button>
+          <button
+            type="button"
+            onClick={handleSupportClick}
+            className="w-full mb-3 px-4 py-3.5 rounded-2xl font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'var(--accent-gradient)' }}
+          >
+            Написать в поддержку
+          </button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-full px-4 py-3 rounded-2xl border border-white/15 font-medium text-white/80 hover:border-white/30 transition-colors"
+          >
+            Назад
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 flex flex-col">
-      <div className="flex-1 flex flex-col justify-center">
-        <h1 className="text-2xl font-bold text-center mb-2">Выберите город</h1>
-        <p className="text-gray-600 text-center mb-8">Где вы находитесь?</p>
+    <div className="relative z-10 min-h-screen flex flex-col px-5 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto"
+      >
+        <h1 className="text-3xl font-extrabold text-white text-center mb-2 tracking-tight">
+          Выберите город
+        </h1>
+        <p className="text-white/55 text-center mb-8">Где вы находитесь?</p>
 
         <div className="space-y-3">
           {cities.map((city) => (
-            <button
+            <motion.button
               key={city.id}
               onClick={() => onSelect(city.id)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition text-left font-medium"
+              whileTap={{ scale: 0.98 }}
+              className="w-full p-4 rounded-2xl border border-white/12 bg-white/5 backdrop-blur-sm text-left font-semibold text-white transition-colors hover:border-white/30"
             >
               {city.name_ru}
-            </button>
+            </motion.button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       <button
         type="button"
         onClick={onBack}
-        className="w-full mt-6 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+        className="w-full max-w-sm mx-auto mt-6 px-4 py-3 rounded-2xl border border-white/15 font-medium text-white/80 hover:border-white/30 transition-colors"
       >
         Назад
       </button>

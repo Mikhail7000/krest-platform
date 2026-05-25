@@ -49,25 +49,29 @@
   align-items: center;
   gap: 0.875rem;
   padding: 0.9375rem 1rem;
-  background: var(--tg-section-bg, #1A1C1F);
+  /* Матовое стекло — звёзды просвечивают и размываются за карточкой */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-radius: var(--radius-lg, 14px);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.625rem;
   text-decoration: none;
-  border: 1px solid var(--tg-section-separator, rgba(127, 127, 140, 0.16));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.28);
   transition: border-color 0.15s, transform 0.1s;
   color: inherit;
 }
 .db-block-card:active {
   transform: scale(0.99);
-  border-color: color-mix(in srgb, var(--accent-solid) 50%, transparent);
+  border-color: color-mix(in srgb, var(--accent-solid) 55%, transparent);
 }
 .db-block-card--locked {
   opacity: 0.4;
   pointer-events: none;
 }
 .db-block-card--done {
-  border-color: color-mix(in srgb, var(--color-success, #16A34A) 40%, transparent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--color-success, #16A34A) 7%, transparent), var(--tg-section-bg, #1A1C1F));
+  border-color: color-mix(in srgb, var(--color-success, #16A34A) 45%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-success, #16A34A) 14%, transparent), rgba(255, 255, 255, 0.03));
 }
 
 .db-block-card__num {
@@ -132,11 +136,14 @@
   align-items: center;
   gap: 0.875rem;
   padding: 1rem;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-from) 16%, transparent), color-mix(in srgb, var(--accent-to) 10%, transparent));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-from) 22%, transparent), color-mix(in srgb, var(--accent-to) 12%, transparent));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-radius: var(--radius-lg, 14px);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.625rem;
   text-decoration: none;
-  border: 1px solid color-mix(in srgb, var(--accent-solid) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 38%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.28);
   color: var(--tg-text, #E5E7EB);
   transition: border-color 0.15s, transform 0.1s;
 }

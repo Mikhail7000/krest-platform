@@ -3,13 +3,49 @@
 }
 
 .lesson-back {
-  display: inline-block;
-  color: var(--tg-hint, #9CA3AF);
-  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem 0.625rem 0.875rem;
+  color: var(--tg-text, #E5E7EB);
+  font-size: 0.9375rem;
+  font-weight: 600;
   text-decoration: none;
-  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  margin-bottom: 1.25rem;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
 }
-.lesson-back:hover { color: var(--tg-text, #E5E7EB); }
+.lesson-back:active {
+  transform: scale(0.97);
+  border-color: color-mix(in srgb, var(--accent-solid) 55%, transparent);
+}
+.lesson-back__icon {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex-shrink: 0;
+}
+
+/* Нижняя кнопка — крупная, на всю ширину */
+.lesson-back--bottom {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  margin-top: 2.5rem;
+  margin-bottom: 0;
+  padding: 0.9375rem 1rem;
+  border-radius: var(--radius-lg, 14px);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+.lesson-back--bottom .lesson-back__icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
 
 .lesson-header { margin-bottom: 1.25rem; }
 .lesson-header__eyebrow {

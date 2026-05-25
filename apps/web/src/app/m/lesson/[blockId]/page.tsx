@@ -17,6 +17,30 @@ const STORAGE_BUCKET = 'block-resources'
 type BlockResource = Database['public']['Tables']['block_resources']['Row']
 type Block = Database['public']['Tables']['blocks']['Row']
 
+function BackToBlocks({ variant = 'top' }: { variant?: 'top' | 'bottom' }) {
+  return (
+    <Link
+      href="/m/dashboard"
+      className={variant === 'bottom' ? 'lesson-back lesson-back--bottom' : 'lesson-back'}
+    >
+      <svg
+        className="lesson-back__icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M19 12H5" />
+        <path d="m12 19-7-7 7-7" />
+      </svg>
+      <span>К списку блоков</span>
+    </Link>
+  )
+}
+
 const adminClient = () =>
   createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -115,7 +139,7 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
 
   return (
     <div className="miniapp-container lesson-page">
-      <Link href="/m/dashboard" className="lesson-back">← К списку блоков</Link>
+      <BackToBlocks variant="top" />
       <header className="lesson-header">
         <p className="lesson-header__eyebrow">Блок {block.order_num ?? blockId}</p>
         <h1 className="lesson-header__title">{block.title_ru ?? `Блок ${blockId}`}</h1>
@@ -149,6 +173,8 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
       ))}
 
       <Stage4Nav blockId={id} />
+
+      <BackToBlocks variant="bottom" />
     </div>
   )
 }

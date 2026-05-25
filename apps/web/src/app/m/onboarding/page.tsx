@@ -89,11 +89,11 @@ export default function OnboardingPage() {
 
   if (step === 'saving') {
     return (
-      <div className="min-h-screen bg-white text-gray-900 flex items-center justify-center p-6">
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
         <div className="text-center max-w-xs w-full">
           {error ? (
             <>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-800 text-sm">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4 text-red-300 text-sm">
                 {error}
               </div>
               <button
@@ -102,15 +102,15 @@ export default function OnboardingPage() {
                   setError(null)
                   setStep('city')
                 }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+                className="w-full px-4 py-3 rounded-2xl border border-white/15 font-medium text-white/80 hover:border-white/30 transition-colors"
               >
                 Назад
               </button>
             </>
           ) : (
             <>
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-              <p className="text-gray-600">Сохранение…</p>
+              <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/15 border-t-primary mx-auto mb-4" />
+              <p className="text-white/55">Сохранение…</p>
             </>
           )}
         </div>
