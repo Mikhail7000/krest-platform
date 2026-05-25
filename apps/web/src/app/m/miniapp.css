@@ -2,8 +2,10 @@
    адаптация под тему Telegram через --tg-* переменные ── */
 
 .miniapp-root {
+  position: relative;
   min-height: 100vh;
-  background: var(--tg-bg, #0F1114);
+  /* Тёмное небо — глобальный звёздный фон (canvas) рисуется поверх. */
+  background: #05060a;
   color: var(--tg-text, #E5E7EB);
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -12,6 +14,12 @@
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Контент поверх звёздного фона */
+.miniapp-content {
+  position: relative;
+  z-index: 1;
 }
 
 .miniapp-container {

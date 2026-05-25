@@ -1,7 +1,6 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Starfield } from '@/components/features/Starfield'
 
 interface LanguageSelectProps {
   onSelect: (lang: 'ru' | 'en') => void
@@ -9,9 +8,7 @@ interface LanguageSelectProps {
 
 export function LanguageSelect({ onSelect }: LanguageSelectProps) {
   return (
-    <div className="relative min-h-screen overflow-hidden flex items-center justify-center px-5">
-      <Starfield />
-
+    <div className="relative min-h-screen flex items-center justify-center px-5">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

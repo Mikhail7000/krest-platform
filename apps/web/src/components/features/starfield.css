@@ -12,3 +12,9 @@
   z-index: 0;
   pointer-events: none;
 }
+
+/* Глобальный фон приложения — фиксирован на вьюпорт, небо стоит на месте,
+   контент скроллится поверх. */
+.starfield-canvas--fixed {
+  position: fixed;
+}

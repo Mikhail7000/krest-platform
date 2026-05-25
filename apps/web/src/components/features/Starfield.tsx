@@ -6,6 +6,8 @@ import './starfield.css'
 interface Props {
   /** Плотность звёзд (по умолчанию средняя) */
   density?: number
+  /** Фиксированный фон на весь вьюпорт (для глобального фона приложения) */
+  fullscreen?: boolean
 }
 
 interface Star {
@@ -20,7 +22,7 @@ interface Star {
 
 // Звёзды рисуются на canvas (а не box-shadow) — длинные box-shadow строки
 // молча обрезаются в Telegram WebView (WKWebView). Canvas работает везде.
-export function Starfield({ density = 1 }: Props) {
+export function Starfield({ density = 1, fullscreen = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -36,9 +38,9 @@ export function Starfield({ density = 1 }: Props) {
     let stars: Star[] = []
 
     const init = () => {
-      const parent = canvas.parentElement
-      width = parent?.clientWidth ?? window.innerWidth
-      height = parent?.clientHeight ?? window.innerHeight
+      const rect = canvas.getBoundingClientRect()
+      width = Math.round(rect.width) || window.innerWidth
+      height = Math.round(rect.height) || window.innerHeight
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       canvas.width = Math.floor(width * dpr)
       canvas.height = Math.floor(height * dpr)
@@ -104,5 +106,11 @@ export function Starfield({ density = 1 }: Props) {
     }
   }, [density])
 
-  return <canvas ref={canvasRef} aria-hidden="true" className="starfield-canvas" />
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className={fullscreen ? 'starfield-canvas starfield-canvas--fixed' : 'starfield-canvas'}
+    />
+  )
 }
