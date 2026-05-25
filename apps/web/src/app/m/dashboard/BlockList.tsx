@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { Database } from '../../../../../../packages/supabase/src/types'
+import { IconGraduation, IconStar, IconTrophy } from '@/app/m/_components/icons'
 import type { DashboardData } from './loadDashboard'
 
 type Block = Database['public']['Tables']['blocks']['Row']
@@ -69,7 +70,7 @@ function BlockCard({ block, progress, canSkip, prevGroupUnlocked }: BlockCardPro
 
 interface ExamCardProps {
   href: string
-  icon: string
+  icon: ReactNode
   title: string
   hint: string
   active: boolean
@@ -159,7 +160,7 @@ export function BlockList() {
         ))}
         <ExamCard
           href="/m/exam/mid"
-          icon="🎓"
+          icon={<IconGraduation className="db-exam-card__icon-svg" />}
           title="Промежуточный экзамен"
           hint="По блокам 1–5"
           active={midExamActive}
@@ -180,7 +181,7 @@ export function BlockList() {
         ))}
         <ExamCard
           href="/m/exam/final"
-          icon="⭐"
+          icon={<IconStar className="db-exam-card__icon-svg" />}
           title="Финальный экзамен"
           hint="По всему курсу"
           active={finalExamActive}
@@ -188,7 +189,9 @@ export function BlockList() {
         />
         {courseDone && (
           <Link href="/m/completed" className="db-cert-link">
-            <span className="db-cert-link__icon">🏆</span>
+            <span className="db-cert-link__icon">
+              <IconTrophy className="db-cert-link__icon-svg" />
+            </span>
             <span className="db-cert-link__text">Ваш сертификат — Мастер Креста</span>
           </Link>
         )}

@@ -7,22 +7,20 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.625rem 1.125rem 0.625rem 0.875rem;
-  color: var(--tg-text, #E5E7EB);
+  color: #fff;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-from) 28%, transparent), color-mix(in srgb, var(--accent-to) 20%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 50%, transparent);
   border-radius: 999px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   margin-bottom: 1.25rem;
-  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  transition: border-color 0.15s, transform 0.1s;
 }
 .lesson-back:active {
   transform: scale(0.97);
-  border-color: color-mix(in srgb, var(--accent-solid) 55%, transparent);
+  border-color: color-mix(in srgb, var(--accent-solid) 70%, transparent);
 }
 .lesson-back__icon {
   width: 1.375rem;
@@ -30,7 +28,7 @@
   flex-shrink: 0;
 }
 
-/* Нижняя кнопка — крупная, на всю ширину */
+/* Нижняя кнопка — крупная, на всю ширину, с яркой заливкой */
 .lesson-back--bottom {
   display: flex;
   width: 100%;
@@ -41,6 +39,9 @@
   border-radius: var(--radius-lg, 14px);
   font-size: 1.0625rem;
   font-weight: 700;
+  background: var(--accent-gradient);
+  border: 0;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent-solid) 35%, transparent);
 }
 .lesson-back--bottom .lesson-back__icon {
   width: 1.5rem;
@@ -367,12 +368,12 @@
 
 .lesson-section { margin-top: 1.25rem; }
 .lesson-section__title {
-  color: var(--tg-hint, #9CA3AF);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  margin: 0 0 0.5rem 0.25rem;
+  margin: 0 0 0.75rem 0.25rem;
 }
 
 /* ── Block progress banner ──────────────────────────────────────── */
@@ -436,16 +437,22 @@
   border-color: color-mix(in srgb, var(--accent-solid) 45%, transparent);
 }
 .lesson-stage4-card__icon {
-  font-size: 1.25rem;
   flex-shrink: 0;
   line-height: 1;
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--accent-solid) 14%, transparent);
+  background: color-mix(in srgb, var(--accent-solid) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 22%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.lesson-stage4-card__icon-svg {
+  display: block;
+  width: 1.375rem;
+  height: 1.375rem;
+  color: var(--accent-solid);
 }
 .lesson-stage4-card__body {
   flex: 1;

@@ -50,7 +50,7 @@ export function DashboardClient() {
   }
 
   return (
-    <div className="miniapp-container">
+    <div className="miniapp-container" style={{ paddingBottom: 0 }}>
       <header className="db-hero">
         <p className="db-hero__eyebrow">Курс ученичества</p>
         <h1 className="db-hero__title">КРЕСТ</h1>
