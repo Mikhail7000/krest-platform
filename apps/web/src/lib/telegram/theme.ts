@@ -3,6 +3,9 @@ type TgWebApp = {
   colorScheme?: 'light' | 'dark'
   onEvent?: (event: string, handler: () => void) => void
   offEvent?: (event: string, handler: () => void) => void
+  setHeaderColor?: (color: string) => void
+  setBackgroundColor?: (color: string) => void
+  setBottomBarColor?: (color: string) => void
 }
 
 function getTg(): TgWebApp | null {
@@ -10,30 +13,44 @@ function getTg(): TgWebApp | null {
   return (window as unknown as { Telegram?: { WebApp: TgWebApp } }).Telegram?.WebApp ?? null
 }
 
-export function applyTelegramTheme(): void {
-  const tg = getTg()
-  if (!tg) return
+// Цвет звёздного неба — фон приложения.
+const DARK_BG = '#05060A'
 
-  const t = tg.themeParams ?? {}
+// Приложение всегда в тёмной теме, независимо от настроек телефона/Telegram.
+// Telegram themeParams игнорируем — иначе в светлой теме карточки и фон
+// становятся белыми. Палитра зафиксирована под звёздный фон.
+export function applyTelegramTheme(): void {
   const root = document.documentElement
 
   const cssVars: Record<string, string> = {
-    '--tg-bg': t.bg_color ?? '#0F1114',
-    '--tg-text': t.text_color ?? '#E5E7EB',
-    '--tg-hint': t.hint_color ?? '#9CA3AF',
-    '--tg-link': t.link_color ?? '#0F8AD2',
-    '--tg-button': t.button_color ?? '#2563EB',
-    '--tg-button-text': t.button_text_color ?? '#FFFFFF',
-    '--tg-secondary-bg': t.secondary_bg_color ?? '#1A1C1F',
-    '--tg-section-bg': t.section_bg_color ?? '#1A1C1F',
-    '--tg-section-separator': t.section_separator_color ?? 'rgba(127, 127, 140, 0.16)',
-    '--tg-destructive': t.destructive_text_color ?? '#EF4444',
+    '--tg-bg': DARK_BG,
+    '--tg-text': '#E5E7EB',
+    '--tg-hint': '#9CA3AF',
+    '--tg-link': '#8B5CF6',
+    '--tg-button': '#7C5CF0',
+    '--tg-button-text': '#FFFFFF',
+    '--tg-secondary-bg': '#1A1C1F',
+    '--tg-section-bg': '#1A1C1F',
+    '--tg-section-separator': 'rgba(127, 127, 140, 0.18)',
+    '--tg-destructive': '#EF4444',
   }
 
   Object.entries(cssVars).forEach(([k, v]) => root.style.setProperty(k, v))
-  root.classList.toggle('dark', tg.colorScheme === 'dark')
+  root.classList.add('dark')
+
+  // Нативная обвязка Telegram (шапка, фон, нижняя панель) — тоже тёмная.
+  // Старые версии не поддерживают hex — оборачиваем в try/catch.
+  const tg = getTg()
+  try {
+    tg?.setHeaderColor?.(DARK_BG)
+    tg?.setBackgroundColor?.(DARK_BG)
+    tg?.setBottomBarColor?.(DARK_BG)
+  } catch {
+    /* версия Telegram не поддерживает hex-цвета — игнорируем */
+  }
 }
 
+// Если Telegram пришлёт смену темы — снова форсим тёмную.
 export function listenThemeChanges(): () => void {
   const tg = getTg()
   if (!tg?.onEvent) return () => undefined
