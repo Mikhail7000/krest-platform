@@ -71,7 +71,13 @@
 }
 
 .lesson-card {
-  background: var(--tg-section-bg, #1A1C1F);
+  /* Полупрозрачное стекло — звёзды просвечивают, как блоки на дашборде */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 6px 20px rgba(0, 0, 0, 0.25);
   border-radius: 14px;
   padding: 1rem 1.125rem;
   margin-bottom: 0.75rem;
@@ -425,11 +431,16 @@
   align-items: center;
   gap: 0.875rem;
   padding: 0.875rem 1rem;
-  background: var(--tg-section-bg, #1A1C1F);
+  /* Полупрозрачное стекло — звёзды просвечивают */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
   border-radius: var(--radius-lg, 14px);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.625rem;
   text-decoration: none;
-  border: 1px solid var(--tg-section-separator, rgba(127, 127, 140, 0.16));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 6px 20px rgba(0, 0, 0, 0.25);
   transition: border-color 0.15s, transform 0.1s;
 }
 .lesson-stage4-card:active {
