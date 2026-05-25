@@ -376,79 +376,110 @@
 /* ── Fullscreen overlay для video_note (запись и просмотр) ───────── */
 /* Скрывает текст местописания во время записи, чтобы было видно
    что ученик смотрит в экран, а не подсматривает. */
-.location-video-fullscreen {
+/* ── Видео-кружок: круглое окно записи (как в Telegram) ── */
+.location-circle-modal {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  /* Полупрозрачный фон — звёздное небо просвечивает */
+  background: rgba(5, 6, 10, 0.85);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
-.location-video-fullscreen__el {
+.location-circle-modal__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 360px;
+}
+.location-circle-modal__hint {
+  min-height: 1.2em;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.location-circle {
+  position: relative;
+  width: min(74vw, 300px);
+  aspect-ratio: 1;
+}
+.location-circle__video {
+  position: absolute;
+  inset: 7px;
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
+  border-radius: 50%;
+  object-fit: cover;
+  background: #000;
+  border: 2px solid color-mix(in srgb, var(--accent-solid) 55%, transparent);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.location-circle__ring {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  display: block;
-  background: #000;
+  transform: rotate(-90deg);
+  z-index: 2;
+  pointer-events: none;
 }
-.location-video-fullscreen__timer {
-  position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 1rem);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.55);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  padding: 0.5rem 0.875rem;
-  border-radius: 999px;
+.location-circle__ring-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 3;
+}
+.location-circle__ring-fill {
+  fill: none;
+  stroke: var(--accent-solid);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 301.6;
+  transition: stroke-dashoffset 1s linear;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent-solid) 60%, transparent));
+}
+.location-circle-modal__timer {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
   font-size: 0.9375rem;
   font-weight: 700;
-  color: #FFFFFF;
-  z-index: 2;
+  color: #fff;
 }
-.location-video-fullscreen__controls {
-  position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 1.25rem);
-  left: 50%;
-  transform: translateX(-50%);
+.location-circle-modal__controls {
   display: flex;
   gap: 0.625rem;
   flex-wrap: wrap;
   justify-content: center;
-  max-width: calc(100% - 2rem);
-  z-index: 2;
+  width: 100%;
 }
-.location-video-fullscreen__btn {
-  font-size: 1rem;
-  padding: 0.75rem 1.25rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-}
-.location-video-fullscreen__status {
-  background: rgba(0, 0, 0, 0.65);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+.location-circle-modal__status {
   padding: 0.65rem 1rem;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  color: #FFFFFF;
+  color: #fff;
   font-weight: 600;
   font-size: 0.95rem;
 }
-.location-video-fullscreen__error {
-  position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem);
-  left: 1rem;
-  right: 1rem;
-  background: rgba(239, 68, 68, 0.92);
-  color: #FFFFFF;
+.location-circle-modal__error {
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #FCA5A5;
   padding: 0.625rem 0.875rem;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.4;
   text-align: center;
-  z-index: 3;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }

@@ -216,65 +216,72 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, accept, labe
     return (
       <>
         {showOverlay && (
-          <div className="location-video-fullscreen" role="dialog" aria-modal="true">
-            {isRecording ? (
-              <video
-                ref={livePreviewRef}
-                className="location-video-fullscreen__el"
-                autoPlay
-                muted
-                playsInline
-              />
-            ) : blobUrl ? (
-              <video
-                key={blobUrl}
-                className="location-video-fullscreen__el"
-                src={blobUrl}
-                playsInline
-                controls
-              />
-            ) : null}
+          <div className="location-circle-modal" role="dialog" aria-modal="true">
+            <div className="location-circle-modal__inner">
+              <p className="location-circle-modal__hint">
+                {isRecording ? 'Идёт запись' : blob ? 'Проверь запись' : ''}
+              </p>
 
-            {isRecording && (
-              <div className="location-video-fullscreen__timer">
-                <span className="location-recording-dot" />
-                {timerSecs}с / {maxRecordSecs}с
+              <div className="location-circle">
+                {isRecording && (
+                  <svg className="location-circle__ring" viewBox="0 0 100 100" aria-hidden="true">
+                    <circle className="location-circle__ring-track" cx="50" cy="50" r="48" />
+                    <circle
+                      className="location-circle__ring-fill"
+                      cx="50"
+                      cy="50"
+                      r="48"
+                      style={{
+                        strokeDashoffset:
+                          301.6 * (1 - Math.min(timerSecs / Math.max(maxRecordSecs, 1), 1)),
+                      }}
+                    />
+                  </svg>
+                )}
+                {isRecording ? (
+                  <video ref={livePreviewRef} className="location-circle__video" autoPlay muted playsInline />
+                ) : blobUrl ? (
+                  <video key={blobUrl} className="location-circle__video" src={blobUrl} playsInline controls />
+                ) : null}
               </div>
-            )}
 
-            {error && !isRecording && (
-              <div className="location-video-fullscreen__error">{error}</div>
-            )}
+              {isRecording && (
+                <div className="location-circle-modal__timer">
+                  <span className="location-recording-dot" />
+                  {timerSecs}с / {maxRecordSecs}с
+                </div>
+              )}
 
-            <div className="location-video-fullscreen__controls">
-              {isRecording ? (
-                <button
-                  type="button"
-                  className="location-btn location-btn--danger location-video-fullscreen__btn"
-                  onClick={stopRecording}
-                >
-                  Остановить
-                </button>
-              ) : isSubmitting ? (
-                <div className="location-video-fullscreen__status">Отправляем…</div>
-              ) : blob ? (
-                <>
+              {error && !isRecording && (
+                <div className="location-circle-modal__error">{error}</div>
+              )}
+
+              <div className="location-circle-modal__controls">
+                {isRecording ? (
                   <button
                     type="button"
-                    className="location-btn location-btn--ghost location-video-fullscreen__btn"
-                    onClick={startRecording}
+                    className="location-btn location-btn--danger"
+                    onClick={stopRecording}
                   >
-                    Перезаписать
+                    Остановить
                   </button>
-                  <button
-                    type="button"
-                    className="location-btn location-video-fullscreen__btn"
-                    onClick={() => submitBlob(blob, `recording.${ext}`)}
-                  >
-                    Отправить запись
-                  </button>
-                </>
-              ) : null}
+                ) : isSubmitting ? (
+                  <div className="location-circle-modal__status">Отправляем…</div>
+                ) : blob ? (
+                  <>
+                    <button type="button" className="location-btn location-btn--ghost" onClick={startRecording}>
+                      Перезаписать
+                    </button>
+                    <button
+                      type="button"
+                      className="location-btn"
+                      onClick={() => submitBlob(blob, `recording.${ext}`)}
+                    >
+                      Отправить
+                    </button>
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
         )}
