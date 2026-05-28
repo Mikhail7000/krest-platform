@@ -38,7 +38,8 @@
 /* ── Section card ────────────────────────────────────────────────── */
 .recitation-card {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   padding: 1rem 1.125rem;
   margin-bottom: 0.75rem;
 }
@@ -214,7 +215,8 @@
 /* ── Loading skeleton ────────────────────────────────────────────── */
 .recitation-skeleton {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   height: 6rem;
   margin-bottom: 0.75rem;
   animation: rec-pulse 1.4s ease-in-out infinite;
@@ -233,7 +235,8 @@
 /* ── Error state ─────────────────────────────────────────────────── */
 .recitation-error {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   padding: 1.5rem 1.125rem;
   text-align: center;
 }

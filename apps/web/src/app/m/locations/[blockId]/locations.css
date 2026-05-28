@@ -47,7 +47,8 @@
 /* ── Locked screen ───────────────────────────────────────────────── */
 .locations-locked {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   padding: 2rem 1.25rem;
   text-align: center;
   margin-top: 1rem;
@@ -92,7 +93,8 @@
 /* ── Location card ───────────────────────────────────────────────── */
 .location-card {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   padding: 1rem 1.125rem;
   margin-bottom: 0.75rem;
   border: 1px solid transparent;
@@ -315,7 +317,8 @@
 /* ── Loading skeleton ────────────────────────────────────────────── */
 .location-skeleton {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   height: 7rem;
   margin-bottom: 0.75rem;
   animation: loc-pulse 1.4s ease-in-out infinite;
@@ -334,7 +337,8 @@
 /* ── Error state ─────────────────────────────────────────────────── */
 .location-error {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   padding: 1.5rem 1.125rem;
   text-align: center;
 }

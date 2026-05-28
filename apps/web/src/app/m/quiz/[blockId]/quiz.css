@@ -52,7 +52,8 @@
 /* ── Card ────────────────────────────────────────────────────────── */
 .quiz-card {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   padding: 1rem 1.125rem;
   margin-bottom: 0.75rem;
 }
@@ -189,7 +190,8 @@
 /* ── Loading skeleton ────────────────────────────────────────────── */
 .quiz-skeleton {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   height: 5rem;
   margin-bottom: 0.75rem;
   animation: quiz-pulse 1.4s ease-in-out infinite;
@@ -208,7 +210,8 @@
 /* ── Error / no-tg states ────────────────────────────────────────── */
 .quiz-state-card {
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 14px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   padding: 1.5rem 1.125rem;
   margin-top: 0.5rem;
   text-align: center;

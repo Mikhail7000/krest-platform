@@ -89,7 +89,8 @@
   text-align: center;
   padding: 2rem 1rem 1.5rem;
   background: var(--tg-section-bg, #1A1C1F);
-  border-radius: 16px;
+  border-radius: 20px;
+  box-shadow: var(--surface-shadow);
   margin-bottom: 1rem;
 }
 .exam-result__score {
