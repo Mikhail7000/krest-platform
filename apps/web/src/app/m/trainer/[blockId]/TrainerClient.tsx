@@ -5,15 +5,17 @@ import Link from 'next/link'
 import { Flashcards } from './Flashcards'
 import { ClozeExercise } from './ClozeExercise'
 import { ReferenceQuiz } from './ReferenceQuiz'
+import { ReciteExercise } from './ReciteExercise'
 import type { TrainerData } from './types'
 
-type Mode = 'cards' | 'cloze' | 'quiz'
+type Mode = 'cards' | 'cloze' | 'quiz' | 'recite'
 type BlockFilter = number | 'all'
 
 const MODES: { key: Mode; label: string }[] = [
   { key: 'cards', label: 'Карточки' },
   { key: 'cloze', label: 'Пропуски' },
   { key: 'quiz', label: 'Викторина' },
+  { key: 'recite', label: 'Озвучить' },
 ]
 
 function getInitData(): string {
@@ -126,8 +128,10 @@ export function TrainerClient({ blockId }: { blockId: number }) {
         <Flashcards key={`cards-${filter}`} verses={verses} />
       ) : mode === 'cloze' ? (
         <ClozeExercise key={`cloze-${filter}`} verses={verses} />
-      ) : (
+      ) : mode === 'quiz' ? (
         <ReferenceQuiz key={`quiz-${filter}`} verses={verses} />
+      ) : (
+        <ReciteExercise key={`recite-${filter}`} verses={verses} />
       )}
     </div>
   )
