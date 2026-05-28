@@ -72,13 +72,13 @@
 }
 
 .lesson-card {
-  /* Светлая — белая карточка; тёмная — стекло поверх звёзд */
+  /* Светлая — «парящая» белая карточка (как на дашборде) */
   background: var(--surface);
   border: 1px solid var(--surface-border);
   box-shadow: var(--surface-shadow);
-  border-radius: 14px;
-  padding: 1rem 1.125rem;
-  margin-bottom: 0.75rem;
+  border-radius: 20px;
+  padding: 1.125rem 1.25rem;
+  margin-bottom: 0.875rem;
 }
 .lesson-card--row {
   display: flex;
@@ -428,11 +428,11 @@
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  padding: 0.875rem 1rem;
-  /* Светлая — белая карточка; тёмная — стекло поверх звёзд */
+  padding: 1rem 1.125rem;
+  /* Светлая — «парящая» белая карточка */
   background: var(--surface);
-  border-radius: var(--radius-lg, 14px);
-  margin-bottom: 0.625rem;
+  border-radius: 20px;
+  margin-bottom: 0.875rem;
   text-decoration: none;
   border: 1px solid var(--surface-border);
   box-shadow: var(--surface-shadow);
