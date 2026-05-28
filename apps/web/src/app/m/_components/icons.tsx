@@ -79,6 +79,27 @@ export function IconMessage(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+// Навигация — дом
+export function IconHome(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5" />
+      <path d="M9.5 21v-6h5v6" />
+    </Svg>
+  )
+}
+
+// Навигация — профиль (один человек)
+export function IconUser(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
+    </Svg>
+  )
+}
+
 // Промежуточный экзамен — академическая шапочка
 export function IconGraduation(props: SVGProps<SVGSVGElement>) {
   return (

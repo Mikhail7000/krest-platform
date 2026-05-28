@@ -63,17 +63,16 @@ export function useTheme(): ThemeContextValue {
 }
 
 /**
- * Инлайн-скрипт: ставит data-theme на <html> до первой отрисовки,
- * чтобы не было вспышки тёмной/светлой темы при загрузке.
+ * Инлайн-скрипт: ставит data-theme на <html> до первой отрисовки.
+ *
+ * СЕЙЧАС: тёмная тема убрана из miniapp — всегда светлая (форсим 'light',
+ * localStorage игнорируем). Инфраструктура темы (ThemeProvider/ThemeToggle/
+ * ThemedBackground/dark-токены в CSS) сохранена для быстрого возврата dark.
+ * Чтобы вернуть переключение: читать localStorage здесь, рендерить
+ * <ThemedBackground/> в layout и <ThemeToggle/> где нужно.
  */
 export const themeNoFlashScript = `
 (function() {
-  try {
-    var t = localStorage.getItem('${THEME_STORAGE_KEY}');
-    if (t !== 'light' && t !== 'dark') t = '${DEFAULT_THEME}';
-    document.documentElement.dataset.theme = t;
-  } catch (e) {
-    document.documentElement.dataset.theme = '${DEFAULT_THEME}';
-  }
+  document.documentElement.dataset.theme = 'light';
 })();
 `

@@ -49,12 +49,23 @@ export function DashboardClient() {
     )
   }
 
+  const name = user?.firstName ?? 'друг'
+  const initial = (user?.firstName?.[0] ?? 'У').toUpperCase()
+
   return (
     <div className="miniapp-container" style={{ paddingBottom: 0 }}>
-      <header className="db-hero">
-        <p className="db-hero__eyebrow">Курс ученичества</p>
-        <h1 className="db-hero__title">КРЕСТ</h1>
-        <p className="db-hero__greeting">Привет, {user?.firstName ?? 'друг'}</p>
+      <header>
+        <div className="db-topbar">
+          <div className="db-avatar">{initial}</div>
+          <div className="db-topbar__text">
+            <span className="db-topbar__eyebrow">Курс ученичества</span>
+            <span className="db-topbar__greeting">Привет, {name}</span>
+          </div>
+        </div>
+        <div className="db-hero">
+          <h1 className="db-hero__title">КРЕСТ</h1>
+          <p className="db-hero__subtitle">Путь от вступления до Мастера Креста</p>
+        </div>
       </header>
     </div>
   )

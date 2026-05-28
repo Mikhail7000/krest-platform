@@ -3,7 +3,6 @@
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
-import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { EnglishPlaceholder } from './EnglishPlaceholder'
 import { LanguageSelect } from './LanguageSelect'
 import { CountrySelect } from './steps/CountrySelect'
@@ -92,16 +91,5 @@ export default function OnboardingPage() {
     content = <NameInput onSubmit={handleNameSubmit} onBack={handleBack} />
   }
 
-  return (
-    <>
-      {/* Предпросмотр темы — переключатель в углу на время онбординга */}
-      <div
-        className="absolute top-0 right-0 z-20 p-4"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}
-      >
-        <ThemeToggle variant="floating" />
-      </div>
-      {content}
-    </>
-  )
+  return content
 }

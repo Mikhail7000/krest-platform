@@ -99,6 +99,7 @@ function ExamCard({ href, icon, title, hint, active, passed }: ExamCardProps) {
 export function BlockList() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [group, setGroup] = useState<'g1' | 'g2'>('g1')
 
   useEffect(() => {
     const initData = getInitData()
@@ -147,55 +148,72 @@ export function BlockList() {
 
   return (
     <div className="miniapp-container" style={{ paddingTop: 0 }}>
-      <div className="db-section">
-        <p className="db-section__title">Курс КРЕСТ — Блоки 1–5</p>
-        {blocks1to5.map((block) => (
-          <BlockCard
-            key={block.id}
-            block={block}
-            progress={progressByBlockId[block.id]}
-            canSkip={canSkip}
-            prevGroupUnlocked={false}
-          />
-        ))}
-        <ExamCard
-          href="/m/exam/mid"
-          icon={<IconGraduation className="db-exam-card__icon-svg" />}
-          title="Промежуточный экзамен"
-          hint="По блокам 1–5"
-          active={midExamActive}
-          passed={midExamPassed}
-        />
+      <div className="db-chips">
+        <button
+          type="button"
+          className={`db-chip${group === 'g1' ? ' db-chip--active' : ''}`}
+          onClick={() => setGroup('g1')}
+        >
+          Блоки 1–5
+        </button>
+        <button
+          type="button"
+          className={`db-chip${group === 'g2' ? ' db-chip--active' : ''}`}
+          onClick={() => setGroup('g2')}
+        >
+          Блоки 6–10
+        </button>
       </div>
 
-      <div className="db-section">
-        <p className="db-section__title">Блоки 6–10</p>
-        {blocks6to10.map((block) => (
-          <BlockCard
-            key={block.id}
-            block={block}
-            progress={progressByBlockId[block.id]}
-            canSkip={canSkip}
-            prevGroupUnlocked={midExamPassed}
+      {group === 'g1' ? (
+        <div className="db-section">
+          {blocks1to5.map((block) => (
+            <BlockCard
+              key={block.id}
+              block={block}
+              progress={progressByBlockId[block.id]}
+              canSkip={canSkip}
+              prevGroupUnlocked={false}
+            />
+          ))}
+          <ExamCard
+            href="/m/exam/mid"
+            icon={<IconGraduation className="db-exam-card__icon-svg" />}
+            title="Промежуточный экзамен"
+            hint="По блокам 1–5"
+            active={midExamActive}
+            passed={midExamPassed}
           />
-        ))}
-        <ExamCard
-          href="/m/exam/final"
-          icon={<IconStar className="db-exam-card__icon-svg" />}
-          title="Финальный экзамен"
-          hint="По всему курсу"
-          active={finalExamActive}
-          passed={finalExamPassed}
-        />
-        {courseDone && (
-          <Link href="/m/completed" className="db-cert-link">
-            <span className="db-cert-link__icon">
-              <IconTrophy className="db-cert-link__icon-svg" />
-            </span>
-            <span className="db-cert-link__text">Ваш сертификат — Мастер Креста</span>
-          </Link>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="db-section">
+          {blocks6to10.map((block) => (
+            <BlockCard
+              key={block.id}
+              block={block}
+              progress={progressByBlockId[block.id]}
+              canSkip={canSkip}
+              prevGroupUnlocked={midExamPassed}
+            />
+          ))}
+          <ExamCard
+            href="/m/exam/final"
+            icon={<IconStar className="db-exam-card__icon-svg" />}
+            title="Финальный экзамен"
+            hint="По всему курсу"
+            active={finalExamActive}
+            passed={finalExamPassed}
+          />
+          {courseDone && (
+            <Link href="/m/completed" className="db-cert-link">
+              <span className="db-cert-link__icon">
+                <IconTrophy className="db-cert-link__icon-svg" />
+              </span>
+              <span className="db-cert-link__text">Ваш сертификат — Мастер Креста</span>
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   )
 }
