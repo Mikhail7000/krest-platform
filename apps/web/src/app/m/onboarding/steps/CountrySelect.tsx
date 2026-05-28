@@ -58,8 +58,8 @@ export function CountrySelect({
     return (
       <div className="relative z-10 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/15 border-t-primary mx-auto mb-4" />
-          <p className="text-white/55">Загрузка стран…</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-[#16181D] dark:border-white/15 dark:border-t-primary mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-white/55">Загрузка стран…</p>
         </div>
       </div>
     )
@@ -73,10 +73,10 @@ export function CountrySelect({
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto"
       >
-        <h1 className="text-3xl font-extrabold text-white text-center mb-2 tracking-tight">
+        <h1 className="text-3xl font-extrabold text-[#16181D] dark:text-white text-center mb-2 tracking-tight">
           Выберите страну
         </h1>
-        <p className="text-white/55 text-center mb-8">Где вы живёте?</p>
+        <p className="text-gray-500 dark:text-white/55 text-center mb-8">Где вы живёте?</p>
 
         <div className="space-y-3">
           {countries.map((country) => (
@@ -84,10 +84,10 @@ export function CountrySelect({
               key={country.id}
               onClick={() => onSelect(country.id)}
               whileTap={{ scale: 0.98 }}
-              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-white/12 bg-white/5 backdrop-blur-sm text-left transition-colors hover:border-white/30"
+              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white shadow-sm text-left transition-colors hover:border-gray-300 dark:border-white/12 dark:bg-white/5 dark:shadow-none dark:backdrop-blur-sm dark:hover:border-white/30"
             >
               <span className="text-2xl">{flagEmoji(country.code)}</span>
-              <span className="font-semibold text-white">{country.name_ru}</span>
+              <span className="font-semibold text-[#16181D] dark:text-white">{country.name_ru}</span>
             </motion.button>
           ))}
         </div>
@@ -96,7 +96,7 @@ export function CountrySelect({
       <button
         type="button"
         onClick={onBack}
-        className="w-full max-w-sm mx-auto mt-6 px-4 py-3 rounded-2xl border border-white/15 font-medium text-white/80 hover:border-white/30 transition-colors"
+        className="w-full max-w-sm mx-auto mt-6 px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
       >
         Назад
       </button>

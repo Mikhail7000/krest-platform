@@ -86,8 +86,8 @@
   align-items: flex-start;
   gap: 0.625rem;
   padding: 0.625rem 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
   border-radius: 10px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
@@ -107,7 +107,7 @@
   width: 1.125rem;
   height: 1.125rem;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--surface-border);
   margin-top: 0.1rem;
   display: flex;
   align-items: center;
@@ -137,8 +137,8 @@
 .quiz-textarea {
   width: 100%;
   min-height: 5rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
   border-radius: 10px;
   color: var(--tg-text, #E5E7EB);
   font-size: 0.9rem;
@@ -335,7 +335,7 @@
   font-style: italic;
   line-height: 1.5;
   padding: 0.375rem 0.5rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-2);
   border-radius: 6px;
 }
 .quiz-q-result__feedback {

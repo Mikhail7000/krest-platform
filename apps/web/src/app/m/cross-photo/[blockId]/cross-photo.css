@@ -37,7 +37,7 @@
 }
 .cp-progress-bar {
   height: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--track);
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 0.25rem;

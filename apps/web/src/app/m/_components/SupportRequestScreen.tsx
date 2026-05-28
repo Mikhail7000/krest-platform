@@ -53,14 +53,13 @@ export function SupportRequestScreen() {
       <div className="relative z-10 min-h-screen w-full flex flex-col items-center justify-center px-5 py-12 text-center">
         <div className="w-full max-w-xs">
           <div className="mb-4 text-5xl">✅</div>
-          <h1 className="text-xl font-bold text-white mb-2 wrap-break-word">Запрос отправлен</h1>
-          <p className="text-sm text-white/55 mb-6">
+          <h1 className="text-xl font-bold text-[#16181D] dark:text-white mb-2 wrap-break-word">Запрос отправлен</h1>
+          <p className="text-sm text-gray-500 dark:text-white/55 mb-6">
             Спасибо! Мы свяжемся с вами в ближайшее время.
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-3 rounded-2xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: 'var(--accent-gradient)' }}
+            className="onb-cta px-6 py-3 rounded-2xl text-sm font-semibold transition-opacity hover:opacity-90"
           >
             Закрыть
           </button>
@@ -74,14 +73,14 @@ export function SupportRequestScreen() {
       <div className="w-full max-w-xs">
         <div className="mb-6 text-center">
           <div className="mb-4 text-5xl">⚠️</div>
-          <h1 className="text-xl font-bold text-white mb-2 wrap-break-word">Доступ запрещён</h1>
-          <p className="text-sm text-white/55 wrap-break-word">
+          <h1 className="text-xl font-bold text-[#16181D] dark:text-white mb-2 wrap-break-word">Доступ запрещён</h1>
+          <p className="text-sm text-gray-500 dark:text-white/55 wrap-break-word">
             Обратитесь к вашему наставнику или напишите нам:
           </p>
         </div>
 
         {errorMessage && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4 text-red-300 text-sm wrap-break-word">
+          <div className="bg-red-50 border border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300 rounded-xl p-3 mb-4 text-sm wrap-break-word">
             {errorMessage}
           </div>
         )}
@@ -91,7 +90,7 @@ export function SupportRequestScreen() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Расскажите о вашем вопросе или проблеме…"
-            className="w-full rounded-2xl border border-white/15 bg-white/5 backdrop-blur-sm px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:border-primary"
+            className="w-full rounded-2xl border border-gray-200 bg-white shadow-sm px-4 py-3 text-sm text-[#16181D] placeholder-gray-400 focus:outline-none focus:border-[#16181D] dark:border-white/15 dark:bg-white/5 dark:shadow-none dark:backdrop-blur-sm dark:text-white dark:placeholder-white/40 dark:focus:border-primary"
             rows={4}
             disabled={status === 'loading'}
           />
@@ -99,14 +98,13 @@ export function SupportRequestScreen() {
           <button
             onClick={handleSubmit}
             disabled={status === 'loading' || !message.trim()}
-            className="w-full rounded-2xl px-4 py-3.5 font-semibold text-white text-sm active:scale-95 transition disabled:opacity-50"
-            style={{ background: 'var(--accent-gradient)' }}
+            className="onb-cta w-full rounded-2xl px-4 py-3.5 font-semibold text-sm active:scale-95 transition disabled:opacity-50"
           >
             {status === 'loading' ? 'Отправляю…' : 'Отправить запрос'}
           </button>
         </div>
 
-        <p className="text-xs text-white/40 text-center mt-4 wrap-break-word">Минимум 10 символов</p>
+        <p className="text-xs text-gray-400 dark:text-white/40 text-center mt-4 wrap-break-word">Минимум 10 символов</p>
       </div>
     </div>
   )

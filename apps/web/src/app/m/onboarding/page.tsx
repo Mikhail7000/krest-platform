@@ -3,14 +3,18 @@
 import { useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { EnglishPlaceholder } from './EnglishPlaceholder'
 import { LanguageSelect } from './LanguageSelect'
 import { CountrySelect } from './steps/CountrySelect'
 import { CitySelect } from './steps/CitySelect'
+import { NameInput } from './steps/NameInput'
 
-// Шаги 'curator' и 'name' убраны на период теста: куратора ещё нет, имя берём
-// из Telegram автоматически. Флоу: язык → страна → город → сохранение.
-type OnboardingStep = 'language' | 'english' | 'country' | 'city' | 'saving'
+// Флоу: язык → страна → город → имя → сохранение.
+// Шаг 'curator' (CuratorSelect) готов под обе темы, но отвязан на период теста:
+// кураторов в Бали ещё нет, иначе новый ученик упирается в «Кураторов не найдено».
+// Включить, когда появятся кураторы: вернуть шаг между 'city' и 'name'.
+type OnboardingStep = 'language' | 'english' | 'country' | 'city' | 'name'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -18,7 +22,7 @@ export default function OnboardingPage() {
 
   const [step, setStep] = useState<OnboardingStep>('language')
   const [countryId, setCountryId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [cityId, setCityId] = useState<string | null>(null)
 
   const handleLanguageSelect = (lang: 'ru' | 'en') => {
     setStep(lang === 'en' ? 'english' : 'country')
@@ -30,6 +34,9 @@ export default function OnboardingPage() {
     } else if (step === 'city') {
       setCountryId(null)
       setStep('country')
+    } else if (step === 'name') {
+      setCityId(null)
+      setStep('city')
     }
   }, [step])
 
@@ -38,85 +45,63 @@ export default function OnboardingPage() {
     setStep('city')
   }, [])
 
-  // Город выбран → сразу сохраняем онбординг (имя берётся из профиля/Telegram)
-  const handleCitySelect = useCallback(
-    async (cId: string) => {
-      setError(null)
-      setStep('saving')
-      try {
-        if (!countryId) throw new Error('Не выбрана страна. Вернитесь назад.')
-        if (!initData) throw new Error('Нет данных Telegram. Откройте приложение через бота заново.')
+  const handleCitySelect = useCallback((cId: string) => {
+    setCityId(cId)
+    setStep('name')
+  }, [])
 
-        const res = await fetch('/api/miniapp/onboarding', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            initData,
-            country_id: countryId,
-            city_id: cId,
-            curator_id: null,
-          }),
-        })
+  // Имя введено — финальный шаг: сохраняем весь онбординг.
+  // Бросаем ошибку при неудаче, чтобы NameInput показал её и оставил на шаге.
+  const handleNameSubmit = useCallback(
+    async (fullName: string) => {
+      if (!countryId || !cityId) throw new Error('Не выбраны страна/город. Вернитесь назад.')
+      if (!initData) throw new Error('Нет данных Telegram. Откройте приложение через бота заново.')
 
-        if (!res.ok) {
-          const e = await res.json().catch(() => ({}))
-          throw new Error(e?.error?.message || 'Не удалось сохранить данные')
-        }
+      const res = await fetch('/api/miniapp/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          initData,
+          country_id: countryId,
+          city_id: cityId,
+          curator_id: null, // шаг куратора отвязан на период теста (см. коммент выше)
+          full_name: fullName,
+        }),
+      })
 
-        router.push('/m/dashboard')
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Ошибка сохранения')
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}))
+        throw new Error(e?.error?.message || 'Не удалось сохранить данные')
       }
+
+      router.push('/m/dashboard')
     },
-    [countryId, initData, router],
+    [countryId, cityId, initData, router],
   )
 
+  let content: React.ReactNode = null
   if (step === 'language') {
-    return <LanguageSelect onSelect={handleLanguageSelect} />
+    content = <LanguageSelect onSelect={handleLanguageSelect} />
+  } else if (step === 'english') {
+    content = <EnglishPlaceholder onBack={() => setStep('language')} />
+  } else if (step === 'country') {
+    content = <CountrySelect onSelect={handleCountrySelect} onBack={handleBack} />
+  } else if (step === 'city' && countryId) {
+    content = <CitySelect countryId={countryId} onSelect={handleCitySelect} onBack={handleBack} />
+  } else if (step === 'name') {
+    content = <NameInput onSubmit={handleNameSubmit} onBack={handleBack} />
   }
 
-  if (step === 'english') {
-    return <EnglishPlaceholder onBack={() => setStep('language')} />
-  }
-
-  if (step === 'country') {
-    return <CountrySelect onSelect={handleCountrySelect} onBack={handleBack} />
-  }
-
-  if (step === 'city' && countryId) {
-    return <CitySelect countryId={countryId} onSelect={handleCitySelect} onBack={handleBack} />
-  }
-
-  if (step === 'saving') {
-    return (
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
-        <div className="text-center max-w-xs w-full">
-          {error ? (
-            <>
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4 text-red-300 text-sm">
-                {error}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setError(null)
-                  setStep('city')
-                }}
-                className="w-full px-4 py-3 rounded-2xl border border-white/15 font-medium text-white/80 hover:border-white/30 transition-colors"
-              >
-                Назад
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/15 border-t-primary mx-auto mb-4" />
-              <p className="text-white/55">Сохранение…</p>
-            </>
-          )}
-        </div>
+  return (
+    <>
+      {/* Предпросмотр темы — переключатель в углу на время онбординга */}
+      <div
+        className="absolute top-0 right-0 z-20 p-4"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}
+      >
+        <ThemeToggle variant="floating" />
       </div>
-    )
-  }
-
-  return null
+      {content}
+    </>
+  )
 }

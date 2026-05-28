@@ -113,7 +113,7 @@
   padding: 1rem 1.125rem;
   margin-bottom: 1rem;
   text-align: left;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hairline);
 }
 .completed-next__label {
   font-size: 0.6875rem;

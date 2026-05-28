@@ -29,28 +29,28 @@ export function LanguageSelect({ onSelect }: LanguageSelectProps) {
           >
             КРЕСТ
           </h1>
-          <p className="text-white/55">Выберите язык / Choose a language</p>
+          <p className="text-gray-500 dark:text-white/55">Выберите язык / Choose a language</p>
         </div>
 
         <div className="space-y-3.5">
           <motion.button
             onClick={() => onSelect('ru')}
             whileTap={{ scale: 0.98 }}
-            className="w-full p-5 rounded-2xl border border-white/12 bg-white/5 backdrop-blur-sm text-center transition-colors hover:border-white/30"
+            className="w-full p-5 rounded-2xl border border-gray-200 bg-white shadow-sm text-center transition-colors hover:border-gray-300 dark:border-white/12 dark:bg-white/5 dark:shadow-none dark:backdrop-blur-sm dark:hover:border-white/30"
           >
             <div className="text-2xl mb-1.5">🇷🇺</div>
-            <div className="text-lg font-bold text-white">Русский</div>
-            <div className="text-sm text-white/50 mt-0.5">Начать обучение</div>
+            <div className="text-lg font-bold text-[#16181D] dark:text-white">Русский</div>
+            <div className="text-sm text-gray-500 dark:text-white/50 mt-0.5">Начать обучение</div>
           </motion.button>
 
           <motion.button
             onClick={() => onSelect('en')}
             whileTap={{ scale: 0.98 }}
-            className="w-full p-5 rounded-2xl border border-white/12 bg-white/5 backdrop-blur-sm text-center transition-colors hover:border-white/30"
+            className="w-full p-5 rounded-2xl border border-gray-200 bg-white shadow-sm text-center transition-colors hover:border-gray-300 dark:border-white/12 dark:bg-white/5 dark:shadow-none dark:backdrop-blur-sm dark:hover:border-white/30"
           >
             <div className="text-2xl mb-1.5">🇬🇧</div>
-            <div className="text-lg font-bold text-white">English</div>
-            <div className="text-sm text-white/50 mt-0.5">Coming soon…</div>
+            <div className="text-lg font-bold text-[#16181D] dark:text-white">English</div>
+            <div className="text-sm text-gray-500 dark:text-white/50 mt-0.5">Coming soon…</div>
           </motion.button>
         </div>
       </motion.div>

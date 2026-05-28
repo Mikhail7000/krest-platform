@@ -4,9 +4,10 @@
 .miniapp-root {
   position: relative;
   min-height: 100vh;
-  /* Тёмное небо — глобальный звёздный фон (canvas) рисуется поверх. */
-  background: #05060a;
-  color: var(--tg-text, #E5E7EB);
+  /* Светлая тема (по умолчанию) — чистый светлый фон в стиле референсов.
+     Тёмная тема — ночное небо со звёздами (canvas рисуется поверх). */
+  background: #eef0f3;
+  color: #16181d;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
   padding-left: env(safe-area-inset-left);
@@ -14,6 +15,38 @@
   font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+[data-theme="dark"] .miniapp-root {
+  background: #05060a;
+  color: var(--tg-text, #e5e7eb);
+}
+
+/* ── Семантические токены поверхности (флипаются по теме) ──────────────
+   Светлая (по умолчанию): белые карточки, мягкие тени, тонкие тёмные границы
+   (стиль референсов). Тёмная: «стекло» поверх звёзд (полупрозрачный белый). */
+.miniapp-root {
+  --surface: #ffffff;
+  --surface-2: rgba(0, 0, 0, 0.035);
+  --surface-border: rgba(0, 0, 0, 0.09);
+  --surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.06);
+  --hairline: rgba(0, 0, 0, 0.08);
+  --section-title: #16181d;
+  --track: rgba(0, 0, 0, 0.08);
+  --on-accent-tint: var(--accent-solid);
+}
+[data-theme="dark"] .miniapp-root {
+  --surface: linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
+  --surface-2: rgba(255, 255, 255, 0.03);
+  --surface-border: rgba(255, 255, 255, 0.2);
+  --surface-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18),
+    0 6px 20px rgba(0, 0, 0, 0.25);
+  --hairline: rgba(255, 255, 255, 0.06);
+  --section-title: rgba(255, 255, 255, 0.82);
+  --track: rgba(255, 255, 255, 0.1);
+  --on-accent-tint: #ffffff;
 }
 
 /* Контент поверх звёздного фона */
@@ -95,3 +128,13 @@
 }
 
 .miniapp-status-error { color: var(--tg-destructive, #EF4444); }
+
+/* Основная кнопка онбординга: тёмная «пилюля» в светлой теме (как референсы),
+   фирменный градиент — в тёмной. */
+.onb-cta {
+  background: #16181d;
+  color: #fff;
+}
+[data-theme="dark"] .onb-cta {
+  background: var(--accent-gradient);
+}

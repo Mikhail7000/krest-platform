@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase-browser'
 
 interface Curator {
@@ -55,10 +56,10 @@ export function CuratorSelect({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="relative z-10 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-gray-600">Загрузка кураторов...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-[#16181D] dark:border-white/15 dark:border-t-primary mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-white/55">Загрузка кураторов…</p>
         </div>
       </div>
     )
@@ -66,62 +67,71 @@ export function CuratorSelect({
 
   if (curators.length === 0) {
     return (
-      <div className="min-h-screen bg-white text-gray-900 p-6 flex flex-col justify-center">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2">Кураторы не найдены</h1>
-          <p className="text-gray-600">
-            В вашем городе пока нет куратора. Напишите в поддержку, и мы поможем найти для вас наставника.
-          </p>
-        </div>
+      <div className="relative z-10 min-h-screen flex flex-col justify-center px-5 py-8">
+        <div className="w-full max-w-sm mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-extrabold text-[#16181D] dark:text-white mb-2 tracking-tight">
+              Кураторы не найдены
+            </h1>
+            <p className="text-gray-500 dark:text-white/55 leading-relaxed">
+              В вашем городе пока нет куратора. Напишите в поддержку, и мы поможем найти для вас
+              наставника.
+            </p>
+          </div>
 
-        <button
-          type="button"
-          onClick={handleSupportClick}
-          className="w-full mb-3 px-4 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition"
-        >
-          Написать в поддержку
-        </button>
-        <button
-          type="button"
-          onClick={onBack}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
-        >
-          Назад
-        </button>
+          <button
+            type="button"
+            onClick={handleSupportClick}
+            className="onb-cta w-full mb-3 px-4 py-3.5 rounded-2xl font-semibold transition-opacity hover:opacity-90"
+          >
+            Написать в поддержку
+          </button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
+          >
+            Назад
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 flex flex-col">
-      <div className="flex-1 flex flex-col justify-center">
-        <h1 className="text-2xl font-bold text-center mb-2">Выберите куратора</h1>
-        <p className="text-gray-600 text-center mb-8">Кто будет вашим наставником?</p>
+    <div className="relative z-10 min-h-screen flex flex-col px-5 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto"
+      >
+        <h1 className="text-3xl font-extrabold text-[#16181D] dark:text-white text-center mb-2 tracking-tight">
+          Выберите куратора
+        </h1>
+        <p className="text-gray-500 dark:text-white/55 text-center mb-8">Кто будет вашим наставником?</p>
 
         <div className="space-y-3">
           {curators.map((curator) => (
-            <button
+            <motion.button
               key={curator.id}
               onClick={() => onSelect(curator.id)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition text-left"
+              whileTap={{ scale: 0.98 }}
+              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white shadow-sm text-left transition-colors hover:border-gray-300 dark:border-white/12 dark:bg-white/5 dark:shadow-none dark:backdrop-blur-sm dark:hover:border-white/30"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
-                  {curator.full_name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-medium">{curator.full_name}</p>
-                </div>
-              </div>
-            </button>
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#16181D] font-semibold text-white dark:border dark:border-white/12 dark:bg-white/10">
+                {curator.full_name.charAt(0).toUpperCase()}
+              </span>
+              <span className="font-semibold text-[#16181D] dark:text-white">{curator.full_name}</span>
+            </motion.button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       <button
         type="button"
         onClick={onBack}
-        className="w-full mt-6 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+        className="w-full max-w-sm mx-auto mt-6 px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
       >
         Назад
       </button>

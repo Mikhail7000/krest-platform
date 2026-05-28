@@ -153,9 +153,9 @@
   color: var(--tg-hint, #9CA3AF);
   line-height: 1.5;
   padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-2);
   border-radius: 8px;
-  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  border-left: 2px solid var(--hairline);
 }
 
 /* ── Stage labels ────────────────────────────────────────────────── */
@@ -283,7 +283,7 @@
   flex: 1;
   height: 0.5rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--track);
 }
 .location-daily-progress__dot--done {
   background: #4ADE80;

@@ -110,9 +110,9 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-2);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hairline);
 }
 .recitation-video-item__num {
   font-size: 0.75rem;
@@ -199,11 +199,11 @@
   align-items: center;
   gap: 0.375rem;
   padding: 0.375rem 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-2);
   border-radius: 999px;
   font-size: 0.8125rem;
   color: var(--tg-hint, #9CA3AF);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--hairline);
 }
 .recitation-progress__item--pass {
   background: rgba(74, 222, 128, 0.1);

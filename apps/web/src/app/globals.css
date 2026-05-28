@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Тема MiniApp — ручной выбор через data-theme на <html> (не ОС/Telegram).
+   Светлая = база, тёмная = вариант dark: */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   /* Шрифт — единый Geist Sans (бриф: один шрифт, wow через размеры/веса) */
   --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
