@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   IconBook,
   IconCamera,
+  IconCards,
   IconCross,
   IconMessage,
   IconMic,
@@ -21,6 +22,16 @@ export function Stage4Nav({ blockId }: Props) {
   return (
     <div className="lesson-section">
       <h3 className="lesson-section__title">Практика блока</h3>
+      <Link href={`/m/trainer/${blockId}`} className="lesson-stage4-card">
+        <span className="lesson-stage4-card__icon">
+          <IconCards className={ICON_CLASS} />
+        </span>
+        <span className="lesson-stage4-card__body">
+          <span className="lesson-stage4-card__title">Тренажёр местописаний</span>
+          <span className="lesson-stage4-card__desc">Выучить стихи перед сдачей — карточки, пропуски, викторина</span>
+        </span>
+        <span className="lesson-stage4-card__arrow">›</span>
+      </Link>
       <Link href={`/m/locations/${blockId}`} className="lesson-stage4-card">
         <span className="lesson-stage4-card__icon">
           <IconBook className={ICON_CLASS} />

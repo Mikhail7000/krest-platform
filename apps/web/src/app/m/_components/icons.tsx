@@ -79,6 +79,16 @@ export function IconMessage(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+// Тренажёр — стопка карточек
+export function IconCards(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="7" width="13" height="14" rx="2" />
+      <path d="M8 7V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+    </Svg>
+  )
+}
+
 // Навигация — дом
 export function IconHome(props: SVGProps<SVGSVGElement>) {
   return (
