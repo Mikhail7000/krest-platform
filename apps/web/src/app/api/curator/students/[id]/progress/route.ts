@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCuratorAuth } from '@/lib/curator-auth'
+import { requireCuratorViaInitData } from '@/lib/curator-auth'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { computeActivity } from '@/lib/activity/streak'
 import { addDaysStr, baliToday } from '@/lib/time/bali'
@@ -17,10 +17,10 @@ const RECURRING_TYPES = ['daily_cross', 'daily_report']
  * Авторизация: curator (только своих студентов) / admin / super_admin
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireCuratorAuth()
+  const auth = await requireCuratorViaInitData(request.headers.get('x-init-data') ?? '')
   if ('errorResponse' in auth) return auth.errorResponse
   const { userId, role, supabase } = auth.curator
 

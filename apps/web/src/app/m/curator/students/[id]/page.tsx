@@ -40,9 +40,14 @@ export default function StudentDetailPage() {
   useEffect(() => {
     if (!studentId) return
 
+    const getInitData = () =>
+      (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp
+        ?.initData ?? ''
     const fetchProgress = async () => {
       try {
-        const res = await fetch(`/api/curator/students/${studentId}/progress`)
+        const res = await fetch(`/api/curator/students/${studentId}/progress`, {
+          headers: { 'X-Init-Data': getInitData() },
+        })
         if (!res.ok) {
           if (res.status === 404) throw new Error('Student not found')
           throw new Error('Failed to load student progress')

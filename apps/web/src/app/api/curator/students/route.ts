@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireCuratorAuth } from '@/lib/curator-auth'
+import { requireCuratorViaInitData } from '@/lib/curator-auth'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { computeActivity } from '@/lib/activity/streak'
 import { addDaysStr, baliToday } from '@/lib/time/bali'
@@ -24,7 +24,7 @@ const VALID_STATUSES = [
  *   status?    — фильтр по статусу прогресса
  */
 export async function GET(request: NextRequest) {
-  const auth = await requireCuratorAuth()
+  const auth = await requireCuratorViaInitData(request.headers.get('x-init-data') ?? '')
   if ('errorResponse' in auth) return auth.errorResponse
   const { userId, role, supabase } = auth.curator
 

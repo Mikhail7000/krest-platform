@@ -38,9 +38,14 @@ export default function CuratorDashboard() {
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'pending' | 'silent'>('all')
 
   useEffect(() => {
+    const getInitData = () =>
+      (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp
+        ?.initData ?? ''
     const fetchStudents = async () => {
       try {
-        const res = await fetch(`/api/curator/students`)
+        const res = await fetch(`/api/curator/students`, {
+          headers: { 'X-Init-Data': getInitData() },
+        })
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
             throw new Error('Curator role required')
