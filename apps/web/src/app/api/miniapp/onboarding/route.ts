@@ -46,9 +46,11 @@ export async function POST(request: NextRequest) {
     const update: Record<string, unknown> = {
       country_id: Number(country_id),
       city_id: Number(city_id),
-      curator_id: curator_id ?? null,
       onboarding_done: true,
     }
+    // curator_id обновляем только если явно передан — иначе НЕ затираем уже
+    // привязанного куратора (шаг куратора в онбординге сейчас отключён → шлёт null)
+    if (curator_id) update.curator_id = curator_id
     // Имя обновляем только если передано — иначе оставляем уже сохранённое
     if (full_name) update.full_name = full_name
 
