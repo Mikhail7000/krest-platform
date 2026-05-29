@@ -5,3 +5,10 @@ const BALI_OFFSET_MS = 8 * 60 * 60 * 1000
 export function baliToday(now: Date = new Date()): string {
   return new Date(now.getTime() + BALI_OFFSET_MS).toISOString().slice(0, 10)
 }
+
+/** Сдвиг даты YYYY-MM-DD на delta дней. */
+export function addDaysStr(dateStr: string, delta: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + delta)
+  return d.toISOString().slice(0, 10)
+}

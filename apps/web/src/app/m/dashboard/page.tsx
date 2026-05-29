@@ -1,5 +1,6 @@
 import { BlockList } from './BlockList'
 import { DashboardClient } from './DashboardClient'
+import { StreakCard } from './StreakCard'
 import { BottomNav } from '../_components/BottomNav'
 import './dashboard.css'
 
@@ -10,6 +11,9 @@ export default function DashboardPage() {
     <>
       <div className="db-page">
         <DashboardClient />
+        <div className="miniapp-container" style={{ paddingTop: 0, paddingBottom: 0 }}>
+          <StreakCard />
+        </div>
         <BlockList />
       </div>
       <BottomNav />
