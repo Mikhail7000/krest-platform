@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCuratorAuth } from '@/lib/curator-auth'
+import { createServiceSupabase } from '@/lib/supabase-service'
+import { computeActivity } from '@/lib/activity/streak'
+import { addDaysStr, baliToday } from '@/lib/time/bali'
 
 export const dynamic = 'force-dynamic'
 
@@ -138,11 +141,29 @@ export async function GET(
     submissions: summarizeSubmissions(subsByBlock[bp.block_id] ?? []),
   }))
 
+  // Активность (заходы в КРЕСТ) — читаем service-role: RLS на student_daily_activity
+  // разрешает только свои строки, а доступ куратора к ученику уже проверен выше.
+  const service = createServiceSupabase()
+  const since = addDaysStr(baliToday(), -30)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: actRows } = await (service as any)
+    .from('student_daily_activity')
+    .select('activity_date')
+    .eq('user_id', studentId)
+    .eq('opened', true)
+    .gte('activity_date', since)
+  const activity = computeActivity(
+    ((actRows ?? []) as { activity_date: string }[]).map((r) => r.activity_date),
+    14,
+  )
+
   return NextResponse.json({
     ok: true,
     data: {
       student_id: studentId,
       blocks,
+      activity,
     },
   })
 }
+

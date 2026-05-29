@@ -6,6 +6,7 @@ import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { MainButton } from '@/components/telegram/MainButton'
 import { BackButton } from '@/components/telegram/BackButton'
 import { useHaptic } from '@/hooks/useHaptic'
+import { pluralDays } from '@/lib/activity/streak'
 
 interface Student {
   id: string
@@ -16,6 +17,8 @@ interface Student {
   last_activity_at: string | null
   submissions_pending: number
   days_silent: number
+  streak: number
+  opened_today: boolean
 }
 
 const STATUS_LABELS: Record<Student['status'], { label: string; color: string }> = {
@@ -177,6 +180,15 @@ export default function CuratorDashboard() {
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         Block {student.current_block}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span
+                          className={`inline-block w-2 h-2 rounded-full ${student.opened_today ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {student.opened_today ? 'Заходил сегодня' : 'Сегодня не заходил'}
+                          {student.streak > 0 && ` · ${student.streak} ${pluralDays(student.streak)} подряд`}
+                        </span>
                       </div>
                       <div className={`inline-block text-xs font-medium rounded px-2 py-1 mt-2 ${statusConfig.color}`}>
                         {statusConfig.label}

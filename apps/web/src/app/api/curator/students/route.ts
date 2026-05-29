@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireCuratorAuth } from '@/lib/curator-auth'
+import { createServiceSupabase } from '@/lib/supabase-service'
+import { computeActivity } from '@/lib/activity/streak'
+import { addDaysStr, baliToday } from '@/lib/time/bali'
 
 export const dynamic = 'force-dynamic'
 
@@ -134,6 +137,23 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Активность (заходы в КРЕСТ) — service-role: RLS пускает только свои строки,
+  // а права куратора на этих учеников уже проверены фильтром выше.
+  const service = createServiceSupabase()
+  const sinceActivity = addDaysStr(baliToday(), -30)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: actRows } = await (service as any)
+    .from('student_daily_activity')
+    .select('user_id, activity_date')
+    .in('user_id', studentIds)
+    .eq('opened', true)
+    .gte('activity_date', sinceActivity)
+
+  const datesByUser: Record<string, string[]> = {}
+  for (const r of (actRows ?? []) as { user_id: string; activity_date: string }[]) {
+    ;(datesByUser[r.user_id] ??= []).push(r.activity_date)
+  }
+
   const MS_PER_DAY = 86_400_000
   const now = Date.now()
 
@@ -150,6 +170,8 @@ export async function GET(request: NextRequest) {
       ? Math.floor((now - new Date(lastAt).getTime()) / MS_PER_DAY)
       : 0
 
+    const act = computeActivity(datesByUser[student.id] ?? [], 7)
+
     return [{
       id: student.id,
       full_name: student.full_name ?? null,
@@ -159,6 +181,8 @@ export async function GET(request: NextRequest) {
       last_activity_at: lastAt,
       submissions_pending: pendingCountMap[student.id] ?? 0,
       days_silent: daysSilent,
+      streak: act.streak,
+      opened_today: act.openedToday,
     }]
   })
 

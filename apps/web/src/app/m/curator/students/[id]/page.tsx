@@ -6,6 +6,7 @@ import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { MainButton } from '@/components/telegram/MainButton'
 import { BackButton } from '@/components/telegram/BackButton'
 import { useHaptic } from '@/hooks/useHaptic'
+import { pluralDays } from '@/lib/activity/streak'
 
 interface StudentProgress {
   id: string
@@ -17,6 +18,13 @@ interface StudentProgress {
     completed_at: string | null
     submissions_pending: number
   }>
+  activity?: {
+    streak: number
+    total: number
+    openedToday: boolean
+    lastActive: string | null
+    days: Array<{ date: string; on: boolean }>
+  }
 }
 
 export default function StudentDetailPage() {
@@ -101,6 +109,47 @@ export default function StudentDetailPage() {
           </div>
         )}
       </div>
+
+      {student.activity && (
+        <div className="bg-card border border-slate-200 rounded-lg p-4 mb-6">
+          <div className="text-xs text-muted-foreground uppercase font-semibold mb-2">
+            Активность в КРЕСТ
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-foreground">{student.activity.streak}</span>
+            <span className="text-sm text-muted-foreground">
+              {pluralDays(student.activity.streak)} подряд
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span
+              className={`inline-block w-2 h-2 rounded-full ${student.activity.openedToday ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            />
+            <span className="text-sm text-foreground">
+              {student.activity.openedToday ? 'Заходил сегодня' : 'Сегодня ещё не заходил'}
+            </span>
+          </div>
+          {student.activity.lastActive && (
+            <div className="text-xs text-muted-foreground mt-1">
+              Последний вход:{' '}
+              {new Date(student.activity.lastActive).toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long',
+              })}
+            </div>
+          )}
+          <div className="flex gap-1 mt-3">
+            {student.activity.days.map((d) => (
+              <span
+                key={d.date}
+                title={d.date}
+                className={`flex-1 h-5 rounded ${d.on ? 'bg-emerald-500' : 'bg-slate-200'}`}
+              />
+            ))}
+          </div>
+          <div className="text-[10px] text-muted-foreground mt-1">Последние 14 дней</div>
+        </div>
+      )}
 
       <div className="bg-card border border-slate-200 rounded-lg p-4 mb-6">
         <div className="text-xs text-muted-foreground uppercase font-semibold mb-2">Progress</div>
