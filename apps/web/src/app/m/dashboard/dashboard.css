@@ -69,50 +69,30 @@
   margin-top: 0.625rem;
 }
 
-/* ── Карточка прогресса (стрик) ──────────────────────────────────── */
-.db-streak {
-  background: #fff;
-  border-radius: 22px;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 14px 30px rgba(0, 0, 0, 0.07);
-  padding: 1.125rem 1.25rem;
-  margin-bottom: 1.25rem;
-}
-.db-streak__top {
+/* ── Бейдж стрика (правый верхний угол шапки) ────────────────────── */
+.db-streak-badge {
+  margin-left: auto;
+  flex-shrink: 0;
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent-solid) 9%, #fff);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 18%, transparent);
 }
-.db-streak__num {
-  font-size: 1.875rem;
+.db-streak-badge__num {
+  font-size: 1.375rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #16181d;
-}
-.db-streak__label {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #6b7280;
-}
-.db-streak__flames {
-  display: flex;
-  gap: 0.375rem;
-  margin: 0.875rem 0;
-}
-.db-streak__flame {
-  flex: 1;
-  height: 0.5rem;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
-}
-.db-streak__flame--on {
-  background: linear-gradient(90deg, #f5b301, #f59e0b);
-}
-.db-streak__phrase {
-  font-size: 0.9375rem;
-  line-height: 1.45;
-  font-weight: 700;
   color: var(--accent-solid);
+  line-height: 1;
+}
+.db-streak-badge__cap {
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #9097a1;
 }
 
 /* ── Чипы-сегменты (Блоки 1–5 / 6–10) ────────────────────────────── */
