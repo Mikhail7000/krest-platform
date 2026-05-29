@@ -91,6 +91,10 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
   const goto = (d: number) => setIndex((i) => Math.max(0, Math.min(verses.length - 1, i + d)))
   const score = result ? Math.round(result.similarity_score) : 0
 
+  // Текст скрываем во время записи (и голос, и кружок). Кружок — скрыт всегда
+  // до разбора. После «Разобрать» эталон раскрываем, чтобы сверить.
+  const showVerse = result != null || (!isVideo && rec.state === 'idle')
+
   return (
     <>
       <div className="trainer-progress">
@@ -101,9 +105,9 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
       </div>
 
       <div className="trainer-card">
-        {/* Кружок — «наизусть»: текст скрыт до разбора, чтобы не подсматривать.
-            Голос — «читай вслух»: текст виден. */}
-        {!isVideo || result ? (
+        {/* Во время записи текст скрыт (и голос, и кружок) — без подсмотра.
+            Кружок скрыт всегда до разбора. После «Разобрать» эталон раскрываем. */}
+        {showVerse ? (
           <blockquote className="tq-text" style={{ marginBottom: '1rem' }}>
             {verse.exact_text}
           </blockquote>
