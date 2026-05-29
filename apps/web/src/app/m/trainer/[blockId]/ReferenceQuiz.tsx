@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { FavStar } from './FavStar'
 import { shuffle, type TrainerVerse } from './types'
 
 // Викторина ссылок: показываем текст стиха — нужно выбрать правильное
@@ -37,7 +38,10 @@ export function ReferenceQuiz({ verses }: { verses: TrainerVerse[] }) {
         <span>
           {index + 1} / {verses.length}
         </span>
-        <span>{verse.topic_label ?? ''}</span>
+        <span className="trainer-progress__right">
+          {verse.topic_label ?? ''}
+          <FavStar verseId={verse.id} />
+        </span>
       </div>
 
       <div className="trainer-card">

@@ -6,10 +6,11 @@ import { Flashcards } from './Flashcards'
 import { ClozeExercise } from './ClozeExercise'
 import { ReferenceQuiz } from './ReferenceQuiz'
 import { ReciteExercise } from './ReciteExercise'
+import { useFavorites } from './useFavorites'
 import type { TrainerData } from './types'
 
 type Mode = 'cards' | 'cloze' | 'quiz' | 'recite'
-type BlockFilter = number | 'all'
+type BlockFilter = number | 'all' | 'fav'
 
 const MODES: { key: Mode; label: string }[] = [
   { key: 'cards', label: 'Карточки' },
@@ -29,6 +30,8 @@ export function TrainerClient({ blockId }: { blockId: number }) {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<BlockFilter>(blockId)
   const [mode, setMode] = useState<Mode>('cards')
+  const { isFav, ids } = useFavorites()
+  const favKey = ids.slice().sort().join(',')
 
   useEffect(() => {
     let cancelled = false
@@ -52,8 +55,12 @@ export function TrainerClient({ blockId }: { blockId: number }) {
 
   const verses = useMemo(() => {
     if (!data) return []
-    return filter === 'all' ? data.verses : data.verses.filter((v) => v.block_id === filter)
-  }, [data, filter])
+    if (filter === 'fav') return data.verses.filter((v) => isFav(v.id))
+    if (filter === 'all') return data.verses
+    return data.verses.filter((v) => v.block_id === filter)
+    // favKey — чтобы пересобрать список при изменении избранного
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, filter, favKey])
 
   if (loading) {
     return (
@@ -87,9 +94,9 @@ export function TrainerClient({ blockId }: { blockId: number }) {
         <p className="trainer-header__subtitle">Выучи стихи перед сдачей блока</p>
       </header>
 
-      {multiBlock && (
-        <div className="trainer-chips">
-          {data.blocks.map((b) => (
+      <div className="trainer-chips">
+        {multiBlock &&
+          data.blocks.map((b) => (
             <button
               key={b.id}
               type="button"
@@ -99,6 +106,7 @@ export function TrainerClient({ blockId }: { blockId: number }) {
               Блок {b.order_num}
             </button>
           ))}
+        {multiBlock && (
           <button
             type="button"
             className={`trainer-chip${filter === 'all' ? ' trainer-chip--active' : ''}`}
@@ -106,8 +114,15 @@ export function TrainerClient({ blockId }: { blockId: number }) {
           >
             Все
           </button>
-        </div>
-      )}
+        )}
+        <button
+          type="button"
+          className={`trainer-chip${filter === 'fav' ? ' trainer-chip--active' : ''}`}
+          onClick={() => setFilter('fav')}
+        >
+          ★ Избранное
+        </button>
+      </div>
 
       <div className="trainer-modes">
         {MODES.map((m) => (
@@ -123,7 +138,11 @@ export function TrainerClient({ blockId }: { blockId: number }) {
       </div>
 
       {verses.length === 0 ? (
-        <p className="trainer-empty">В этом блоке пока нет местописаний для тренировки.</p>
+        <p className="trainer-empty">
+          {filter === 'fav'
+            ? 'В избранном пока пусто. Отметь стихи звёздочкой ☆ — и они появятся здесь.'
+            : 'В этом блоке пока нет местописаний для тренировки.'}
+        </p>
       ) : mode === 'cards' ? (
         <Flashcards key={`cards-${filter}`} verses={verses} />
       ) : mode === 'cloze' ? (

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { extFor, useRecorder } from './useRecorder'
+import { FavStar } from './FavStar'
 import type { TrainerVerse } from './types'
 
 type Medium = 'audio' | 'video_note'
@@ -101,7 +102,10 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
         <span>
           {index + 1} / {verses.length}
         </span>
-        <span>{verse.reference}</span>
+        <span className="trainer-progress__right">
+          {verse.reference}
+          <FavStar verseId={verse.id} />
+        </span>
       </div>
 
       <div className="trainer-card">
@@ -113,26 +117,26 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
           </blockquote>
         ) : (
           <p className="tr-hidden-hint">
-            Текст скрыт — произнеси <b>{verse.reference}</b> по памяти. После разбора покажем эталон.
+            Текст скрыт — произнеси <b>{verse.reference}</b> по памяти. После проверки покажем эталон.
           </p>
         )}
 
         <div className="trainer-modes" style={{ marginBottom: '1rem' }}>
           <button
             type="button"
-            className={`trainer-mode${!isVideo ? ' trainer-mode--active' : ''}`}
+            className={`trainer-mode trainer-mode--strong${!isVideo ? ' trainer-mode--active' : ''}`}
             onClick={() => setMedium('audio')}
             disabled={rec.state === 'recording'}
           >
-            🎤 Голос
+            Голос
           </button>
           <button
             type="button"
-            className={`trainer-mode${isVideo ? ' trainer-mode--active' : ''}`}
+            className={`trainer-mode trainer-mode--strong${isVideo ? ' trainer-mode--active' : ''}`}
             onClick={() => setMedium('video_note')}
             disabled={rec.state === 'recording'}
           >
-            ⭕ Кружок
+            Кружок
           </button>
         </div>
 
@@ -173,7 +177,7 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
                 onClick={analyze}
                 disabled={analyzing}
               >
-                {analyzing ? 'Разбираю…' : 'Разобрать'}
+                {analyzing ? 'Проверяю…' : 'Проверить'}
               </button>
             </>
           ) : (

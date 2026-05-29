@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { FavStar } from './FavStar'
 import { shuffle, type TrainerVerse } from './types'
 
 const clean = (t: string) => t.replace(/[^\p{L}\p{N}-]/gu, '')
@@ -93,7 +94,10 @@ export function ClozeExercise({ verses }: { verses: TrainerVerse[] }) {
         <span>
           {index + 1} / {verses.length}
         </span>
-        <span>{verse.reference}</span>
+        <span className="trainer-progress__right">
+          {verse.reference}
+          <FavStar verseId={verse.id} />
+        </span>
       </div>
 
       <div className="trainer-card">

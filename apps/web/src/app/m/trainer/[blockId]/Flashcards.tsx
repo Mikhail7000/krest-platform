@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { FavStar } from './FavStar'
 import type { TrainerVerse } from './types'
 
 // Карточки-переворот: лицо — ссылка, оборот — текст стиха (и наоборот).
@@ -28,7 +29,10 @@ export function Flashcards({ verses }: { verses: TrainerVerse[] }) {
         <span>
           {index + 1} / {verses.length}
         </span>
-        <span>{verse.topic_label ?? ''}</span>
+        <span className="trainer-progress__right">
+          {verse.topic_label ?? ''}
+          <FavStar verseId={verse.id} />
+        </span>
       </div>
 
       <div className="trainer-card tc-flip" onClick={() => setFlipped((f) => !f)}>
