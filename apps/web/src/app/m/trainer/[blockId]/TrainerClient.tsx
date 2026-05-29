@@ -58,9 +58,10 @@ export function TrainerClient({ blockId }: { blockId: number }) {
     if (filter === 'fav') return data.verses.filter((v) => isFav(v.id))
     if (filter === 'all') return data.verses
     return data.verses.filter((v) => v.block_id === filter)
-    // favKey — чтобы пересобрать список при изменении избранного
+    // favKey влияет ТОЛЬКО на фильтр «Избранное». В обычных блоках добавление
+    // в избранное не должно пересобирать список (иначе карточка сбрасывается).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, filter, favKey])
+  }, [data, filter, filter === 'fav' ? favKey : ''])
 
   if (loading) {
     return (
