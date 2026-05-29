@@ -83,26 +83,6 @@ export async function GET(request: NextRequest) {
 
   const studentIds: string[] = (students as Array<{ id: string }>).map((s) => s.id)
 
-  // Pending submissions count per student
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let subsQuery = (supabase as any)
-    .from('submissions')
-    .select('user_id')
-    .in('user_id', studentIds)
-    .eq('status', 'pending')
-
-  if (blockId) subsQuery = subsQuery.eq('block_id', blockId)
-
-  const { data: pendingSubs } = await subsQuery
-
-  // Last activity per student (latest submission created_at)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: lastActivity } = await (supabase as any)
-    .from('submissions')
-    .select('user_id, created_at')
-    .in('user_id', studentIds)
-    .order('created_at', { ascending: false })
-
   // Current block + status from student_block_progress
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let blockProgressQuery = (supabase as any)
@@ -116,18 +96,6 @@ export async function GET(request: NextRequest) {
   const { data: blockProgress } = await blockProgressQuery
 
   // Build lookup maps
-  const pendingCountMap: Record<string, number> = {}
-  for (const sub of pendingSubs ?? []) {
-    pendingCountMap[sub.user_id] = (pendingCountMap[sub.user_id] ?? 0) + 1
-  }
-
-  const lastActivityMap: Record<string, string> = {}
-  for (const act of lastActivity ?? []) {
-    if (!lastActivityMap[act.user_id]) {
-      lastActivityMap[act.user_id] = act.created_at
-    }
-  }
-
   const currentBlockMap: Record<string, number> = {}
   const blockStatusMap: Record<string, string> = {}
   for (const bp of blockProgress ?? []) {
@@ -165,12 +133,12 @@ export async function GET(request: NextRequest) {
     // Apply status filter
     if (status && studentStatus !== status) return []
 
-    const lastAt = lastActivityMap[student.id] ?? null
-    const daysSilent = lastAt
-      ? Math.floor((now - new Date(lastAt).getTime()) / MS_PER_DAY)
-      : 0
-
     const act = computeActivity(datesByUser[student.id] ?? [], [], 7)
+    // дней молчания = с последнего захода (по активности, а не по сабмишенам)
+    const lastAt = act.lastActive
+    const daysSilent = lastAt
+      ? Math.floor((now - new Date(`${lastAt}T00:00:00Z`).getTime()) / MS_PER_DAY)
+      : 0
 
     return [{
       id: student.id,
@@ -179,7 +147,7 @@ export async function GET(request: NextRequest) {
       current_block: currentBlock,
       status: studentStatus,
       last_activity_at: lastAt,
-      submissions_pending: pendingCountMap[student.id] ?? 0,
+      submissions_pending: 0,
       days_silent: daysSilent,
       streak: act.streak,
       opened_today: act.openedToday,

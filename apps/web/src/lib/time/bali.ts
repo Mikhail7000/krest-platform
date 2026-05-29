@@ -12,3 +12,8 @@ export function addDaysStr(dateStr: string, delta: number): string {
   d.setUTCDate(d.getUTCDate() + delta)
   return d.toISOString().slice(0, 10)
 }
+
+/** Дата по Бали (YYYY-MM-DD) из произвольного timestamp (ISO/UTC). */
+export function baliDateOf(iso: string): string {
+  return new Date(new Date(iso).getTime() + BALI_OFFSET_MS).toISOString().slice(0, 10)
+}

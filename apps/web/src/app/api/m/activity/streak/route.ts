@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { computeActivity } from '@/lib/activity/streak'
+import { getWorkedDates } from '@/lib/activity/worked'
 import { addDaysStr, baliToday } from '@/lib/time/bali'
 
 export const dynamic = 'force-dynamic'
@@ -34,16 +35,8 @@ export async function POST(req: NextRequest) {
     .gte('activity_date', since)
   const opened = ((data ?? []) as { activity_date: string }[]).map((r) => r.activity_date)
 
-  // дни, когда что-то сдавал — для «зелёных» кубиков (последняя неделя)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: subs } = await (supabase as any)
-    .from('submissions')
-    .select('submission_date')
-    .eq('user_id', auth.userId)
-    .gte('submission_date', addDaysStr(today, -8))
-  const worked = ((subs ?? []) as { submission_date: string | null }[])
-    .map((s) => (s.submission_date ? String(s.submission_date).slice(0, 10) : ''))
-    .filter(Boolean)
+  // дни, когда что-то делал — для «зелёных» кубиков (последняя неделя)
+  const worked = await getWorkedDates(supabase, auth.userId, addDaysStr(today, -8))
 
   const activity = computeActivity(opened, worked, 7)
 
