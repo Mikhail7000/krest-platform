@@ -152,8 +152,12 @@ export async function GET(
     .eq('user_id', studentId)
     .eq('opened', true)
     .gte('activity_date', since)
+  const workedDates = ((submissions ?? []) as { submission_date: string | null }[])
+    .map((s) => (s.submission_date ? String(s.submission_date).slice(0, 10) : ''))
+    .filter(Boolean)
   const activity = computeActivity(
     ((actRows ?? []) as { activity_date: string }[]).map((r) => r.activity_date),
+    workedDates,
     14,
   )
 

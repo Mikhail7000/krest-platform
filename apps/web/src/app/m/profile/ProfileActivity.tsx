@@ -8,7 +8,7 @@ interface Data {
   total: number
   openedToday: boolean
   lastActive: string | null
-  days: { date: string; on: boolean }[]
+  days: { date: string; on: boolean; state: 'green' | 'yellow' | 'off' | 'red' }[]
 }
 
 function getInitData(): string {
@@ -54,8 +54,13 @@ export function ProfileActivity() {
 
       <div className="pf-cal">
         {d.days.map((x) => (
-          <span key={x.date} title={x.date} className={`pf-cal__day${x.on ? ' pf-cal__day--on' : ''}`} />
+          <span key={x.date} title={x.date} className={`pf-cube pf-cube--${x.state}`} />
         ))}
+      </div>
+      <div className="pf-legend">
+        <span><i className="pf-cube pf-cube--green" /> прошёл</span>
+        <span><i className="pf-cube pf-cube--yellow" /> заходил</span>
+        <span><i className="pf-cube pf-cube--red" /> пропуск</span>
       </div>
 
       <div className="pf-activity__foot">

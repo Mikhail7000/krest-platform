@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
       ? Math.floor((now - new Date(lastAt).getTime()) / MS_PER_DAY)
       : 0
 
-    const act = computeActivity(datesByUser[student.id] ?? [], 7)
+    const act = computeActivity(datesByUser[student.id] ?? [], [], 7)
 
     return [{
       id: student.id,
