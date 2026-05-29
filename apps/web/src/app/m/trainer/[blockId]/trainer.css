@@ -238,6 +238,24 @@
 }
 
 /* ── Режим «Озвучить» ────────────────────────────────────────────── */
+.tr-hidden-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 5rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px dashed rgba(0, 0, 0, 0.14);
+  color: #6b7280;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.tr-hidden-hint b {
+  color: #16181d;
+}
 .tr-circle {
   width: min(60vw, 220px);
   aspect-ratio: 1;

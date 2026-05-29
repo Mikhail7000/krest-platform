@@ -101,9 +101,17 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
       </div>
 
       <div className="trainer-card">
-        <blockquote className="tq-text" style={{ marginBottom: '1rem' }}>
-          {verse.exact_text}
-        </blockquote>
+        {/* Кружок — «наизусть»: текст скрыт до разбора, чтобы не подсматривать.
+            Голос — «читай вслух»: текст виден. */}
+        {!isVideo || result ? (
+          <blockquote className="tq-text" style={{ marginBottom: '1rem' }}>
+            {verse.exact_text}
+          </blockquote>
+        ) : (
+          <p className="tr-hidden-hint">
+            Текст скрыт — произнеси <b>{verse.reference}</b> по памяти. После разбора покажем эталон.
+          </p>
+        )}
 
         <div className="trainer-modes" style={{ marginBottom: '1rem' }}>
           <button
