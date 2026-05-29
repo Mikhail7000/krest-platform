@@ -1,14 +1,15 @@
 /**
  * POST /api/m/activity/streak
- * Прогресс ученика: стрик (дней подряд), всего дней, активность за 7 дней.
+ * Прогресс ТЕКУЩЕГО ученика: стрик, всего дней, заход сегодня, календарь 14 дней.
  *
  * Body: { initData: string }
- * Response: { ok, streak, total, openedToday, last7: boolean[] }  (last7[6] = сегодня)
+ * Response: { ok, streak, total, openedToday, lastActive, days: {date,on}[] }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { computeActivity } from '@/lib/activity/streak'
 import { addDaysStr, baliToday } from '@/lib/time/bali'
 
 export const dynamic = 'force-dynamic'
@@ -21,8 +22,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceSupabase()
-  const today = baliToday()
-  const since = addDaysStr(today, -60)
+  const since = addDaysStr(baliToday(), -60)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (supabase as any)
@@ -32,27 +32,8 @@ export async function POST(req: NextRequest) {
     .eq('opened', true)
     .gte('activity_date', since)
 
-  const set = new Set<string>(((data ?? []) as { activity_date: string }[]).map((r) => r.activity_date))
+  const dates = ((data ?? []) as { activity_date: string }[]).map((r) => r.activity_date)
+  const activity = computeActivity(dates, 14)
 
-  // последние 7 дней: индекс 6 = сегодня
-  const last7: boolean[] = []
-  for (let i = 6; i >= 0; i--) last7.push(set.has(addDaysStr(today, -i)))
-
-  // стрик: считаем подряд назад от сегодня (или вчера, если сегодня ещё не заходил)
-  let streak = 0
-  let cursor = set.has(today) ? today : addDaysStr(today, -1)
-  if (set.has(cursor)) {
-    while (set.has(cursor)) {
-      streak++
-      cursor = addDaysStr(cursor, -1)
-    }
-  }
-
-  return NextResponse.json({
-    ok: true,
-    streak,
-    total: set.size,
-    openedToday: set.has(today),
-    last7,
-  })
+  return NextResponse.json({ ok: true, ...activity })
 }

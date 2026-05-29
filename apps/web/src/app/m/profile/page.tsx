@@ -2,6 +2,7 @@
 
 import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { BottomNav } from '../_components/BottomNav'
+import { ProfileActivity } from './ProfileActivity'
 import '../dashboard/dashboard.css'
 import './profile.css'
 
@@ -19,6 +20,10 @@ export default function ProfilePage() {
           <p className="pf-role">Ученик курса КРЕСТ</p>
         </div>
 
+        <p className="pf-section">Активность</p>
+        <ProfileActivity />
+
+        <p className="pf-section">О курсе</p>
         <div className="pf-card">
           <div className="pf-row">
             <span className="pf-row__label">Курс</span>

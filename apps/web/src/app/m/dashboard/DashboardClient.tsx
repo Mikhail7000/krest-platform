@@ -23,6 +23,8 @@ function getInitData(): string {
 export function DashboardClient() {
   const { status, user, errorMessage } = useTelegram()
   const [streak, setStreak] = useState<number | null>(null)
+  // Случайная мотивационная фраза при каждом заходе в приложение
+  const [phraseIdx] = useState(() => Math.floor(Math.random() * STATUS_PHRASES.length))
 
   useEffect(() => {
     if (status !== 'ready') return
@@ -88,8 +90,8 @@ export function DashboardClient() {
 
   const name = user?.firstName ?? 'друг'
   const initial = (user?.firstName?.[0] ?? 'У').toUpperCase()
-  // Мотивационный статус наверху — ротация по стрику; до загрузки — нейтральный текст
-  const subtitle = streak !== null ? STATUS_PHRASES[streak % STATUS_PHRASES.length] : FALLBACK_SUBTITLE
+  // Случайная фраза при входе (показывается сразу, не зависит от стрика)
+  const subtitle = STATUS_PHRASES[phraseIdx] ?? FALLBACK_SUBTITLE
 
   return (
     <div className="miniapp-container" style={{ paddingBottom: 0 }}>
