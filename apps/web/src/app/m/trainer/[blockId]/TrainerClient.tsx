@@ -96,17 +96,16 @@ export function TrainerClient({ blockId }: { blockId: number }) {
       </header>
 
       <div className="trainer-chips">
-        {multiBlock &&
-          data.blocks.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              className={`trainer-chip${filter === b.id ? ' trainer-chip--active' : ''}`}
-              onClick={() => setFilter(b.id)}
-            >
-              Блок {b.order_num}
-            </button>
-          ))}
+        {data.blocks.map((b) => (
+          <button
+            key={b.id}
+            type="button"
+            className={`trainer-chip${filter === b.id ? ' trainer-chip--active' : ''}`}
+            onClick={() => setFilter(b.id)}
+          >
+            Блок {b.order_num}
+          </button>
+        ))}
         {multiBlock && (
           <button
             type="button"
