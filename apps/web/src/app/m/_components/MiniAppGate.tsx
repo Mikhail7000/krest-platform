@@ -13,6 +13,13 @@ export function MiniAppGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (status !== 'ready' || !initData) return
 
+    // Отметить ежедневную активность (заход в приложение) — fire-and-forget
+    fetch('/api/m/activity/ping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData }),
+    }).catch(() => {})
+
     const checkOnboarding = async () => {
       try {
         const res = await fetch('/api/miniapp/profile', {
