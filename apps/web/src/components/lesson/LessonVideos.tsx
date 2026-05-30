@@ -70,17 +70,15 @@ export function LessonVideos({ videos }: { videos: VideoResource[] }) {
               {v.is_required && <span className="lesson-badge">обязательно</span>}
             </h2>
             {v.description_ru && <p className="lesson-card__desc">{v.description_ru}</p>}
-            <div className="lesson-video">
-              <KinescopePlayerNoSkip
-                blockResourceId={v.id}
-                videoId={v.kinescope_id}
-                initialMaxWatched={p?.maxWatchedSeconds ?? 0}
-                initialTotal={p?.totalSeconds ?? null}
-                // Тестировщик (canSkip): видео сразу «просмотрено» — свободная перемотка
-                initialCompleted={canSkip || !!p?.completedAt}
-                showWatchedButton={canSkip}
-              />
-            </div>
+            <KinescopePlayerNoSkip
+              blockResourceId={v.id}
+              videoId={v.kinescope_id}
+              initialMaxWatched={p?.maxWatchedSeconds ?? 0}
+              initialTotal={p?.totalSeconds ?? null}
+              // Тестировщик (canSkip): видео сразу «просмотрено» — свободная перемотка
+              initialCompleted={canSkip || !!p?.completedAt}
+              showWatchedButton={canSkip}
+            />
             {v.summary_md ? (
               <details className="lesson-details">
                 <summary>Конспект</summary>

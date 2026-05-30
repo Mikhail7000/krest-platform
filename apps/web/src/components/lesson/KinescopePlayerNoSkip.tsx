@@ -200,20 +200,25 @@ export function KinescopePlayerNoSkip({
   }, [saveProgress])
 
   return (
-    <div className="kp">
-      <div className="kp__frame" ref={containerRef} />
-      {!completed && (
-        <div className="kp__progress" aria-hidden="true">
-          <div className="kp__progress-bar" style={{ width: `${progressPercent}%` }} />
+    <>
+      <div className="lesson-video">
+        <div className="kp">
+          <div className="kp__frame" ref={containerRef} />
+          {!completed && (
+            <div className="kp__progress" aria-hidden="true">
+              <div className="kp__progress-bar" style={{ width: `${progressPercent}%` }} />
+            </div>
+          )}
+          {error && <div className="kp__error">{error}</div>}
         </div>
-      )}
-      {completed && <div className="kp__badge">✓ Просмотрено — можно перематывать свободно</div>}
+      </div>
+      {/* Плашка/кнопка — ПОД видео, чтобы не перекрывать play и контролы */}
+      {completed && <div className="kp-watched">✓ Просмотрено — перематывать можно свободно</div>}
       {showWatchedButton && !completed && (
         <button type="button" className="kp__watched-btn" onClick={markWatched}>
-          Просмотрено
+          Отметить просмотренным
         </button>
       )}
-      {error && <div className="kp__error">{error}</div>}
-    </div>
+    </>
   )
 }
