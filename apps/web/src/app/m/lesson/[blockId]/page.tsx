@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Database } from '../../../../../../../packages/supabase/src/types'
 import { LessonVideos } from '@/components/lesson/LessonVideos'
-import { BlockProgressBanner } from './BlockProgressBanner'
+import { BlockProgress } from './BlockProgress'
 import { Stage4Nav } from './Stage4Nav'
 import './lesson.css'
 
@@ -146,7 +146,7 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
         {block.subtitle_ru && <p className="lesson-header__subtitle">{block.subtitle_ru}</p>}
       </header>
 
-      <BlockProgressBanner blockId={id} />
+      <BlockProgress blockId={id} />
 
       <LessonVideos videos={videoResources} />
 
