@@ -257,18 +257,6 @@
     });
   },{passive:true});
 
-  // параллакс: большие шары двигаются за скроллом ленты
-  const orbs=[...document.querySelectorAll('.orb')];
-  let ticking=false;
-  deck.addEventListener('scroll',()=>{
-    if(ticking)return;ticking=true;
-    requestAnimationFrame(()=>{
-      const y=deck.scrollTop;
-      orbs.forEach(o=>{o.style.transform='translate3d(0,'+(y*parseFloat(o.dataset.speed||0))+'px,0)'});
-      ticking=false;
-    });
-  },{passive:true});
-
   // активный слайд = раскрытие контента + подсветка точки
   const io=new IntersectionObserver((es)=>{
     es.forEach(e=>{
