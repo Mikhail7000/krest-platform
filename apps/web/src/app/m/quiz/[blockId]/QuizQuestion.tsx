@@ -9,6 +9,8 @@ export interface QuizQuestionData {
   question_type: 'single_choice' | 'multi_choice' | 'free_text'
   options: string[] | null
   order_index: number
+  // В экзамене — название блока вопроса (показываем вместо «Блок N»)
+  block_title?: string | null
 }
 
 interface Props {
@@ -45,6 +47,7 @@ export function QuizQuestion({ question, index, answer, onChange, audioAnswer }:
 
   return (
     <section className="quiz-card">
+      {question.block_title && <span className="quiz-question__block">{question.block_title}</span>}
       <span className="quiz-question__label">Вопрос {index + 1}</span>
       <p className="quiz-question__text">{question_text}</p>
 

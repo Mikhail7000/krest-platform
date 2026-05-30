@@ -92,10 +92,22 @@ export async function POST(req: NextRequest, { params }: Params) {
     return err('No questions found for this exam', 'NO_QUESTIONS', 404)
   }
 
+  // Названия блоков — чтобы в экзамене показывать «Принцип Сотворения», а не «Блок 2»
+  const blockIds = [...new Set((questions as { block_id: number | null }[]).map((q) => q.block_id).filter((b): b is number => !!b))]
+  const { data: blocksData } = await supabase
+    .from('blocks')
+    .select('id, title_ru')
+    .in('id', blockIds)
+  const titleById = new Map((blocksData ?? []).map((b) => [b.id, b.title_ru]))
+  const questionsWithBlock = (questions as Array<{ block_id: number | null }>).map((q) => ({
+    ...q,
+    block_title: q.block_id ? titleById.get(q.block_id) ?? null : null,
+  }))
+
   return NextResponse.json({
     ok: true,
     type,
-    questions,
+    questions: questionsWithBlock,
     attempts_used: attemptsUsed,
     attempts_remaining: attemptsRemaining,
     pass_pct: passPct,

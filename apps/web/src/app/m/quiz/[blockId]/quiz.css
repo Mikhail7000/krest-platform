@@ -68,6 +68,15 @@
   color: var(--tg-hint, #9CA3AF);
   margin-bottom: 0.5rem;
 }
+.quiz-question__block {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-solid);
+  margin-bottom: 0.2rem;
+}
 .quiz-question__text {
   font-size: 0.9875rem;
   font-weight: 700;

@@ -104,6 +104,7 @@ export function ExamResult({ result, questions, examType, onRetry }: Props) {
                 <div className={`quiz-q-result__verdict quiz-q-result__verdict--${r.correct ? 'pass' : 'fail'}`}>
                   {r.correct ? '✓ Верно' : '✗ Неверно'}
                 </div>
+                {q?.block_title && <span className="quiz-question__block">{q.block_title}</span>}
                 {q && <p className="quiz-q-result__text">{q.question_text}</p>}
                 <p className="quiz-q-result__answer-row">
                   Ваш ответ: <span>{r.your_answer}</span>
