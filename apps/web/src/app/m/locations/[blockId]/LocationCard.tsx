@@ -81,7 +81,7 @@ interface StageProps {
   captureAttr?: string
 }
 
-function RecordStage({ locationId, medium, maxRecordSecs, onResult, accept, label, captureAttr }: StageProps) {
+function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: StageProps) {
   const [state, setState] = useState<RecordingState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [blob, setBlob] = useState<Blob | null>(null)
@@ -90,7 +90,6 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, accept, labe
   const [recordedMime, setRecordedMime] = useState<string>('')
   const mediaRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
-  const fileRef = useRef<HTMLInputElement>(null)
   const livePreviewRef = useRef<HTMLVideoElement | null>(null)
   const timerSecs = useTimer(state === 'recording')
   const hasMediaDevices = typeof navigator !== 'undefined' && !!navigator.mediaDevices
@@ -195,12 +194,6 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, accept, labe
     }
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    submitBlob(file, file.name)
-  }
-
   const isRecording = state === 'recording'
   const isSubmitting = state === 'submitting'
   const ext = recordedMime.startsWith('video/mp4')
@@ -293,22 +286,6 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, accept, labe
                 {label}
               </button>
             )}
-            <button
-              type="button"
-              className="location-btn location-btn--ghost"
-              onClick={() => fileRef.current?.click()}
-              disabled={isSubmitting}
-            >
-              Загрузить файл
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept={accept}
-              className="location-file-input"
-              onChange={handleFileChange}
-              {...(captureAttr ? { capture: captureAttr as 'environment' | 'user' } : {})}
-            />
           </div>
         )}
 
@@ -339,26 +316,6 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, accept, labe
             </button>
           )
         ) : null}
-        {!isRecording && (
-          <>
-            <button
-              type="button"
-              className="location-btn location-btn--ghost"
-              onClick={() => fileRef.current?.click()}
-              disabled={isSubmitting}
-            >
-              Загрузить файл
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept={accept}
-              className="location-file-input"
-              onChange={handleFileChange}
-              {...(captureAttr ? { capture: captureAttr as 'environment' | 'user' } : {})}
-            />
-          </>
-        )}
         {blob && !isRecording && state !== 'submitting' && (
           <button
             type="button"
