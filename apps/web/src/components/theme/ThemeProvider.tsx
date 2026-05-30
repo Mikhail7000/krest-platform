@@ -63,16 +63,17 @@ export function useTheme(): ThemeContextValue {
 }
 
 /**
- * Инлайн-скрипт: ставит data-theme на <html> до первой отрисовки.
- *
- * СЕЙЧАС: тёмная тема убрана из miniapp — всегда светлая (форсим 'light',
- * localStorage игнорируем). Инфраструктура темы (ThemeProvider/ThemeToggle/
- * ThemedBackground/dark-токены в CSS) сохранена для быстрого возврата dark.
- * Чтобы вернуть переключение: читать localStorage здесь, рендерить
- * <ThemedBackground/> в layout и <ThemeToggle/> где нужно.
+ * Инлайн-скрипт: ставит data-theme на <html> до первой отрисовки (без вспышки).
+ * Читает сохранённый выбор из localStorage; по умолчанию — светлая тема.
+ * Тёмная — чистый тёмный фон (без орбов/звёзд), переключается кнопкой солнце/луна.
  */
 export const themeNoFlashScript = `
 (function() {
-  document.documentElement.dataset.theme = 'light';
+  try {
+    var t = localStorage.getItem('${THEME_STORAGE_KEY}');
+    document.documentElement.dataset.theme = (t === 'dark') ? 'dark' : 'light';
+  } catch (e) {
+    document.documentElement.dataset.theme = 'light';
+  }
 })();
 `

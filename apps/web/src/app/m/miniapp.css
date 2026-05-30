@@ -50,10 +50,18 @@
   --on-accent-tint: #ffffff;
 }
 
-/* Контент поверх звёздного фона */
+/* Контент поверх фона */
 .miniapp-content {
   position: relative;
   z-index: 1;
+}
+
+/* Плавающая кнопка темы (солнце/луна) — правый верхний угол, на всех экранах */
+.m-theme-fab {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 0.6rem);
+  right: 0.85rem;
+  z-index: 60;
 }
 
 .miniapp-container {

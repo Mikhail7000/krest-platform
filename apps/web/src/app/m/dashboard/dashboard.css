@@ -12,6 +12,7 @@
   align-items: center;
   gap: 0.75rem;
   padding-top: 0.25rem;
+  padding-right: 3.25rem; /* место под плавающую кнопку темы в углу */
   margin-bottom: 1.5rem;
 }
 .db-avatar {
