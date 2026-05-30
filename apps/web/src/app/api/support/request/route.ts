@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHmac } from 'crypto'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { sendTelegramMessage } from '@/lib/telegram/send'
 
 /**
  * POST /api/support/request
@@ -141,6 +142,15 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Уведомление владельцу/админам в Telegram (не блокирует ответ)
+    const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => !isNaN(n))
+    const from = tgUsername ?? `id ${tgId}`
+    const notifyText = `🆘 <b>Запрос поддержки</b>\n\nОт: ${from}\n\n${message}`
+    await Promise.all(adminChatIds.map((cid) => sendTelegramMessage(cid, notifyText)))
 
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (err) {

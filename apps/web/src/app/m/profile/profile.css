@@ -40,6 +40,23 @@
   padding: 0.5rem 1.125rem;
 }
 
+.pf-linkrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.125rem;
+  text-decoration: none;
+}
+.pf-linkrow .pf-row__label {
+  font-size: 0.9375rem;
+  color: #16181d;
+  font-weight: 600;
+}
+.pf-linkrow__arrow {
+  color: #c2c6cf;
+  font-size: 1.25rem;
+}
+
 /* Заголовок секции профиля */
 .pf-section {
   font-size: 0.75rem;

@@ -4,7 +4,10 @@ import Link from 'next/link'
 import { useEffect, useState, type ReactNode } from 'react'
 import type { Database } from '../../../../../../packages/supabase/src/types'
 import { IconGraduation, IconStar, IconTrophy } from '@/app/m/_components/icons'
+import { pluralDays } from '@/lib/activity/streak'
 import type { DashboardData } from './loadDashboard'
+
+const BLOCK_DAYS = 7
 
 type Block = Database['public']['Tables']['blocks']['Row']
 type BlockProgress = Database['public']['Tables']['student_block_progress']['Row']
@@ -54,6 +57,28 @@ function BlockCard({ block, progress, canSkip, prevGroupUnlocked }: BlockCardPro
     variant === 'active' && 'db-block-card__status--active',
   ].filter(Boolean).join(' ')
 
+  // «Осталось дней» — блок длится 7 полных дней с момента открытия
+  let daysNode: ReactNode = null
+  const unlockedAt = progress?.block_unlocked_at
+  if (unlockedAt && !progress?.block_passed_at) {
+    const elapsed = Math.min(
+      BLOCK_DAYS,
+      Math.max(0, Math.floor((Date.now() - new Date(unlockedAt).getTime()) / 86_400_000)),
+    )
+    const left = BLOCK_DAYS - elapsed
+    const pct = Math.round((elapsed / BLOCK_DAYS) * 100)
+    daysNode = (
+      <span className="db-block-card__days">
+        <span className="db-block-card__days-label">
+          {left > 0 ? `Осталось ${left} ${pluralDays(left)}` : 'Можно сдавать'} · {elapsed}/{BLOCK_DAYS}
+        </span>
+        <span className="db-days-bar">
+          <span className="db-days-bar__fill" style={{ width: `${pct}%` }} />
+        </span>
+      </span>
+    )
+  }
+
   return (
     <Link href={`/m/lesson/${block.id}`} className={cardClass}>
       <span className="db-block-card__num">{block.order_num ?? block.id}</span>
@@ -62,6 +87,7 @@ function BlockCard({ block, progress, canSkip, prevGroupUnlocked }: BlockCardPro
           {block.title_ru ?? `Блок ${block.order_num ?? block.id}`}
         </span>
         <span className={statusClass}>{isDone ? `${label} ✓` : label}</span>
+        {daysNode}
       </span>
       {!isLocked && <span className="db-block-card__arrow">›</span>}
     </Link>

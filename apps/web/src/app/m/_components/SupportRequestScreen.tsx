@@ -2,7 +2,13 @@
 
 import { useState } from 'react'
 
-export function SupportRequestScreen() {
+export function SupportRequestScreen({
+  title = 'Доступ запрещён',
+  subtitle = 'Обратитесь к вашему наставнику или напишите нам:',
+}: {
+  title?: string
+  subtitle?: string
+} = {}) {
   const [message, setMessage] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -73,9 +79,9 @@ export function SupportRequestScreen() {
       <div className="w-full max-w-xs">
         <div className="mb-6 text-center">
           <div className="mb-4 text-5xl">⚠️</div>
-          <h1 className="text-xl font-bold text-[#16181D] dark:text-white mb-2 wrap-break-word">Доступ запрещён</h1>
+          <h1 className="text-xl font-bold text-[#16181D] dark:text-white mb-2 wrap-break-word">{title}</h1>
           <p className="text-sm text-gray-500 dark:text-white/55 wrap-break-word">
-            Обратитесь к вашему наставнику или напишите нам:
+            {subtitle}
           </p>
         </div>
 

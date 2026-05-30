@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { computeActivity } from '@/lib/activity/streak'
 
 // Telegram Update types
 interface TelegramUser {
@@ -118,6 +119,55 @@ export async function POST(request: NextRequest) {
 
   const chatId = message.chat.id
   const text = message.text.trim()
+
+  // /help — помощь и связь с разработчиком
+  if (text.startsWith('/help')) {
+    await sendTelegramMessage(
+      chatId,
+      `<b>Помощь ✝️</b>\n\nНужна помощь или нашёл ошибку — напиши разработчику: @Rogue02\n\nВнутри приложения тоже есть кнопка «Помощь и поддержка».`,
+      { withMiniAppButton: true },
+    )
+    return NextResponse.json({ ok: true })
+  }
+
+  // /progress — мой прогресс
+  if (text.startsWith('/progress')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('telegram_chat_id', chatId)
+      .maybeSingle()
+    if (!profile) {
+      await sendTelegramMessage(chatId, `Сначала открой приложение командой /start.`, {
+        withMiniAppButton: true,
+      })
+      return NextResponse.json({ ok: true })
+    }
+    const [{ data: bp }, { data: act }] = await Promise.all([
+      supabase.from('student_block_progress').select('block_passed_at').eq('user_id', profile.id),
+      supabase
+        .from('student_daily_activity')
+        .select('activity_date')
+        .eq('user_id', profile.id)
+        .eq('opened', true),
+    ])
+    const passed = ((bp ?? []) as { block_passed_at: string | null }[]).filter(
+      (b) => b.block_passed_at,
+    ).length
+    const streak = computeActivity(
+      ((act ?? []) as { activity_date: string }[]).map((r) => r.activity_date),
+      [],
+      7,
+    ).streak
+    await sendTelegramMessage(
+      chatId,
+      `<b>Твой прогресс ✝️</b>\n\nПройдено блоков: <b>${passed} из 10</b>\nДней подряд: <b>${streak}</b>\n\nПродолжай — день начинается с вечера 🙏`,
+      { withMiniAppButton: true },
+    )
+    return NextResponse.json({ ok: true })
+  }
 
   // Handle /start command
   if (text.startsWith('/start')) {
