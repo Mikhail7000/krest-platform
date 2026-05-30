@@ -1,0 +1,94 @@
+/* Трекинг — список участников теста с прогрессом */
+.tr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.tr-empty {
+  margin-top: 2rem;
+  text-align: center;
+  color: #9097a1;
+  font-size: 0.95rem;
+}
+.tr-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 18px;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+}
+.tr-card--me {
+  border-color: var(--accent-solid, #6d5dfc);
+  box-shadow: 0 6px 22px rgba(109, 93, 252, 0.18);
+}
+.tr-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.tr-id {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.tr-name {
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: #16181d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tr-you {
+  color: var(--accent-solid, #6d5dfc);
+  font-weight: 600;
+}
+.tr-role {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #9097a1;
+}
+.tr-pct {
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--accent-solid, #6d5dfc);
+}
+.tr-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+.tr-bar {
+  margin-top: 0.6rem;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+}
+.tr-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent-solid, #6d5dfc);
+  transition: width 0.3s;
+}
+.tr-cal {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.6rem;
+}
+.tr-dot {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+}
+.tr-dot--on {
+  background: var(--accent-solid, #6d5dfc);
+}
