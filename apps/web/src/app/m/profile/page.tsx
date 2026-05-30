@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { BottomNav } from '../_components/BottomNav'
 import { ProfileActivity } from './ProfileActivity'
+import { AddToHomeScreenButton } from './AddToHomeScreenButton'
 import '../dashboard/dashboard.css'
 import './profile.css'
 
@@ -35,6 +36,8 @@ export default function ProfilePage() {
             <span className="pf-row__value">Русский</span>
           </div>
         </div>
+
+        <AddToHomeScreenButton />
 
         <p className="pf-section">Помощь</p>
         <Link href="/m/support" className="pf-card pf-linkrow">
