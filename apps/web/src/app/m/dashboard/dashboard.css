@@ -95,6 +95,52 @@
   color: #9097a1;
 }
 
+/* ── Прогресс курса (всегда виден) ───────────────────────────────── */
+.db-course {
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 22px rgba(0, 0, 0, 0.05);
+  padding: 0.875rem 1rem;
+  margin-bottom: 1rem;
+}
+.db-course__top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.db-course__pct {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--accent-solid);
+}
+.db-course__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+.db-course__bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin: 0.55rem 0;
+}
+.db-course__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent-gradient);
+}
+.db-course__current {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+.db-course__current b {
+  color: #16181d;
+}
+
 /* ── Чипы-сегменты (Блоки 1–5 / 6–10) ────────────────────────────── */
 .db-chips {
   display: flex;

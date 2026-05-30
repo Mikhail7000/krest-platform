@@ -126,6 +126,7 @@ export function BlockList() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [group, setGroup] = useState<'g1' | 'g2'>('g1')
+  const [currentUnlockedAt, setCurrentUnlockedAt] = useState<string | null>(null)
 
   useEffect(() => {
     const initData = getInitData()
@@ -145,6 +146,26 @@ export function BlockList() {
       })
     return () => { cancelled = true }
   }, [])
+
+  // Запускаем 7-дневный отсчёт текущего блока при заходе на дашборд (чтобы «осталось дней» было видно сразу)
+  useEffect(() => {
+    if (!data) return
+    const sorted = [...data.blocks].sort((a, b) => (a.order_num ?? 0) - (b.order_num ?? 0))
+    const current = sorted.find((b) => !data.progressByBlockId[b.id]?.block_passed_at)
+    if (!current) return
+    const existing = data.progressByBlockId[current.id]?.block_unlocked_at
+    if (existing) { setCurrentUnlockedAt(existing); return }
+    fetch(`/api/m/block-open/${current.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: getInitData() }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { block_unlocked_at?: string | null } | null) => {
+        if (d?.block_unlocked_at) setCurrentUnlockedAt(d.block_unlocked_at)
+      })
+      .catch(() => {})
+  }, [data])
 
   if (loading || !data) {
     return (
@@ -172,8 +193,40 @@ export function BlockList() {
   const midExamActive = allBlock5Passed || canSkip
   const finalExamActive = (midExamPassed && allBlock10Passed) || canSkip
 
+  // Прогресс курса (всегда виден): % по сданным блокам + дни текущего блока
+  const totalBlocks = blocks.length || 10
+  const passedCount = blocks.filter((b) => progressByBlockId[b.id]?.block_passed_at).length
+  const coursePct = Math.round((passedCount / totalBlocks) * 100)
+  const sortedBlocks = [...blocks].sort((a, b) => (a.order_num ?? 0) - (b.order_num ?? 0))
+  const currentBlock = sortedBlocks.find((b) => !progressByBlockId[b.id]?.block_passed_at) ?? null
+  const unlockedAt = currentBlock
+    ? progressByBlockId[currentBlock.id]?.block_unlocked_at ?? currentUnlockedAt
+    : null
+  let daysLine: string | null = null
+  if (currentBlock && unlockedAt) {
+    const elapsed = Math.min(7, Math.max(0, Math.floor((Date.now() - new Date(unlockedAt).getTime()) / 86_400_000)))
+    const left = 7 - elapsed
+    daysLine = left > 0 ? `Осталось ${left} ${pluralDays(left)} · день ${Math.min(7, elapsed + 1)}/7` : 'Текущий блок можно сдавать'
+  }
+
   return (
     <div className="miniapp-container" style={{ paddingTop: 0 }}>
+      <div className="db-course">
+        <div className="db-course__top">
+          <span className="db-course__pct">{coursePct}%</span>
+          <span className="db-course__label">курс пройден · {passedCount}/{totalBlocks} блоков</span>
+        </div>
+        <div className="db-course__bar">
+          <span className="db-course__fill" style={{ width: `${coursePct}%` }} />
+        </div>
+        {currentBlock && (
+          <div className="db-course__current">
+            Текущий: <b>{currentBlock.title_ru ?? `Блок ${currentBlock.order_num}`}</b>
+            {daysLine ? ` — ${daysLine}` : ''}
+          </div>
+        )}
+      </div>
+
       <div className="db-chips">
         <button
           type="button"
