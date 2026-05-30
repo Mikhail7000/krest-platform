@@ -34,7 +34,7 @@ export default async function RecitationPage({ params }: { params: Promise<{ blo
 
   return (
     <div className="miniapp-container recitation-page">
-      <Link href={`/m/lesson/${id}`} className="recitation-back">← К уроку</Link>
+      <Link href={`/m/lesson/${id}`} className="stage-back">← К уроку</Link>
 
       <header className="recitation-header">
         <p className="recitation-header__eyebrow">Блок {block.order_num ?? id} — Пересказ</p>

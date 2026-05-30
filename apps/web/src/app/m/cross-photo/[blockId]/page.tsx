@@ -34,7 +34,7 @@ export default async function CrossPhotoPage({ params }: { params: Promise<{ blo
 
   return (
     <div className="miniapp-container cross-photo-page">
-      <Link href={`/m/lesson/${id}`} className="cp-back">← К уроку</Link>
+      <Link href={`/m/lesson/${id}`} className="stage-back">← К уроку</Link>
 
       <header className="cp-header">
         <p className="cp-header__eyebrow">Блок {block.order_num ?? id} — Ежедневное фото</p>

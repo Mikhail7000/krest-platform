@@ -130,6 +130,26 @@
 
 .miniapp-status-error { color: var(--tg-destructive, #EF4444); }
 
+/* Кнопка «К уроку» на этапных экранах — заметная пилюля (легко найти и нажать) */
+.stage-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  margin-bottom: 1.25rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--accent-solid);
+  background: color-mix(in srgb, var(--accent-solid) 12%, #fff);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 24%, transparent);
+  transition: transform 0.1s;
+}
+.stage-back:active {
+  transform: scale(0.97);
+}
+
 /* Основная кнопка онбординга: тёмная «пилюля» в светлой теме (как референсы),
    фирменный градиент — в тёмной. */
 .onb-cta {

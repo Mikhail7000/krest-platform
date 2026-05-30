@@ -34,7 +34,7 @@ export default async function LocationsPage({ params }: { params: Promise<{ bloc
 
   return (
     <div className="miniapp-container locations-page">
-      <Link href={`/m/lesson/${id}`} className="locations-back">← К уроку</Link>
+      <Link href={`/m/lesson/${id}`} className="stage-back">← К уроку</Link>
 
       <header className="locations-header">
         <p className="locations-header__eyebrow">Блок {block.order_num ?? id} — Местописания</p>

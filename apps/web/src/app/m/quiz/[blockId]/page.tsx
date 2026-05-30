@@ -36,7 +36,7 @@ export default async function QuizPage({ params }: { params: Promise<{ blockId: 
 
   return (
     <div className="miniapp-container quiz-page">
-      <Link href={`/m/lesson/${id}`} className="quiz-back">← К уроку</Link>
+      <Link href={`/m/lesson/${id}`} className="stage-back">← К уроку</Link>
 
       <header className="quiz-header">
         <p className="quiz-header__eyebrow">Блок {block.order_num ?? id} — Тест</p>

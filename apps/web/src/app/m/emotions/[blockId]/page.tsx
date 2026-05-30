@@ -34,7 +34,7 @@ export default async function EmotionsPage({ params }: { params: Promise<{ block
 
   return (
     <div className="miniapp-container emotions-page">
-      <Link href={`/m/lesson/${id}`} className="emotions-back">← К уроку</Link>
+      <Link href={`/m/lesson/${id}`} className="stage-back">← К уроку</Link>
 
       <header className="emotions-header">
         <p className="emotions-header__eyebrow">Блок {block.order_num ?? id} — Эмоции и свидетельства</p>

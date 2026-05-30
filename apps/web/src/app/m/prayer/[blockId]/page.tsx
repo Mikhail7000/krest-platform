@@ -34,12 +34,12 @@ export default async function PrayerPage({ params }: { params: Promise<{ blockId
 
   return (
     <div className="miniapp-container prayer-page">
-      <Link href={`/m/lesson/${id}`} className="prayer-back">← К уроку</Link>
+      <Link href={`/m/lesson/${id}`} className="stage-back">← К уроку</Link>
 
       <header className="prayer-header">
         <p className="prayer-header__eyebrow">Блок {block.order_num ?? id} — Молитва по кресту</p>
         <p className="prayer-header__motto">
-          Очень важно молиться каждый день — проси, чтобы Отец Небесный открыл тебе дух креста.
+          Очень важно молиться каждый день — проси, чтобы Отец Небесный открыл тебе Дух Креста.
         </p>
       </header>
 

@@ -34,7 +34,7 @@ export default async function FridayPage({ params }: { params: Promise<{ blockId
 
   return (
     <div className="miniapp-container friday-page">
-      <Link href={`/m/lesson/${id}`} className="friday-back">← К уроку</Link>
+      <Link href={`/m/lesson/${id}`} className="stage-back">← К уроку</Link>
 
       <header className="friday-header">
         <p className="friday-header__eyebrow">Блок {block.order_num ?? id} — Эпоха пятницы</p>
