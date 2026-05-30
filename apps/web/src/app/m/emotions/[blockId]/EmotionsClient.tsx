@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRecorder, extFor } from '@/app/m/trainer/[blockId]/useRecorder'
 
 interface EmotionItem {
   id: string
@@ -15,14 +16,18 @@ function getInitData(): string {
   return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp?.initData ?? ''
 }
 
+type Medium = 'audio' | 'video_note'
+
 interface Props { blockId: number }
 
 export function EmotionsClient({ blockId }: Props) {
   const [items, setItems] = useState<EmotionItem[]>([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
-  const audioRef = useRef<HTMLInputElement>(null)
-  const videoRef = useRef<HTMLInputElement>(null)
+  const [medium, setMedium] = useState<Medium | null>(null)
+  const isVideo = medium === 'video_note'
+  const rec = useRecorder(isVideo, 60)
+  const liveRef = useRef<HTMLVideoElement | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -39,6 +44,15 @@ export function EmotionsClient({ blockId }: Props) {
   }, [blockId])
 
   useEffect(() => { load() }, [load])
+
+  // live-превью кружка
+  useEffect(() => {
+    const el = liveRef.current
+    if (!el || !rec.stream) return
+    el.srcObject = rec.stream
+    el.play().catch(() => undefined)
+    return () => { try { el.srcObject = null } catch { /* noop */ } }
+  }, [rec.stream])
 
   const submitText = async () => {
     if (text.trim().length < 1) return
@@ -59,18 +73,22 @@ export function EmotionsClient({ blockId }: Props) {
     }
   }
 
-  const uploadMedia = async (kind: 'audio' | 'video_note', file: File) => {
+  const sendRecording = async () => {
+    if (!rec.blob || !medium) return
     setBusy(true)
     try {
+      const file = new File([rec.blob], `emotion.${extFor(rec.mime)}`, { type: rec.blob.type })
       const fd = new FormData()
       fd.append('initData', getInitData())
-      fd.append('kind', kind)
+      fd.append('kind', medium)
       fd.append('file', file, file.name)
       const res = await fetch(`/api/m/emotions/${blockId}`, { method: 'POST', body: fd })
       if (res.ok) {
         const data = await res.json() as { items: EmotionItem[] }
         setItems(data.items ?? [])
       }
+      rec.reset()
+      setMedium(null)
     } finally {
       setBusy(false)
     }
@@ -90,30 +108,53 @@ export function EmotionsClient({ blockId }: Props) {
         Отправить текст
       </button>
 
-      <div className="emotions-media-row">
-        <button type="button" className="emotions-media-btn" onClick={() => audioRef.current?.click()} disabled={busy}>
-          🎙️ Аудио
-        </button>
-        <button type="button" className="emotions-media-btn" onClick={() => videoRef.current?.click()} disabled={busy}>
-          🎥 Кружок
-        </button>
-      </div>
-      <input
-        ref={audioRef}
-        type="file"
-        accept="audio/*"
-        capture
-        className="emotions-file-input"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMedia('audio', f) }}
-      />
-      <input
-        ref={videoRef}
-        type="file"
-        accept="video/*"
-        capture="user"
-        className="emotions-file-input"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMedia('video_note', f) }}
-      />
+      {medium === null ? (
+        <div className="emotions-media-row">
+          <button type="button" className="emotions-media-btn" onClick={() => setMedium('audio')} disabled={busy}>
+            Голосовое
+          </button>
+          <button type="button" className="emotions-media-btn" onClick={() => setMedium('video_note')} disabled={busy}>
+            Кружок
+          </button>
+        </div>
+      ) : (
+        <div className="em-recorder">
+          {isVideo && (rec.state === 'recording' || rec.blobUrl) && (
+            <div className="em-circle">
+              {rec.state === 'recording' ? (
+                <video ref={liveRef} className="em-circle__video" autoPlay muted playsInline />
+              ) : (
+                <video key={rec.blobUrl} className="em-circle__video" src={rec.blobUrl ?? undefined} playsInline controls />
+              )}
+            </div>
+          )}
+          {rec.state === 'recording' && (
+            <p className="em-rec-timer"><span className="em-rec-dot" />{rec.secs}с / 60с</p>
+          )}
+          {!isVideo && rec.blobUrl && rec.state === 'recorded' && (
+            <audio className="emotions-item__media" src={rec.blobUrl} controls />
+          )}
+
+          <div className="emotions-media-row">
+            {rec.state === 'recording' ? (
+              <button type="button" className="emotions-media-btn" onClick={rec.stop}>Остановить</button>
+            ) : rec.state === 'recorded' ? (
+              <>
+                <button type="button" className="emotions-media-btn" onClick={rec.reset} disabled={busy}>Перезаписать</button>
+                <button type="button" className="emotions-btn" onClick={sendRecording} disabled={busy}>Отправить</button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="emotions-btn" onClick={rec.start}>
+                  {isVideo ? 'Записать кружок' : 'Записать голосовое'}
+                </button>
+                <button type="button" className="emotions-media-btn" onClick={() => { rec.reset(); setMedium(null) }}>Отмена</button>
+              </>
+            )}
+          </div>
+          {rec.error && <p className="emotions-busy" style={{ color: 'var(--color-error, #dc2626)' }}>{rec.error}</p>}
+        </div>
+      )}
 
       {busy && <p className="emotions-busy">Отправляем…</p>}
 

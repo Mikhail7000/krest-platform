@@ -110,3 +110,33 @@
 }
 .emotions-item__media { width: 100%; }
 video.emotions-item__media { border-radius: 10px; max-height: 320px; }
+
+/* Запись кружка — круглое окно (как в Telegram) */
+.em-recorder { margin-top: 0.75rem; }
+.em-circle {
+  width: min(60vw, 220px);
+  aspect-ratio: 1;
+  margin: 0.25rem auto 0.875rem;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+  border: 3px solid color-mix(in srgb, var(--accent-solid) 50%, transparent);
+}
+.em-circle__video { width: 100%; height: 100%; object-fit: cover; }
+.em-rec-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--color-error, #dc2626);
+}
+.em-rec-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--color-error, #dc2626);
+  animation: em-blink 1s ease-in-out infinite;
+}
+@keyframes em-blink { 50% { opacity: 0.3; } }
