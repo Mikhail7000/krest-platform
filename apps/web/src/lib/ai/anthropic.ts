@@ -12,6 +12,7 @@ export type AiPurpose =
   | 'check_quiz_answer'
   | 'compare_location'
   | 'summarize_transcript'
+  | 'check_cross_photo'
 
 export interface AnthropicCallOptions {
   model: string
@@ -22,6 +23,10 @@ export interface AnthropicCallOptions {
   maxTokens?: number
   timeoutMs?: number
   expectJson?: boolean
+  /** Изображение для vision-запроса (base64 без префикса data:) */
+  imageBase64?: string
+  /** MIME изображения, напр. 'image/jpeg' */
+  imageMediaType?: string
 }
 
 export interface AnthropicCallResult<T = string> {
@@ -54,11 +59,26 @@ export async function callAnthropic<T = unknown>(
   const maxTokens = opts.maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS
   const timeoutMs = opts.timeoutMs ?? ANTHROPIC_DEFAULT_TIMEOUT_MS
 
+  // Vision: если передано изображение — content становится массивом блоков
+  const userContent = opts.imageBase64
+    ? [
+        {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: opts.imageMediaType ?? 'image/jpeg',
+            data: opts.imageBase64,
+          },
+        },
+        { type: 'text', text: opts.userMessage },
+      ]
+    : opts.userMessage
+
   const body = {
     model: opts.model,
     max_tokens: maxTokens,
     system: opts.systemPrompt,
-    messages: [{ role: 'user', content: opts.userMessage }],
+    messages: [{ role: 'user', content: userContent }],
   }
 
   let lastError: unknown = null

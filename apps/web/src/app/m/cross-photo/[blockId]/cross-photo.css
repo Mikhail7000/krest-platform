@@ -35,6 +35,28 @@
   color: var(--tg-hint, #9CA3AF);
   margin-bottom: 0.25rem;
 }
+.cp-ai-feedback {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-solid) 9%, #fff);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 20%, transparent);
+}
+.cp-ai-feedback__label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-solid);
+  margin-bottom: 0.25rem;
+}
+.cp-ai-feedback p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #16181d;
+}
+
 .cp-progress-bar {
   height: 3px;
   background: var(--track);

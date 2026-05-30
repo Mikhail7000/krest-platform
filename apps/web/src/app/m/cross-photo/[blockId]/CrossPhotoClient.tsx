@@ -27,6 +27,8 @@ interface UploadResult {
   storage_path: string | null
   photo_url: string | null
   completed_count?: number
+  ai_feedback?: string | null
+  ai_matched?: boolean | null
 }
 
 function getInitData(): string {
@@ -38,10 +40,11 @@ interface DayCardProps {
   day: DayEntry
   isToday: boolean
   blockId: number
+  feedback?: string | null
   onUploaded: (result: UploadResult) => void
 }
 
-function DayCard({ day, isToday, blockId, onUploaded }: DayCardProps) {
+function DayCard({ day, isToday, blockId, feedback, onUploaded }: DayCardProps) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -96,6 +99,13 @@ function DayCard({ day, isToday, blockId, onUploaded }: DayCardProps) {
         />
       )}
 
+      {feedback && (
+        <div className="cp-ai-feedback">
+          <span className="cp-ai-feedback__label">Комментарий AI</span>
+          <p>{feedback}</p>
+        </div>
+      )}
+
       {isToday && !day.submitted && (
         <div>
           <label
@@ -130,6 +140,7 @@ export function CrossPhotoClient({ blockId }: Props) {
   const [days, setDays] = useState<DayEntry[]>([])
   const [completedCount, setCompletedCount] = useState(0)
   const [testMode, setTestMode] = useState(false)
+  const [feedbackByDate, setFeedbackByDate] = useState<Record<string, string>>({})
 
   const load = useCallback(async () => {
     setView('loading')
@@ -170,6 +181,9 @@ export function CrossPhotoClient({ blockId }: Props) {
     )
     if (result.completed_count !== undefined) setCompletedCount(result.completed_count)
     else if (result.submitted ?? true) setCompletedCount((c) => c + 1)
+    if (result.date && result.ai_feedback) {
+      setFeedbackByDate((m) => ({ ...m, [result.date as string]: result.ai_feedback as string }))
+    }
     // Перечитываем состояние: тестировщику после первого фото засчитается вся неделя
     void load()
   }
@@ -214,6 +228,7 @@ export function CrossPhotoClient({ blockId }: Props) {
           day={day}
           isToday={day.day_index === todayIndex}
           blockId={blockId}
+          feedback={feedbackByDate[day.date]}
           onUploaded={handleUploaded}
         />
       ))}

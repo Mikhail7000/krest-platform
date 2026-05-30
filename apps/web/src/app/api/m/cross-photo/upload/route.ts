@@ -21,6 +21,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { STUDENT_CROSS_PHOTOS_BUCKET } from '@/lib/ai/constants'
+import { checkCrossPhoto } from '@/lib/cross/check'
 
 export const dynamic = 'force-dynamic'
 
@@ -204,11 +205,35 @@ export async function POST(req: NextRequest) {
     .createSignedUrl(storagePath, 60 * 60)
   const photoUrl = signed?.signedUrl ?? null
 
+  // ИИ-проверка «креста блока» по фото (мягко, не блокирует). HEIC пропускаем —
+  // vision принимает jpeg/png/webp/gif.
+  let aiFeedback: string | null = null
+  let aiMatched: boolean | null = null
+  const VISION_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+  if (VISION_MIMES.has(mimeType)) {
+    try {
+      const { data: blk } = await supabase
+        .from('blocks')
+        .select('order_num, title_ru')
+        .eq('id', blockId)
+        .maybeSingle()
+      const order = (blk as { order_num?: number } | null)?.order_num ?? blockId
+      const title = (blk as { title_ru?: string } | null)?.title_ru ?? `Блок ${blockId}`
+      const r = await checkCrossPhoto(fileBuffer.toString('base64'), mimeType, order, title, userId)
+      aiFeedback = r.feedback
+      aiMatched = r.matched
+    } catch (e) {
+      console.error('[cross-photo/upload] AI check failed:', e)
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     date: dateStr,
     storage_path: storagePath,
     photo_url: photoUrl,
     completed_count: completedCount,
+    ai_feedback: aiFeedback,
+    ai_matched: aiMatched,
   })
 }
