@@ -2,6 +2,7 @@ import Script from 'next/script'
 import { TelegramProvider } from '@/components/telegram/TelegramProvider'
 import { ThemeProvider, themeNoFlashScript } from '@/components/theme/ThemeProvider'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
+import { ThemedBackground } from '@/components/theme/ThemedBackground'
 import { MiniAppGate } from './_components/MiniAppGate'
 import './miniapp.css'
 import './theme-dark.css'
@@ -20,6 +21,7 @@ export default function MiniAppLayout({ children }: { children: React.ReactNode 
       <ThemeProvider>
         <TelegramProvider>
           <div className="miniapp-root">
+            <ThemedBackground />
             <div className="m-theme-fab">
               <ThemeToggle variant="floating" />
             </div>

@@ -17,7 +17,8 @@
   text-rendering: optimizeLegibility;
 }
 
-[data-theme="dark"] .miniapp-root {
+[data-theme="dark"] .miniapp-root,
+[data-theme="stars"] .miniapp-root {
   background: #05060a;
   color: var(--tg-text, #e5e7eb);
 }
@@ -36,18 +37,29 @@
   --track: rgba(0, 0, 0, 0.08);
   --on-accent-tint: var(--accent-solid);
 }
-[data-theme="dark"] .miniapp-root {
-  --surface: linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
+/* Общие тёмные токены (ночь + звёзды) */
+[data-theme="dark"] .miniapp-root,
+[data-theme="stars"] .miniapp-root {
   --surface-2: rgba(255, 255, 255, 0.03);
+  --surface-border: rgba(255, 255, 255, 0.12);
+  --hairline: rgba(255, 255, 255, 0.07);
+  --section-title: rgba(255, 255, 255, 0.82);
+  --track: rgba(255, 255, 255, 0.1);
+  --on-accent-tint: #ffffff;
+}
+/* Чистая ночь — сплошные тёмные карточки */
+[data-theme="dark"] .miniapp-root {
+  --surface: #15171c;
+  --surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 34px rgba(0, 0, 0, 0.4);
+}
+/* Звёзды — «стекло» поверх звёздного неба */
+[data-theme="stars"] .miniapp-root {
+  --surface: linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
   --surface-border: rgba(255, 255, 255, 0.2);
   --surface-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     inset 0 -1px 0 rgba(0, 0, 0, 0.18),
     0 6px 20px rgba(0, 0, 0, 0.25);
-  --hairline: rgba(255, 255, 255, 0.06);
-  --section-title: rgba(255, 255, 255, 0.82);
-  --track: rgba(255, 255, 255, 0.1);
-  --on-accent-tint: #ffffff;
 }
 
 /* Контент поверх фона */
@@ -164,6 +176,7 @@
   background: #16181d;
   color: #fff;
 }
-[data-theme="dark"] .onb-cta {
+[data-theme="dark"] .onb-cta,
+[data-theme="stars"] .onb-cta {
   background: var(--accent-gradient);
 }

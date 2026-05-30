@@ -1,76 +1,85 @@
-/* Тёмная тема — чистый тёмный фон (без орбов/звёзд).
-   Аддитивный слой: светлая тема не трогается, здесь только [data-theme="dark"].
-   Покрывает экраны на «чистом» CSS (dashboard / profile / tracking / нижняя навигация).
-   Онбординг и контентные экраны темнеют сами (Tailwind dark: и семантические токены). */
+/* Тёмные темы для экранов на «чистом» CSS (dashboard / profile / tracking / навигация).
+   Две тёмные темы:
+     dark  — чистая ночь (сплошные тёмные карточки),
+     stars — звёздное небо (стеклянные полупрозрачные карточки + блюр).
+   Аддитивный слой: светлая тема не трогается. Онбординг и контентные экраны
+   темнеют сами (Tailwind dark: и семантические токены --surface/--track). */
 
-[data-theme="dark"] {
-  --d-card: #15171c;
-  --d-card-2: #1b1e25;
-  --d-border: rgba(255, 255, 255, 0.08);
-  --d-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 34px rgba(0, 0, 0, 0.4);
+/* Общие текст/треки */
+[data-theme="dark"],
+[data-theme="stars"] {
   --d-text: #f2f4f8;
   --d-muted: #9aa3b2;
   --d-muted-2: #7f8896;
   --d-track: rgba(255, 255, 255, 0.1);
   --d-arrow: #5b616c;
 }
+/* Карточки: ночь — сплошные, звёзды — стекло */
+[data-theme="dark"] {
+  --d-card: #15171c;
+  --d-border: rgba(255, 255, 255, 0.08);
+  --d-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 34px rgba(0, 0, 0, 0.4);
+}
+[data-theme="stars"] {
+  --d-card: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035));
+  --d-border: rgba(255, 255, 255, 0.16);
+  --d-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 24px rgba(0, 0, 0, 0.35);
+}
 
 /* ── Dashboard ─────────────────────────────────────────────────────── */
-[data-theme="dark"] .db-topbar__eyebrow,
-[data-theme="dark"] .db-streak-badge__cap { color: var(--d-muted-2); }
-[data-theme="dark"] .db-topbar__greeting { color: var(--d-text); }
-[data-theme="dark"] .db-hero__subtitle { color: var(--d-muted); }
+[data-theme="dark"] .db-topbar__eyebrow, [data-theme="stars"] .db-topbar__eyebrow,
+[data-theme="dark"] .db-streak-badge__cap, [data-theme="stars"] .db-streak-badge__cap { color: var(--d-muted-2); }
+[data-theme="dark"] .db-topbar__greeting, [data-theme="stars"] .db-topbar__greeting { color: var(--d-text); }
+[data-theme="dark"] .db-hero__subtitle, [data-theme="stars"] .db-hero__subtitle { color: var(--d-muted); }
 
-[data-theme="dark"] .db-streak-badge {
+[data-theme="dark"] .db-streak-badge, [data-theme="stars"] .db-streak-badge {
   background: color-mix(in srgb, var(--accent-solid) 22%, transparent);
   border-color: color-mix(in srgb, var(--accent-solid) 38%, transparent);
 }
 
-[data-theme="dark"] .db-course {
+[data-theme="dark"] .db-course, [data-theme="stars"] .db-course {
   background: var(--d-card);
   border-color: var(--d-border);
   box-shadow: var(--d-shadow);
 }
-[data-theme="dark"] .db-course__label { color: var(--d-text); }
-[data-theme="dark"] .db-course__bar,
-[data-theme="dark"] .db-days-bar { background: var(--d-track); }
+[data-theme="dark"] .db-course__label, [data-theme="stars"] .db-course__label { color: var(--d-text); }
+[data-theme="dark"] .db-course__bar, [data-theme="stars"] .db-course__bar,
+[data-theme="dark"] .db-days-bar, [data-theme="stars"] .db-days-bar { background: var(--d-track); }
 
-[data-theme="dark"] .db-chip {
+[data-theme="dark"] .db-chip, [data-theme="stars"] .db-chip {
   background: var(--d-card);
   border-color: var(--d-border);
   color: var(--d-muted);
 }
-[data-theme="dark"] .db-chip--active {
+[data-theme="dark"] .db-chip--active, [data-theme="stars"] .db-chip--active {
   background: var(--accent-solid);
   border-color: var(--accent-solid);
   color: #fff;
 }
 
-[data-theme="dark"] .db-block-card {
+[data-theme="dark"] .db-block-card, [data-theme="stars"] .db-block-card {
   background: var(--d-card);
   border-color: var(--d-border);
   box-shadow: var(--d-shadow);
 }
-[data-theme="dark"] .db-block-card:active {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.35);
-}
-[data-theme="dark"] .db-block-card__title { color: var(--d-text); }
-[data-theme="dark"] .db-block-card__status { color: var(--d-muted); }
-[data-theme="dark"] .db-block-card__arrow { color: var(--d-arrow); }
-[data-theme="dark"] .db-block-card--locked .db-block-card__num {
+[data-theme="dark"] .db-block-card__title, [data-theme="stars"] .db-block-card__title { color: var(--d-text); }
+[data-theme="dark"] .db-block-card__status, [data-theme="stars"] .db-block-card__status { color: var(--d-muted); }
+[data-theme="dark"] .db-block-card__arrow, [data-theme="stars"] .db-block-card__arrow { color: var(--d-arrow); }
+[data-theme="dark"] .db-block-card--locked .db-block-card__num,
+[data-theme="stars"] .db-block-card--locked .db-block-card__num {
   background: #2a2d35;
   color: var(--d-muted-2);
 }
 
-[data-theme="dark"] .db-exam-card {
+[data-theme="dark"] .db-exam-card, [data-theme="stars"] .db-exam-card {
   background: color-mix(in srgb, var(--accent-solid) 16%, transparent);
   border-color: color-mix(in srgb, var(--accent-solid) 34%, transparent);
   box-shadow: var(--d-shadow);
   color: var(--d-text);
 }
-[data-theme="dark"] .db-exam-card__title { color: var(--d-text); }
-[data-theme="dark"] .db-exam-card__hint { color: var(--d-muted); }
-[data-theme="dark"] .db-cert-link {
+[data-theme="dark"] .db-exam-card__title, [data-theme="stars"] .db-exam-card__title { color: var(--d-text); }
+[data-theme="dark"] .db-exam-card__hint, [data-theme="stars"] .db-exam-card__hint { color: var(--d-muted); }
+[data-theme="dark"] .db-cert-link, [data-theme="stars"] .db-cert-link {
   background: color-mix(in srgb, var(--color-success, #16a34a) 18%, transparent);
   border-color: color-mix(in srgb, var(--color-success, #16a34a) 36%, transparent);
 }
@@ -80,49 +89,65 @@
   background: rgba(16, 18, 23, 0.85);
   border-top-color: rgba(255, 255, 255, 0.07);
 }
-[data-theme="dark"] .db-navitem { color: var(--d-muted-2); }
-[data-theme="dark"] .db-navitem--active { color: var(--d-text); }
+[data-theme="stars"] .db-bottomnav {
+  background: rgba(8, 9, 16, 0.6);
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme="dark"] .db-navitem, [data-theme="stars"] .db-navitem { color: var(--d-muted-2); }
+[data-theme="dark"] .db-navitem--active, [data-theme="stars"] .db-navitem--active { color: var(--d-text); }
 
 /* ── Профиль ───────────────────────────────────────────────────────── */
-[data-theme="dark"] .pf-name,
-[data-theme="dark"] .pf-activity__num,
-[data-theme="dark"] .pf-row__value { color: var(--d-text); }
-[data-theme="dark"] .pf-role,
-[data-theme="dark"] .pf-activity__cap,
-[data-theme="dark"] .pf-activity__today,
-[data-theme="dark"] .pf-row__label { color: var(--d-muted); }
-[data-theme="dark"] .pf-section,
-[data-theme="dark"] .pf-legend,
-[data-theme="dark"] .pf-activity__foot { color: var(--d-muted-2); }
+[data-theme="dark"] .pf-name, [data-theme="stars"] .pf-name,
+[data-theme="dark"] .pf-activity__num, [data-theme="stars"] .pf-activity__num,
+[data-theme="dark"] .pf-row__value, [data-theme="stars"] .pf-row__value { color: var(--d-text); }
+[data-theme="dark"] .pf-role, [data-theme="stars"] .pf-role,
+[data-theme="dark"] .pf-activity__cap, [data-theme="stars"] .pf-activity__cap,
+[data-theme="dark"] .pf-activity__today, [data-theme="stars"] .pf-activity__today,
+[data-theme="dark"] .pf-row__label, [data-theme="stars"] .pf-row__label { color: var(--d-muted); }
+[data-theme="dark"] .pf-section, [data-theme="stars"] .pf-section,
+[data-theme="dark"] .pf-legend, [data-theme="stars"] .pf-legend,
+[data-theme="dark"] .pf-activity__foot, [data-theme="stars"] .pf-activity__foot { color: var(--d-muted-2); }
 
-[data-theme="dark"] .pf-card {
+[data-theme="dark"] .pf-card, [data-theme="stars"] .pf-card {
   background: var(--d-card);
   border-color: var(--d-border);
   box-shadow: var(--d-shadow);
 }
-[data-theme="dark"] .pf-linkrow .pf-row__label { color: var(--d-text); }
-[data-theme="dark"] .pf-linkrow__arrow { color: var(--d-arrow); }
-[data-theme="dark"] .pf-row { border-bottom-color: rgba(255, 255, 255, 0.07); }
-[data-theme="dark"] .pf-dot { background: #3a3d45; }
-[data-theme="dark"] .pf-cube,
-[data-theme="dark"] .pf-cube--off {
+[data-theme="dark"] .pf-linkrow .pf-row__label, [data-theme="stars"] .pf-linkrow .pf-row__label { color: var(--d-text); }
+[data-theme="dark"] .pf-linkrow__arrow, [data-theme="stars"] .pf-linkrow__arrow { color: var(--d-arrow); }
+[data-theme="dark"] .pf-row, [data-theme="stars"] .pf-row { border-bottom-color: rgba(255, 255, 255, 0.07); }
+[data-theme="dark"] .pf-dot, [data-theme="stars"] .pf-dot { background: #3a3d45; }
+[data-theme="dark"] .pf-cube, [data-theme="stars"] .pf-cube,
+[data-theme="dark"] .pf-cube--off, [data-theme="stars"] .pf-cube--off {
   background: #20232a;
   border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ── Трекинг ───────────────────────────────────────────────────────── */
-[data-theme="dark"] .tr-empty { color: var(--d-muted-2); }
-[data-theme="dark"] .tr-card {
+[data-theme="dark"] .tr-empty, [data-theme="stars"] .tr-empty { color: var(--d-muted-2); }
+[data-theme="dark"] .tr-card, [data-theme="stars"] .tr-card {
   background: var(--d-card);
   border-color: var(--d-border);
   box-shadow: var(--d-shadow);
 }
-[data-theme="dark"] .tr-card--me {
+[data-theme="dark"] .tr-card--me, [data-theme="stars"] .tr-card--me {
   border-color: var(--accent-solid);
   box-shadow: 0 6px 22px color-mix(in srgb, var(--accent-solid) 30%, transparent);
 }
-[data-theme="dark"] .tr-name { color: var(--d-text); }
-[data-theme="dark"] .tr-role { color: var(--d-muted-2); }
-[data-theme="dark"] .tr-meta { color: var(--d-muted); }
-[data-theme="dark"] .tr-bar { background: var(--d-track); }
-[data-theme="dark"] .tr-dot { background: rgba(255, 255, 255, 0.12); }
+[data-theme="dark"] .tr-name, [data-theme="stars"] .tr-name { color: var(--d-text); }
+[data-theme="dark"] .tr-role, [data-theme="stars"] .tr-role { color: var(--d-muted-2); }
+[data-theme="dark"] .tr-meta, [data-theme="stars"] .tr-meta { color: var(--d-muted); }
+[data-theme="dark"] .tr-bar, [data-theme="stars"] .tr-bar { background: var(--d-track); }
+[data-theme="dark"] .tr-dot, [data-theme="stars"] .tr-dot { background: rgba(255, 255, 255, 0.12); }
+
+/* Звёзды — стеклянный блюр на карточках (поверх звёздного неба) */
+[data-theme="stars"] .db-course,
+[data-theme="stars"] .db-block-card,
+[data-theme="stars"] .db-exam-card,
+[data-theme="stars"] .db-chip,
+[data-theme="stars"] .pf-card,
+[data-theme="stars"] .tr-card,
+[data-theme="stars"] .db-bottomnav {
+  -webkit-backdrop-filter: blur(13px);
+  backdrop-filter: blur(13px);
+}

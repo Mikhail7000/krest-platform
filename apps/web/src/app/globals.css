@@ -2,7 +2,7 @@
 
 /* Тема MiniApp — ручной выбор через data-theme на <html> (не ОС/Telegram).
    Светлая = база, тёмная = вариант dark: */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, [data-theme="stars"], [data-theme="stars"] *));
 
 @theme {
   /* Шрифт — единый Geist Sans (бриф: один шрифт, wow через размеры/веса) */

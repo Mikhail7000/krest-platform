@@ -13,26 +13,29 @@ function getTg(): TgWebApp | null {
   return (window as unknown as { Telegram?: { WebApp: TgWebApp } }).Telegram?.WebApp ?? null
 }
 
-type Theme = 'light' | 'dark'
+type Theme = 'light' | 'dark' | 'stars'
 
-// Две палитры. Тёмная — звёздное небо; светлая (по умолчанию) — в стиле референсов.
+// Палитры тем. Тёмная — чистая ночь; звёзды — звёздное небо; светлая (по умолчанию) — референсы.
+// Тёмная и звёзды делят одну палитру нативной обвязки Telegram.
 // Тема Telegram/ОС намеренно игнорируется: выбор ручной (см. ThemeProvider).
-const PALETTES: Record<Theme, { bg: string; vars: Record<string, string> }> = {
-  dark: {
-    bg: '#05060A',
-    vars: {
-      '--tg-bg': '#05060A',
-      '--tg-text': '#E5E7EB',
-      '--tg-hint': '#9CA3AF',
-      '--tg-link': '#8B5CF6',
-      '--tg-button': '#7C5CF0',
-      '--tg-button-text': '#FFFFFF',
-      '--tg-secondary-bg': '#1A1C1F',
-      '--tg-section-bg': '#1A1C1F',
-      '--tg-section-separator': 'rgba(127, 127, 140, 0.18)',
-      '--tg-destructive': '#EF4444',
-    },
+const DARK_PALETTE = {
+  bg: '#05060A',
+  vars: {
+    '--tg-bg': '#05060A',
+    '--tg-text': '#E5E7EB',
+    '--tg-hint': '#9CA3AF',
+    '--tg-link': '#8B5CF6',
+    '--tg-button': '#7C5CF0',
+    '--tg-button-text': '#FFFFFF',
+    '--tg-secondary-bg': '#1A1C1F',
+    '--tg-section-bg': '#1A1C1F',
+    '--tg-section-separator': 'rgba(127, 127, 140, 0.18)',
+    '--tg-destructive': '#EF4444',
   },
+}
+const PALETTES: Record<Theme, { bg: string; vars: Record<string, string> }> = {
+  dark: DARK_PALETTE,
+  stars: DARK_PALETTE,
   light: {
     bg: '#EEF0F3',
     vars: {
@@ -53,7 +56,8 @@ const PALETTES: Record<Theme, { bg: string; vars: Record<string, string> }> = {
 function resolveTheme(theme?: Theme): Theme {
   if (theme) return theme
   if (typeof document === 'undefined') return 'light'
-  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
+  const t = document.documentElement.dataset.theme
+  return t === 'dark' || t === 'stars' ? t : 'light'
 }
 
 // Применяет палитру --tg-* и красит нативную обвязку Telegram под выбранную тему.

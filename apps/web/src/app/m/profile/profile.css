@@ -47,6 +47,16 @@
   padding: 1rem 1.125rem;
   text-decoration: none;
 }
+/* Когда строка-ссылка — это <button> (напр. «Добавить на главный экран»):
+   сбрасываем нативные стили кнопки и растягиваем на всю ширину карточки */
+button.pf-card {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
 .pf-linkrow .pf-row__label {
   font-size: 0.9375rem;
   color: #16181d;

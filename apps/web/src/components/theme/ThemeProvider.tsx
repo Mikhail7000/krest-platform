@@ -3,10 +3,13 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { applyTelegramTheme } from '@/lib/telegram/theme'
 
-export type Theme = 'light' | 'dark'
+export type Theme = 'light' | 'dark' | 'stars'
 
 export const THEME_STORAGE_KEY = 'krest-theme'
 export const DEFAULT_THEME: Theme = 'light'
+
+// Порядок переключения: солнце → луна → звёзды → солнце
+const THEME_CYCLE: Theme[] = ['light', 'dark', 'stars']
 
 interface ThemeContextValue {
   theme: Theme
@@ -29,7 +32,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // и приводим палитру --tg-* / нативную обвязку Telegram в соответствие.
   useEffect(() => {
     const current = document.documentElement.dataset.theme
-    const resolved: Theme = current === 'dark' ? 'dark' : 'light'
+    const resolved: Theme = current === 'dark' ? 'dark' : current === 'stars' ? 'stars' : 'light'
     setThemeState(resolved)
     applyTelegramTheme(resolved)
   }, [])
@@ -46,7 +49,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
+    const idx = THEME_CYCLE.indexOf(theme)
+    const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length]
+    setTheme(next)
   }, [theme, setTheme])
 
   return (
@@ -71,7 +76,7 @@ export const themeNoFlashScript = `
 (function() {
   try {
     var t = localStorage.getItem('${THEME_STORAGE_KEY}');
-    document.documentElement.dataset.theme = (t === 'dark') ? 'dark' : 'light';
+    document.documentElement.dataset.theme = (t === 'dark' || t === 'stars') ? t : 'light';
   } catch (e) {
     document.documentElement.dataset.theme = 'light';
   }

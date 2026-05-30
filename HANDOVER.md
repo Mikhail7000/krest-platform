@@ -1,210 +1,170 @@
 # HANDOVER — КРЕСТ
 
-> Дата: **2026-05-21 (ночь)** | Сессия: ✅ **Русский многошаговый онбординг (язык → страна → город → куратор → имя) реализован. API endpoints + React компоненты готовы к тестированию.**
+> Дата: **2026-05-28** | Сессия: 🟡 **Русский онбординг работает в testing-phase (язык → страна → город → save). Компоненты `CuratorSelect` и `NameInput` готовы, но НЕ подключены — нужна тёмная тема и активация полного флоу.**
 
 ---
 
 ## 🎯 Главное (читать первым)
 
-### Русский онбординг (2026-05-21 ночь)
+### Текущее состояние онбординга (2026-05-28)
 
-1. **Критичный fix в telegram-auth**: Убрана `onboarding_done: true` для новых пользователей
-   - Теперь новые пользователи попадают на `/m/onboarding` вместо прямого доступа к dashboard
-2. **Новые API endpoints** ✅:
-   - `POST /api/miniapp/onboarding` — сохранение выбора страны, города, куратора, имени
-   - `GET /api/miniapp/profile` — проверка статуса онбординга (используется MiniAppGate)
-3. **Обновлена MiniAppGate.tsx** ✅:
-   - После `status === 'ready'` делает GET запрос к `/api/miniapp/profile`
-   - Если `onboarding_done === false` → редирект на `/m/onboarding`
-4. **Многошаговый flow в /m/onboarding/page.tsx** ✅:
-   - State machine: `language → country → city → curator → name → saving → done`
-   - Собирает `{ countryId, cityId, curatorId, fullName }` → POST на `/api/miniapp/onboarding`
-5. **Новые React компоненты** ✅:
-   - `CountrySelect.tsx` — загружает `countries WHERE status='active'`
-   - `CitySelect.tsx` — загружает `cities WHERE country_id=X AND status='active'`
-   - `CuratorSelect.tsx` — загружает кураторов `WHERE role='curator' AND city_id=Y`
-   - `NameInput.tsx` — предзаполняет именем из Telegram, можно изменить
-6. **Кнопка "Написать в поддержку"** ✅ для случаев:
-   - Нет активных городов в стране
-   - Нет кураторов в городе (редиректит на `/m/support`)
-7. **Поля в profiles уже есть** ✅:
-   - `country_id` (integer)
-   - `city_id` (integer)
-   - `curator_id` (uuid)
-   - `onboarding_done` (boolean, default=false)
+**Что работает в production:**
+- `/m/onboarding/page.tsx` — state-машина: `language → country → city → saving → /m/dashboard`
+- `LanguageSelect.tsx` — выбор Русский/English (тёмная тема + звёзды)
+- `CountrySelect.tsx` — простой список стран с эмодзи-флагами (тёмная тема)
+- `CitySelect.tsx` — список городов выбранной страны (тёмная тема)
+- `EnglishPlaceholder.tsx` — "Still Cooking" + рандомный NIV стих (для EN ветки)
+- `MiniAppGate.tsx` — после `status === 'ready'` делает `POST /api/miniapp/profile`. Если `onboarding_done === false` → редирект на `/m/onboarding`
+- `POST /api/miniapp/onboarding` — сохраняет `country_id, city_id, curator_id, onboarding_done=true` через `resolveUserId(initData)`
+- `POST /api/miniapp/profile` — возвращает `{ onboarding_done, country_id, city_id, curator_id, full_name }`
+- `telegram-auth/route.ts` — НЕ ставит `onboarding_done=true` для новых юзеров (дефолт `false` в БД) ✅
+
+**Что готово, но НЕ подключено:**
+- `steps/CuratorSelect.tsx` — **СВЕТЛАЯ ТЕМА** (`bg-white`, `text-gray-900`), не соответствует дизайну. Загружает `profiles WHERE role='curator' AND city_id=Y`, есть fallback "Написать в поддержку" если кураторов нет.
+- `steps/NameInput.tsx` — **СВЕТЛАЯ ТЕМА**, предзаполняет именем из Telegram, есть fallback на "Ученик" если пусто.
+- `steps/GlobeSelect.tsx` — 3D-глобус `react-globe.gl` (тёмная тема ✅), альтернатива простому `CountrySelect`. Подсвечивает 9 активных стран, автовращение, клик → выбор.
+
+**Почему отключены:** в `page.tsx:11-12` написано «Шаги 'curator' и 'name' убраны на период теста: куратора ещё нет, имя берём из Telegram автоматически».
 
 ---
 
-## ✅ ЧТО РАБОТАЕТ В PRODUCTION
+## 📁 Файлы онбординга
+
+```
+apps/web/src/app/m/onboarding/
+├── page.tsx                  ← state-машина (текущий флоу language→country→city)
+├── LanguageSelect.tsx        ← ✅ тёмная тема
+├── EnglishPlaceholder.tsx    ← ✅ тёмная тема + NIV стихи
+└── steps/
+    ├── CountrySelect.tsx     ← ✅ тёмная тема (простой список)
+    ├── CitySelect.tsx        ← ✅ тёмная тема
+    ├── CuratorSelect.tsx     ← ❌ светлая тема, не подключён
+    ├── NameInput.tsx         ← ❌ светлая тема, не подключён
+    └── GlobeSelect.tsx       ← ✅ тёмная тема (альтернатива списку)
+
+apps/web/src/app/api/miniapp/
+├── onboarding/route.ts       ← POST: сохраняет онбординг
+├── profile/route.ts          ← POST: возвращает onboarding_done
+└── telegram-auth/route.ts    ← ✅ НЕ ставит onboarding_done
+
+apps/web/src/app/m/_components/
+└── MiniAppGate.tsx           ← ✅ проверяет онбординг
+```
+
+---
+
+## ✅ ЧТО РАБОТАЕТ В PRODUCTION (общее)
 
 ### Ученик (MiniApp)
-- ✅ Menu Button бота `@cross_notify_bot` → `/m/dashboard`
-- ✅ Выбор языка → English "Still Cooking" с NIV стихом (рандом из БД)
-- ✅ Все 10 блоков КРЕСТ доступны для прохождения
-- ✅ 12-пунктовая модель ДЗ: видео, конспект, квиз, местописания, пересказ, фото креста
-- ✅ Экзамены: 10 block-gates + mid-exam + final-exam
-- ✅ Ачивка «Мастер Креста» при завершении курса
+- Menu Button бота `@cross_notify_bot` → `/m/dashboard`
+- Выбор языка → English "Still Cooking" с NIV стихом (рандом из БД)
+- Все 10 блоков КРЕСТ доступны для прохождения
+- 12-пунктовая модель ДЗ: видео, конспект, квиз, местописания, пересказ, фото креста
+- Экзамены: 10 block-gates + mid-exam + final-exam
+- Ачивка «Мастер Креста» при завершении курса
 
 ### Куратор (MiniApp)
-- ✅ Список своих студентов с прогрессом по блокам
-- ✅ Статусы: not_started → video_watching → quiz_passed → locations_passed → block_completed
-- ✅ Фильтры: All / Pending Submissions / Silent Days
-- ✅ Просмотр сабмишенов (текст + медиа: фото, видео, аудио)
-- ✅ Одобрение (approve) → автоматически проверяет block_completed
-- ✅ Отклонение (reject) с обязательным комментарием (≥10 символов)
-- ✅ Визуальные индикаторы: красные бэджи с количеством pending, дни молчания (дни_silent)
+- Список своих студентов с прогрессом по блокам
+- Статусы: not_started → video_watching → quiz_passed → locations_passed → block_completed
+- Фильтры: All / Pending Submissions / Silent Days
+- Просмотр сабмишенов (текст + медиа: фото, видео, аудио)
+- Одобрение (approve) → автоматически проверяет block_completed
+- Отклонение (reject) с обязательным комментарием (≥10 символов)
+- Визуальные индикаторы: красные бэджи pending, дни молчания
 
 ### API (Backend)
-- ✅ 7 endpoints в `/api/curator/*`:
-  - `GET /api/curator/students` — список с фильтрами
-  - `GET /api/curator/students/[id]/progress` — детальный прогресс
-  - `GET /api/curator/submissions` — очередь сабмишенов
-  - `POST /api/curator/submissions/[id]/approve` — одобрить
-  - `POST /api/curator/submissions/[id]/reject` — отклонить
-  - `GET /api/curator/notifications` — уведомления (TODO UI)
-  - `POST /api/curator/notifications/[id]/read` — отметить прочитанным
-- ✅ `requireCuratorAuth` guard: проверяет curator/admin/super_admin роль
-- ✅ RLS filtering: куратор видит своих студентов, admin/super_admin видят всех
+- 7 endpoints в `/api/curator/*` (students, submissions, notifications)
+- `requireCuratorAuth` guard: проверяет curator/admin/super_admin роль
+- RLS filtering: куратор видит своих студентов, admin/super_admin видят всех
 
 ### Telegram Auth
-- ✅ HMAC-SHA256 валидация `initData` на `/api/miniapp/telegram-auth`
-- ✅ Whitelist проверка: username не в `testing_whitelist` → 403 "Доступ запрещен"
-- ✅ Error message: "Напишите в поддержку" (НЕ @Rogue02)
-
----
-
-## 📊 КОММИТЫ ЭТОЙ СЕССИИ (2026-05-21)
-
-### Коммит 1: `88035f8`
-**feat(curator): add curator dashboard API stubs + English placeholder onboarding**
-
-Файлы добавлены:
-- `/api/curator/students/route.ts` (166 строк) — GET список студентов
-- `/api/curator/students/[id]/progress/route.ts` (148 строк) — детальный прогресс
-- `/api/curator/submissions/route.ts` (140 строк) — GET сабмишены
-- `/api/curator/submissions/[id]/approve/route.ts` (174 строк) — одобрить
-- `/api/curator/submissions/[id]/reject/route.ts` (153 строк) — отклонить
-- `/api/curator/notifications/route.ts` (72 строк) — GET уведомления
-- `/api/curator/notifications/[id]/read/route.ts` (85 строк) — отметить прочитанным
-- `lib/curator-auth.ts` — guard функция для всех endpoints
-- `/m/onboarding/page.tsx` — router с выбором языка
-- `/m/onboarding/LanguageSelect.tsx` — кнопки Русский / English
-- `/m/onboarding/EnglishPlaceholder.tsx` — "Still Cooking" экран со стихами
-- `docs/feature-specs/2026-05-21-curator-dashboard.md` (486 строк) — полная спецификация
-- `HANDOVER.md` — обновлён с информацией о whitelist и English Placeholder
-
-**Итого**: 1693 строк, 11 новых файлов, 1 обновлён
-
-### Коммит 2: `5fcdc4d`
-**feat(curator-ui): add curator dashboard pages with students list, submissions review**
-
-Файлы добавлены:
-- `/m/curator/page.tsx` (238 строк) — главная страница куратора
-- `/m/curator/students/[id]/page.tsx` (215 строк) — детальная страница студента
-- `/m/curator/submissions/page.tsx` (221 строк) — просмотр и review сабмишенов
-
-**Итого**: 674 строк, 3 новых файла
+- HMAC-SHA256 валидация `initData` на `/api/miniapp/telegram-auth`
+- Whitelist проверка: username не в `testing_whitelist` → 403 "Доступ запрещен"
 
 ---
 
 ## 🔄 ЧТО В ПРОЦЕССЕ (TODO на следующую сессию)
 
-1. **Notifications UI** — сейчас API есть, но нет sidebar/badge с alert count
-   - Добавить `GET /api/curator/notifications` вызов
-   - Badge с количеством unread notifications
-   - Список с read/unread state
-   - Автоматический click → `POST /api/curator/notifications/[id]/read`
+### 1. Активация полного русского онбординга (приоритет)
 
-2. **Russian onboarding** — сейчас только English Placeholder
-   - `/m/onboarding` выбор языка → если Русский → выбор страны → города → куратора
-   - Интеграция с `locations` и `profiles.curator_id`
-   - RLS проверка для видимости кураторов по городам
+**Что сделать:**
+1. Переделать `CuratorSelect.tsx` и `NameInput.tsx` в **тёмную тему + звёздный фон** — стиль такой же, как в `CountrySelect.tsx` / `CitySelect.tsx`:
+   - `relative z-10 min-h-screen flex flex-col px-5 py-8`
+   - Кнопки: `border border-white/12 bg-white/5 backdrop-blur-sm`
+   - Заголовки: `text-white`, подписи: `text-white/55`
+   - Анимации входа: `motion.div` + `initial={{opacity:0, y:20}} animate={{opacity:1, y:0}}`
+2. Обновить `page.tsx`:
+   - Расширить тип `OnboardingStep`: `'language' | 'english' | 'country' | 'city' | 'curator' | 'name' | 'saving'`
+   - Добавить state `curatorId` и `fullName`
+   - Изменить переходы: `city → curator → name → saving`
+   - Передавать `curator_id` и `full_name` в POST `/api/miniapp/onboarding` (API уже их принимает)
+   - Расширить `handleBack` для новых шагов
+3. **Решить вопрос с globe-селектором:**
+   - Либо заменить `CountrySelect` на `GlobeSelect` (более красивый, но требует `react-globe.gl` + `topojson-client` + `world-atlas` — проверить, установлены ли)
+   - Либо оставить простой список (надёжнее на старте)
+   - Михаил оставил на потом выбор финального варианта
 
-3. **Test end-to-end** перед демо
-   - Запушить на Vercel (если локально тестировали)
-   - Открыть в Telegram на iOS/Android
-   - Проверить все 3 страницы куратора + approve/reject flow
-   - Проверить English Placeholder на разных экранах
+### 2. Notifications UI
+- API есть (`/api/curator/notifications`), UI нет
+- Sidebar/badge с alert count
+- Список read/unread
 
-4. **Alerts System** — низкий приоритет, может быть после одобрения PoC
-   - 24h+ silence alerts
-   - 3+ days silence alerts
-   - Exam passed notifications
+### 3. Удалить legacy
+- `@cross_bot` хардкод в `TelegramProvider.tsx` → `@cross_notify_bot`
+- `/api/cron/reset-streaks`, `/api/cron/archive-cohorts` (legacy v2.0)
+- Скрипт `lint` всё ещё `next lint` (Next 16 удалил его)
 
 ---
 
 ## ❌ ЧТО СЛОМАНО / ДОЛГИ
 
-- **Russian onboarding** — заглушка (TODO выбор страны/города/куратора)
-- **Notifications UI** — API есть, UI нет
-- **@cross_bot хардкод** в TelegramProvider.tsx — должно быть `@cross_notify_bot`
-- **Legacy v2.0 cron-endpoints** — `/api/cron/reset-streaks`, `/api/cron/archive-cohorts` не удалены
-- **`lint` скрипт** — всё ещё на `next lint` (Next 16 удалил его)
+- **Полный русский онбординг** — компоненты есть, но не подключены (testing phase)
+- **CuratorSelect/NameInput** — светлая тема, не соответствует дизайну
+- **Notifications UI** — только API, нет UI
+- **@cross_bot хардкод** в TelegramProvider.tsx
+- **Legacy cron-endpoints** — не удалены
 
 ---
 
-## 📋 СТРУКТУРА КОДА
+## 📋 СТРУКТУРА КОДА (общая)
 
 ```
 apps/web/src/app/
 ├── /m/
-│   ├── onboarding/
-│   │   ├── page.tsx (router)
-│   │   ├── LanguageSelect.tsx (UI кнопки)
-│   │   └── EnglishPlaceholder.tsx (стихи)
-│   ├── curator/ (👈 НОВОЕ)
-│   │   ├── page.tsx (список студентов)
-│   │   ├── students/[id]/page.tsx (детали)
-│   │   └── submissions/page.tsx (review очередь)
-│   └── dashboard/
+│   ├── onboarding/          ← language → country → city (testing)
+│   ├── curator/             ← список + детали + сабмишены
+│   ├── dashboard/
+│   ├── lesson/[blockId]/    ← 12-пунктовое ДЗ
+│   ├── locations/[blockId]/ ← местописания
+│   └── _components/         ← MiniAppGate, SupportRequestScreen
 │
-├── /api/
-│   ├── /miniapp/telegram-auth/ (whitelist check)
-│   └── /curator/ (👈 НОВОЕ — 7 endpoints)
-│
-└── ... (остальное без изменений)
+└── /api/
+    ├── /miniapp/            ← telegram-auth, profile, onboarding
+    └── /curator/            ← 7 endpoints для админки
 ```
 
 ---
 
-## 🚀 NEXT STEPS (FOR DEMO)
+## 🧠 КЛЮЧЕВЫЕ РЕШЕНИЯ
 
-**Порядок для демо Алексу Манье**:
-1. ✅ English Placeholder UI (выбор языка + стихи) — **ГОТОВО**
-2. ✅ Curator Dashboard (список студентов + детали) — **ГОТОВО**
-3. ✅ Submission Review (approve/reject с медиа) — **ГОТОВО**
-4. 🟡 Test на реальном Telegram (iOS/Android)
-5. 🟡 Notifications UI (если время позволит)
-6. 🟡 Russian onboarding (после одобрения PoC)
-
-**За пределами PoC**:
-- OpenRouter миграция (вместо прямых API)
-- Self-hosted Supabase (вместо Cloud)
-- Custom domain
-- Full production deployment
-
----
-
-## 🧠 РЕШЕНИЯ ЭТОЙ СЕССИИ
-
-| Решение | Почему | Файлы |
-|---|---|---|
-| Curator API 7 endpoints | Backend готов, фронт интегрируется просто | `/api/curator/*` |
-| MiniApp Dashboard (не /admin) | Скорость: Next.js + Telegram UI нативный, мобильный-first | `/m/curator/*` |
-| Submissions с реджектом | Требование спеки: куратор должен объяснить отклонение | approve/reject routes |
-| English Placeholder перед Russian | PoC faster to demo, Russian сложнее (выбор страны/города) | `/m/onboarding` |
-| TypeScript types regenerated | Strict mode требует новые типы сразу после миграций | types.ts |
+| Решение | Почему |
+|---|---|
+| Testing phase онбординга | Куратора ещё нет, имя берём из Telegram |
+| Тёмная тема всегда | Игнорируем светлую тему Telegram (см. memory `project_dark_theme_starfield`) |
+| Звёздный canvas-фон | Box-shadow ломался в Telegram WebView (см. memory) |
+| GlobeSelect готов | Подготовлен альтернативный 3D-вариант (memory `project_globe_country_picker`) |
+| API через `resolveUserId(initData)` | Не cookie-based, как в curator API. Совместимо с MiniApp |
 
 ---
 
 ## 💡 ВАЖНЫЕ ЧИСЛА
 
+- **9 стран** в БД (RU, ID, TH, AE, GE, IL, BY, US, VN)
+- **21 город РФ + 9 за рубежом**, активен только Бали
 - **Telegram whitelist**: 1 юзер (@Rogue02 / Михаил)
-- **10 блоков КРЕСТ**: полный цикл ученика → curator dashboard
-- **7 API endpoints**: все необходимые для куратора
-- **3 страницы куратора**: dashboard + student detail + submissions
-- **2 большие спеки**: SPEC v3.0 (в репо) + feature spec (2026-05-21)
+- **10 блоков КРЕСТ**: полный цикл
+- **7 API endpoints куратора**
 
 ---
 
-*Версия 3.1 | Дата: 2026-05-21 (вечер) | Два коммита за сессию: `88035f8` + `5fcdc4d`*
+*Версия 3.2 | Дата: 2026-05-28 | Предыдущая: 3.1 (2026-05-21) | Команда: продолжить активацию полного флоу онбординга*
