@@ -25,6 +25,15 @@ interface StudentProgress {
     lastActive: string | null
     days: Array<{ date: string; on: boolean }>
   }
+  friday?: Array<{ block_id: number; impressions: string; updated_at: string }>
+  emotions?: Array<{
+    id: string
+    block_id: number
+    kind: string
+    content_text: string | null
+    media_url: string | null
+    created_at: string
+  }>
 }
 
 export default function StudentDetailPage() {
@@ -218,6 +227,45 @@ export default function StudentDetailPage() {
           )
         })}
       </div>
+
+      {student.friday && student.friday.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-sm font-bold text-foreground mb-2">Эпоха пятницы</h2>
+          <div className="space-y-2">
+            {student.friday.map((f) => (
+              <div key={f.block_id} className="bg-card border border-slate-200 rounded-lg p-3">
+                <div className="text-xs text-muted-foreground mb-1">Блок {f.block_id}</div>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{f.impressions}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {student.emotions && student.emotions.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-sm font-bold text-foreground mb-2">Эмоции и свидетельства</h2>
+          <div className="space-y-2">
+            {student.emotions.map((e) => (
+              <div key={e.id} className="bg-card border border-slate-200 rounded-lg p-3">
+                <div className="text-xs text-muted-foreground mb-1">
+                  Блок {e.block_id} ·{' '}
+                  {new Date(e.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                </div>
+                {e.kind === 'text' && (
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{e.content_text}</p>
+                )}
+                {e.kind === 'audio' && e.media_url && (
+                  <audio controls preload="none" src={e.media_url} className="w-full" />
+                )}
+                {e.kind === 'video_note' && e.media_url && (
+                  <video controls preload="none" src={e.media_url} className="w-full rounded-lg max-h-80" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 space-y-3 border-t border-slate-200 pt-6">
         <button

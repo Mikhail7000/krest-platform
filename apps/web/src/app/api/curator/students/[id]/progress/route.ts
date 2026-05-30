@@ -81,8 +81,47 @@ export async function GET(
   const worked = await getWorkedDates(supabase, studentId, since)
   const activity = computeActivity(opened, worked, 14)
 
+  // Эпоха пятницы — впечатления по блокам
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: fridayRows } = await (supabase as any)
+    .from('student_block_friday_practice')
+    .select('block_id, impressions, updated_at')
+    .eq('user_id', studentId)
+    .order('block_id', { ascending: true })
+  const friday = ((fridayRows ?? []) as { block_id: number; impressions: string | null; updated_at: string }[])
+    .filter((r) => r.impressions && r.impressions.trim())
+    .map((r) => ({ block_id: r.block_id, impressions: r.impressions as string, updated_at: r.updated_at }))
+
+  // Эмоции и свидетельства — текст/аудио/кружок (с подписанными ссылками на медиа)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: emoRows } = await (supabase as any)
+    .from('student_block_emotions')
+    .select('id, block_id, kind, content_text, storage_path, created_at')
+    .eq('user_id', studentId)
+    .order('created_at', { ascending: false })
+  type EmoRow = { id: string; block_id: number; kind: string; content_text: string | null; storage_path: string | null; created_at: string }
+  const emoList = (emoRows ?? []) as EmoRow[]
+  const emoPaths = emoList.map((r) => r.storage_path).filter((p): p is string => !!p)
+  const urlByPath = new Map<string, string>()
+  if (emoPaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from('student-recitations')
+      .createSignedUrls(emoPaths, 60 * 60)
+    for (const s of (signed ?? []) as { path: string | null; signedUrl: string | null }[]) {
+      if (s.path && s.signedUrl) urlByPath.set(s.path, s.signedUrl)
+    }
+  }
+  const emotions = emoList.map((r) => ({
+    id: r.id,
+    block_id: r.block_id,
+    kind: r.kind,
+    content_text: r.content_text,
+    media_url: r.storage_path ? urlByPath.get(r.storage_path) ?? null : null,
+    created_at: r.created_at,
+  }))
+
   return NextResponse.json({
     ok: true,
-    data: { student_id: studentId, blocks, activity },
+    data: { student_id: studentId, blocks, activity, friday, emotions },
   })
 }
