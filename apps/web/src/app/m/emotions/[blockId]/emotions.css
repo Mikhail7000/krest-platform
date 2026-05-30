@@ -9,10 +9,13 @@
   display: block;
   margin-top: 1.5rem;
   margin-bottom: 0;
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1rem;
   text-align: center;
-  border: 1px solid var(--tg-section-separator, rgba(255, 255, 255, 0.12));
-  border-radius: 12px;
+  background: var(--accent-gradient);
+  color: #fff;
+  border: 0;
+  border-radius: 14px;
+  font-weight: 700;
 }
 
 .emotions-header { margin-bottom: 1.25rem; }
@@ -78,12 +81,12 @@
 .emotions-media-btn {
   flex: 1;
   padding: 0.75rem 1rem;
-  background: transparent;
-  color: var(--tg-text, #E5E7EB);
-  border: 1px solid var(--tg-section-separator, rgba(255, 255, 255, 0.18));
+  background: color-mix(in srgb, var(--accent-solid) 10%, #fff);
+  color: var(--accent-solid);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 28%, transparent);
   border-radius: 12px;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 .emotions-media-btn:disabled { opacity: 0.5; }

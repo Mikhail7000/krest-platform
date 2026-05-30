@@ -39,7 +39,7 @@ export default async function ExamPage({
 
   return (
     <div className="miniapp-container exam-page">
-      <Link href={meta.backHref} className="exam-back">
+      <Link href={meta.backHref} className="stage-back">
         ← К списку блоков
       </Link>
 
@@ -48,11 +48,6 @@ export default async function ExamPage({
         <h1 className="exam-header__title">{meta.title}</h1>
         <p className="exam-header__subtitle">{meta.subtitle}</p>
       </header>
-
-      <div className="exam-pass-req">
-        <span className="exam-pass-req__icon">🎯</span>
-        {meta.passReq}
-      </div>
 
       <ExamClient examType={examType} />
     </div>
