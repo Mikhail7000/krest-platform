@@ -21,10 +21,11 @@
   }
 
   /* фоновые градиентные пятна + общий «просвечивающий» крест */
-  .orb{position:fixed;border-radius:50%;filter:blur(95px);opacity:.45;z-index:0;pointer-events:none;will-change:transform}
-  .orb.a{width:540px;height:540px;background:#8b5cf6;top:-160px;left:-120px}
-  .orb.b{width:480px;height:480px;background:#6366f1;bottom:-160px;right:-120px}
-  .orb.c{width:420px;height:420px;background:#a855f7;top:46%;left:50%;transform:translate(-50%,-50%);opacity:.28}
+  .orb{position:fixed;border-radius:50%;z-index:0;pointer-events:none;will-change:transform;filter:blur(88px);animation:orbGlow 7s ease-in-out infinite}
+  .orb.a{width:64vmin;height:64vmin;background:#8b5cf6;top:-16vmin;left:-12vmin;opacity:.5}
+  .orb.b{width:58vmin;height:58vmin;background:#6366f1;bottom:-18vmin;right:-12vmin;opacity:.5;animation-delay:-3.5s}
+  .orb.c{width:52vmin;height:52vmin;background:#a855f7;top:34vmin;left:38vmin;opacity:.3;animation-delay:-1.8s}
+  @keyframes orbGlow{0%,100%{filter:blur(90px) hue-rotate(-16deg) saturate(1)}50%{filter:blur(78px) hue-rotate(24deg) saturate(1.3)}}
 
   /* ── полноэкранная листалка: один свайп = один экран ── */
   .deck{position:relative;z-index:1;height:100dvh;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
@@ -89,9 +90,9 @@
 </style>
 </head>
 <body>
-<div class="orb a"></div>
-<div class="orb b"></div>
-<div class="orb c"></div>
+<div class="orb a" data-speed="0.22"></div>
+<div class="orb b" data-speed="-0.18"></div>
+<div class="orb c" data-speed="0.12"></div>
 <svg width="0" height="0"><defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs></svg>
 
 <nav class="dots" id="dots"></nav>
@@ -243,6 +244,30 @@
     dotsBox.appendChild(b);
   });
   const dots=[...dotsBox.children];
+
+  // параллакс: большие шары двигаются за скроллом ленты
+  const orbs=[...document.querySelectorAll('.orb')];
+  let ticking=false;
+  deck.addEventListener('scroll',()=>{
+    if(ticking)return;ticking=true;
+    requestAnimationFrame(()=>{
+      const y=deck.scrollTop;
+      orbs.forEach(o=>{o.style.transform='translate3d(0,'+(y*parseFloat(o.dataset.speed||0))+'px,0)'});
+      ticking=false;
+    });
+  },{passive:true});
+
+  // параллакс: большие шары двигаются за скроллом ленты
+  const orbs=[...document.querySelectorAll('.orb')];
+  let ticking=false;
+  deck.addEventListener('scroll',()=>{
+    if(ticking)return;ticking=true;
+    requestAnimationFrame(()=>{
+      const y=deck.scrollTop;
+      orbs.forEach(o=>{o.style.transform='translate3d(0,'+(y*parseFloat(o.dataset.speed||0))+'px,0)'});
+      ticking=false;
+    });
+  },{passive:true});
 
   // активный слайд = раскрытие контента + подсветка точки
   const io=new IntersectionObserver((es)=>{
