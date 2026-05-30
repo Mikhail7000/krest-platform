@@ -3,222 +3,258 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>КРЕСТ — платформа ученичества</title>
-<meta name="description" content="КРЕСТ — платформа для изучения Креста. 10 блоков, ИИ-наставник, тренажёр местописаний, прогресс." />
-<meta property="og:title" content="КРЕСТ — платформа ученичества" />
-<meta property="og:description" content="10 блоков · ИИ-проверки · тренажёр · прогресс. Обзор приложения." />
+<title>КРЕСТ КАПСУЛА — платформа управляемого ученичества</title>
+<meta name="description" content="КРЕСТ КАПСУЛА — платформа управляемого ученичества. 10 блоков, живой ИИ-наставник, тренажёр местописаний, экзамены, прогресс." />
+<meta property="og:title" content="КРЕСТ КАПСУЛА" />
+<meta property="og:description" content="Платформа управляемого ученичества: 10 блоков, живой ИИ-наставник, тренажёр, экзамены." />
 <style>
   :root{
-    --bg:#05060a; --card:rgba(255,255,255,.045); --line:rgba(255,255,255,.10);
-    --txt:#eef1f6; --mut:#9aa3b2; --from:#8b5cf6; --to:#6366f1;
-    --grad:linear-gradient(135deg,#8b5cf6,#6366f1);
+    --bg:#05060a; --card:rgba(255,255,255,.05); --line:rgba(255,255,255,.11);
+    --txt:#eef1f6; --mut:#9aa3b2; --grad:linear-gradient(135deg,#8b5cf6,#6366f1);
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
+  html,body{height:100%}
   body{
-    background:var(--bg);color:var(--txt);
+    background:var(--bg);color:var(--txt);overflow:hidden;
     font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
-    -webkit-font-smoothing:antialiased;overflow-x:hidden;line-height:1.5;
+    -webkit-font-smoothing:antialiased;line-height:1.5;
   }
-  /* фоновые градиентные пятна (двигаются от скролла — параллакс) */
-  .orb{position:fixed;border-radius:50%;filter:blur(95px);opacity:.5;z-index:0;pointer-events:none;will-change:transform}
+
+  /* фоновые градиентные пятна + общий «просвечивающий» крест */
+  .orb{position:fixed;border-radius:50%;filter:blur(95px);opacity:.45;z-index:0;pointer-events:none;will-change:transform}
   .orb.a{width:540px;height:540px;background:#8b5cf6;top:-160px;left:-120px}
   .orb.b{width:480px;height:480px;background:#6366f1;bottom:-160px;right:-120px}
-  .orb.c{width:400px;height:400px;background:#a855f7;top:42%;right:-160px;opacity:.32}
-  .wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:0 22px}
-  section{padding:92px 0;scroll-snap-align:start}
-  main{scroll-snap-type:y proximity}
+  .bg-cross{position:fixed;inset:0;z-index:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .bg-cross svg{width:46vmin;height:auto;opacity:.045}
+  .bg-cross path{stroke:#fff;stroke-width:5;stroke-linecap:round;fill:none}
 
-  /* ── keynote-раскрытие: разные анимации появления ── */
-  .reveal{opacity:0;transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1),filter .8s ease;will-change:transform,opacity}
-  .reveal[data-anim="up"]{transform:translateY(46px)}
-  .reveal[data-anim="left"]{transform:translateX(-60px)}
-  .reveal[data-anim="right"]{transform:translateX(60px)}
-  .reveal[data-anim="scale"]{transform:scale(.86)}
-  .reveal[data-anim="blur"]{transform:translateY(30px) scale(.98);filter:blur(14px)}
-  .reveal.in{opacity:1;transform:none;filter:none}
+  /* ── полноэкранная листалка: один свайп = один экран ── */
+  .deck{position:relative;z-index:1;height:100dvh;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+  .deck::-webkit-scrollbar{display:none}
+  .deck{scrollbar-width:none}
+  .slide{min-height:100dvh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center;padding:64px 24px}
+  .inner{width:100%;max-width:760px;text-align:center}
 
-  /* стаггер для карточек/строк */
-  .stagger > *{opacity:0;transform:translateY(34px) scale(.97);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
-  .stagger.in > *{opacity:1;transform:none}
-  .stagger.in > *:nth-child(1){transition-delay:.05s}
-  .stagger.in > *:nth-child(2){transition-delay:.13s}
-  .stagger.in > *:nth-child(3){transition-delay:.21s}
-  .stagger.in > *:nth-child(4){transition-delay:.29s}
-  .stagger.in > *:nth-child(5){transition-delay:.37s}
-  .stagger.in > *:nth-child(6){transition-delay:.45s}
-  .stagger.in > *:nth-child(7){transition-delay:.53s}
-  .stagger.in > *:nth-child(8){transition-delay:.61s}
-  .stagger.in > *:nth-child(9){transition-delay:.69s}
+  /* раскрытие контента при попадании слайда в кадр */
+  .slide .inner > *{opacity:0;transform:translateY(34px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
+  .slide.active .inner > *{opacity:1;transform:none}
+  .slide.active .inner > *:nth-child(1){transition-delay:.05s}
+  .slide.active .inner > *:nth-child(2){transition-delay:.14s}
+  .slide.active .inner > *:nth-child(3){transition-delay:.23s}
+  .slide.active .inner > *:nth-child(4){transition-delay:.32s}
+  .slide.active .inner > *:nth-child(5){transition-delay:.41s}
 
-  .eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--mut)}
+  .eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--mut);margin-bottom:18px}
   .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  h2{font-size:clamp(2.1rem,7vw,3.4rem);font-weight:800;letter-spacing:-.03em;line-height:1.05}
+  .lead{font-size:clamp(1.05rem,3.4vw,1.35rem);color:var(--mut);margin-top:22px;max-width:640px;margin-left:auto;margin-right:auto}
 
-  /* ── HERO с крестом ── */
-  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;scroll-snap-align:start}
-  .cross-wrap{margin-bottom:6px;filter:drop-shadow(0 14px 40px rgba(124,92,240,.5))}
-  .cross-svg{width:88px;height:120px}
-  .cross-svg path{stroke:url(#cg);stroke-width:7;stroke-linecap:round;fill:none;
-    stroke-dasharray:240;stroke-dashoffset:240;animation:draw 1.6s cubic-bezier(.16,1,.3,1) .2s forwards}
+  /* HERO */
+  .cross-svg{width:84px;height:116px;margin:0 auto;display:block;filter:drop-shadow(0 14px 40px rgba(124,92,240,.5))}
+  .cross-svg path{stroke:url(#cg);stroke-width:7;stroke-linecap:round;fill:none;stroke-dasharray:240;stroke-dashoffset:240}
+  .slide.active .cross-svg path{animation:draw 1.5s cubic-bezier(.16,1,.3,1) .15s forwards}
   @keyframes draw{to{stroke-dashoffset:0}}
-  .logo{font-size:clamp(4.4rem,19vw,9.5rem);font-weight:900;letter-spacing:-.05em;line-height:.9;
-    opacity:0;transform:scale(.8);animation:pop 1s cubic-bezier(.16,1,.3,1) 1s forwards}
-  @keyframes pop{to{opacity:1;transform:scale(1)}}
-  .hero .sub,.hero .verse,.hero .scrolldown{opacity:0;animation:fadein .9s ease forwards}
-  .hero .sub{font-size:clamp(1.05rem,3.6vw,1.45rem);color:var(--mut);margin-top:20px;animation-delay:1.45s}
-  .hero .verse{margin-top:26px;font-size:.95rem;color:var(--mut);font-style:italic;animation-delay:1.7s}
-  .hero .scrolldown{margin-top:50px;font-size:.8rem;color:var(--mut);letter-spacing:.1em;animation-delay:2s}
-  @keyframes fadein{to{opacity:1}}
-  .scrolldown b{display:inline-block;animation:bob 1.8s ease-in-out infinite}
+  .logo{font-size:clamp(4rem,17vw,8.5rem);font-weight:900;letter-spacing:-.05em;line-height:.92}
+  .capsule{font-size:clamp(1.1rem,4.4vw,1.7rem);font-weight:700;letter-spacing:.42em;text-indent:.42em;color:var(--mut);margin-top:4px}
+  .verse{margin-top:24px;font-style:italic;color:var(--mut);font-size:.98rem}
+  .hint{position:absolute;bottom:30px;left:0;right:0;text-align:center;color:var(--mut);font-size:.8rem;letter-spacing:.08em}
+  .hint b{display:inline-block;animation:bob 1.8s ease-in-out infinite}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
 
-  h2{font-size:clamp(1.9rem,6.4vw,3rem);font-weight:800;letter-spacing:-.03em;margin-top:10px}
-  .lead{font-size:1.08rem;color:var(--mut);margin-top:16px;max-width:640px}
+  .num{display:inline-flex;align-items:center;justify-content:center;min-width:56px;height:56px;padding:0 14px;border-radius:16px;background:var(--grad);font-weight:800;font-size:1.4rem;box-shadow:0 12px 30px rgba(124,92,240,.42);margin:0 auto 22px}
+  .pill{display:inline-block;margin-top:20px;padding:7px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--mut);font-size:.82rem;font-weight:600}
 
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:40px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;backdrop-filter:blur(6px)}
-  .card h3{font-size:1.12rem;font-weight:700;margin-bottom:8px}
-  .card p{color:var(--mut);font-size:.95rem}
-  .num{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:12px;background:var(--grad);font-weight:800;margin-bottom:14px;box-shadow:0 8px 22px rgba(124,92,240,.4)}
+  /* видение / благодарность — список */
+  .stack{margin-top:30px;display:flex;flex-direction:column;gap:14px;text-align:left}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;backdrop-filter:blur(6px)}
+  .item b{color:#fff}
+  .item p{color:var(--mut);font-size:1rem;margin-top:4px}
 
-  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:36px}
-  @media(max-width:620px){.cols{grid-template-columns:1fr}}
-  .col{border-radius:20px;padding:24px;border:1px solid var(--line)}
-  .col.test{background:linear-gradient(160deg,rgba(139,92,246,.18),rgba(99,102,241,.06))}
-  .col.prod{background:var(--card)}
-  .col h3{font-size:1.15rem;margin-bottom:14px}
-  .col ul{list-style:none}
-  .col li{padding:9px 0 9px 26px;position:relative;color:var(--mut);font-size:.95rem;border-top:1px solid var(--line)}
-  .col li:first-child{border-top:0}
-  .col li:before{content:"";position:absolute;left:4px;top:16px;width:8px;height:8px;border-radius:50%;background:var(--from)}
-
-  .steps{margin-top:36px;display:flex;flex-direction:column;gap:14px}
-  .step{display:flex;gap:16px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
-  .step b{color:#fff}
-  .step .dot{flex:0 0 auto;width:12px;height:12px;border-radius:50%;background:var(--grad);margin-top:6px}
-
-  .thanks{text-align:center}
-  .thanks p{color:var(--mut);max-width:680px;margin:14px auto 0;font-size:1.02rem}
-  .cta{display:inline-block;margin-top:30px;padding:16px 32px;border-radius:999px;background:var(--grad);color:#fff;text-decoration:none;font-weight:700;font-size:1.05rem;box-shadow:0 14px 36px rgba(124,92,240,.45);transition:transform .15s}
+  .cta{display:inline-block;margin-top:30px;padding:16px 34px;border-radius:999px;background:var(--grad);color:#fff;text-decoration:none;font-weight:700;font-size:1.05rem;box-shadow:0 14px 36px rgba(124,92,240,.45);transition:transform .15s}
   .cta:active{transform:scale(.97)}
-  footer{padding:40px 0 64px;text-align:center;color:var(--mut);font-size:.85rem}
-  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal,.stagger>*{opacity:1!important;transform:none!important;filter:none!important}}
+  .credit{margin-top:34px;color:var(--mut);font-size:.82rem;line-height:1.7}
+  .small-cross{width:34px;height:46px;margin:0 auto 18px}
+  .small-cross path{stroke:url(#cg);stroke-width:7;stroke-linecap:round;fill:none}
+
+  /* точки-навигация справа */
+  .dots{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:5;display:flex;flex-direction:column;gap:11px}
+  .dots button{width:9px;height:9px;border-radius:50%;border:0;padding:0;background:rgba(255,255,255,.22);cursor:pointer;transition:all .25s}
+  .dots button.on{background:linear-gradient(135deg,#8b5cf6,#6366f1);transform:scale(1.5)}
+  @media(max-width:560px){.dots{right:9px;gap:9px}.dots button{width:7px;height:7px}}
+
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.slide .inner > *{opacity:1!important;transform:none!important}.cross-svg path{stroke-dashoffset:0!important}}
 </style>
 </head>
 <body>
-<div class="orb a" data-speed="0.20"></div>
-<div class="orb b" data-speed="-0.16"></div>
-<div class="orb c" data-speed="0.10"></div>
-
+<div class="orb a"></div>
+<div class="orb b"></div>
+<div class="bg-cross"><svg viewBox="0 0 60 84" aria-hidden="true"><path d="M30 6 V78"/><path d="M10 30 H50"/></svg></div>
 <svg width="0" height="0"><defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs></svg>
 
-<main>
-<div class="wrap">
+<nav class="dots" id="dots"></nav>
 
-  <header class="hero">
-    <div class="cross-wrap">
-      <svg class="cross-svg" viewBox="0 0 60 84" aria-hidden="true">
-        <path d="M30 6 V78" />
-        <path d="M10 30 H50" />
-      </svg>
+<div class="deck" id="deck">
+
+  <!-- 1. HERO -->
+  <section class="slide" id="s0">
+    <div class="inner">
+      <svg class="cross-svg" viewBox="0 0 60 84" aria-hidden="true"><path d="M30 6 V78"/><path d="M10 30 H50"/></svg>
+      <div class="logo grad">КРЕСТ</div>
+      <div class="capsule">КАПСУЛА</div>
+      <p class="verse">«Идите, научите все народы…» — Матфея 28:18–20</p>
     </div>
-    <div class="logo grad">КРЕСТ</div>
-    <p class="sub">Платформа для изучения Креста</p>
-    <p class="verse">«Идите, научите все народы…» — Матфея 28:18–20</p>
-    <div class="scrolldown"><b>↓ листай вниз</b></div>
-  </header>
-
-  <section class="reveal" data-anim="scale">
-    <p class="eyebrow">Что это</p>
-    <h2>Управляемое <span class="grad">ученичество</span> в твоём телефоне</h2>
-    <p class="lead">10 блоков курса — от вступления до «Мастера Креста». Видео-уроки, тренажёры,
-    практика, экзамены и живой наставник — всё внутри Telegram, как приложение.</p>
+    <div class="hint"><b>↓ листай вниз</b></div>
   </section>
 
-  <section class="reveal" data-anim="up">
-    <p class="eyebrow">Возможности</p>
-    <h2>Всё, что нужно ученику</h2>
-    <div class="grid stagger">
-      <div class="card"><div class="num">1</div><h3>10 блоков курса</h3><p>От «Малого Креста» до «5 Уверенностей». Каждый блок — видео, конспект, практика и сдача.</p></div>
-      <div class="card"><div class="num">2</div><h3>Видео-уроки</h3><p>Без перемотки вперёд — материал усваивается полностью. Конспект и доп-материалы рядом.</p></div>
-      <div class="card"><div class="num">3</div><h3>Тренажёр местописаний</h3><p>Карточки, пропущенные слова, викторина ссылок и озвучивание голосом/кружком.</p></div>
-      <div class="card"><div class="num">4</div><h3>ИИ-наставник</h3><p>Разбирает аудио-пересказ, местописания и фото твоего «креста блока» — мягко, с подсказками.</p></div>
-      <div class="card"><div class="num">5</div><h3>Местописания</h3><p>Произнеси стих вслух — голосом или видео-кружком. Система распознаёт и подсказывает.</p></div>
-      <div class="card"><div class="num">6</div><h3>Прогресс и дни</h3><p>Процент курса, сколько дней осталось и сколько дней подряд ты заходишь.</p></div>
-      <div class="card"><div class="num">7</div><h3>Экзамены</h3><p>Промежуточный и финальный — с разбором ответов по каждому блоку.</p></div>
-      <div class="card"><div class="num">8</div><h3>Напоминания</h3><p>Если не зашёл — придёт доброе напоминание в Telegram. «День начинается с вечера».</p></div>
-      <div class="card"><div class="num">9</div><h3>Поддержка</h3><p>Кнопка помощи внутри приложения — вопрос или ошибка сразу долетают до команды.</p></div>
+  <!-- 2. ЧТО ЭТО -->
+  <section class="slide">
+    <div class="inner">
+      <p class="eyebrow">Что это</p>
+      <h2>Управляемое <span class="grad">ученичество</span> в твоём телефоне</h2>
+      <p class="lead">Видео-уроки, тренажёры, практика, экзамены и живой наставник — всё внутри Telegram, как приложение. Шаг за шагом, от вступления до «Мастера Креста».</p>
     </div>
   </section>
 
-  <section class="reveal" data-anim="blur">
-    <p class="eyebrow">Важно понять</p>
-    <h2>Тест <span class="grad">vs</span> рабочая версия</h2>
-    <p class="lead">Сейчас вы тестируете приложение. Тест устроен так, чтобы всё можно было пройти быстро и насквозь — без ожидания.</p>
-    <div class="cols">
-      <div class="col test reveal" data-anim="left">
-        <h3>Тестовая версия (сейчас)</h3>
-        <ul>
-          <li>Каждый день засчитывается сразу — не нужно ждать сутки</li>
-          <li>Весь блок (7 дней) проходится за один заход</li>
-          <li>Видео можно перематывать свободно</li>
-          <li>Безлимитные пересдачи квизов и местописаний</li>
-          <li>Доступ только по белому списку (вы)</li>
-        </ul>
+  <!-- 3. 10 БЛОКОВ -->
+  <section class="slide">
+    <div class="inner">
+      <div class="num">01</div>
+      <h2>10 блоков курса</h2>
+      <p class="lead">От «Малого Креста» до «5 Уверенностей». Каждый блок — это видео-уроки, конспект, практика, тренажёр и сдача. Блоки открываются последовательно: пройди один — откроется следующий.</p>
+    </div>
+  </section>
+
+  <!-- 4. ВИДЕО-УРОКИ -->
+  <section class="slide">
+    <div class="inner">
+      <div class="num">02</div>
+      <h2>Видео-уроки</h2>
+      <p class="lead">Первый просмотр — без перемотки вперёд, чтобы материал усвоился полностью. После первого прохождения перемотка открывается — можно вернуться к любому моменту. Конспект и дополнительные материалы всегда рядом.</p>
+    </div>
+  </section>
+
+  <!-- 5. ЖИВОЙ ИИ-НАСТАВНИК -->
+  <section class="slide">
+    <div class="inner">
+      <div class="num">03</div>
+      <h2>Живой <span class="grad">ИИ-наставник</span></h2>
+      <p class="lead">Искусственный интеллект разбирает твой аудио-пересказ, местописания и фото твоего «креста блока» — распознаёт даже рукописное. Чем больше дней ты проходишь в блоке, тем выше требования наставника к тебе: он растёт вместе с тобой.</p>
+    </div>
+  </section>
+
+  <!-- 6. ТРЕНАЖЁР МЕСТОПИСАНИЙ -->
+  <section class="slide">
+    <div class="inner">
+      <div class="num">04</div>
+      <h2>Тренажёр местописаний с ИИ</h2>
+      <p class="lead">Карточки (ссылка ↔ текст), пропущенные слова, викторина ссылок и озвучивание голосом или видео-кружком. Можно повторять предыдущие блоки. Искусственный интеллект проверяет точность каждого ответа.</p>
+    </div>
+  </section>
+
+  <!-- 7. МЕСТОПИСАНИЯ ВСЛУХ -->
+  <section class="slide">
+    <div class="inner">
+      <div class="num">05</div>
+      <h2>Местописания вслух</h2>
+      <p class="lead">Сначала можно читать стих вслух голосом и одновременно произносить его — искусственный интеллект анализирует. Затем в видео-кружке читать уже нельзя: нужно рассказать наизусть. Всё это система оценивает автоматически.</p>
+    </div>
+  </section>
+
+  <!-- 8. ПРОГРЕСС И ДНИ -->
+  <section class="slide">
+    <div class="inner">
+      <div class="num">06</div>
+      <h2>Прогресс и дни</h2>
+      <p class="lead">Видно процент пройденного курса, сколько дней осталось (10 блоков × 7 = 70 дней) и сколько дней подряд ты заходишь. Прогресс всегда перед глазами.</p>
+    </div>
+  </section>
+
+  <!-- 9. ЭКЗАМЕНЫ -->
+  <section class="slide">
+    <div class="inner">
+      <div class="num">07</div>
+      <h2>Экзамены</h2>
+      <p class="lead">Промежуточный и финальный — с разбором ответов по каждому блоку (с названиями блоков). Сдал финальный — становишься «Мастером Креста».</p>
+    </div>
+  </section>
+
+  <!-- 10. ДАШБОРД КУРАТОРОВ -->
+  <section class="slide">
+    <div class="inner">
+      <div class="num">08</div>
+      <h2>Дашборд кураторов</h2>
+      <p class="lead">Профессиональный дашборд с полным трекингом каждого ученика — активность, прогресс, сдачи. Сейчас в разработке.</p>
+      <span class="pill">В разработке</span>
+    </div>
+  </section>
+
+  <!-- 11. НАПОМИНАНИЯ -->
+  <section class="slide">
+    <div class="inner">
+      <div class="num">09</div>
+      <h2>Напоминания</h2>
+      <p class="lead">Приходят в 18:00 и в 21:00 по времени Бали. Второе напоминание отправляется в чат Telegram, чтобы ученик точно не забыл пройти крест в этот день.</p>
+    </div>
+  </section>
+
+  <!-- 12. ВИДЕНИЕ -->
+  <section class="slide">
+    <div class="inner">
+      <p class="eyebrow">Что дальше</p>
+      <h2>Видение</h2>
+      <div class="stack">
+        <div class="item"><b>Английская версия</b><p>Открыть курс для англоязычных — при поддержке Дениса Федосеева.</p></div>
+        <div class="item"><b>«10 писем»</b><p>Следующий курс — на этой же платформе или на её скелете. Единая экосистема ученичества.</p></div>
+        <div class="item"><b>Эпохальные ученики</b><p>Те, кто меняет культуру этого мира — шаг за шагом, к Вечному Завету с Богом.</p></div>
       </div>
-      <div class="col prod reveal" data-anim="right">
-        <h3>Рабочая версия (для учеников)</h3>
-        <ul>
-          <li>Блок длится 7 реальных дней — ритм и постоянство</li>
-          <li>Видео без перемотки — материал усваивается</li>
-          <li>Экзамены с попытками и паузами</li>
-          <li>Реальные кураторы принимают сдачу</li>
-          <li>Отдельный дашборд кураторов — в доработке</li>
-        </ul>
+    </div>
+  </section>
+
+  <!-- 13. БЛАГОДАРНОСТЬ -->
+  <section class="slide">
+    <div class="inner">
+      <svg class="small-cross" viewBox="0 0 60 84" aria-hidden="true"><path d="M30 6 V78"/><path d="M10 30 H50"/></svg>
+      <h2>Спасибо, что вы здесь</h2>
+      <div class="stack">
+        <div class="item"><b>Особая благодарность Алексу Манье</b><p>За возможность реализовать талант и продолжать служение Богу.</p></div>
+        <div class="item"><b>Спасибо пастору</b><p>За его видение и непрерывную работу.</p></div>
+        <div class="item"><b>Спасибо каждому из вас</b><p>Кто присоединился к этому делу. Вместе — отполируем и запустим.</p></div>
       </div>
+      <p style="margin-top:24px;font-weight:700;color:#fff;font-size:1.15rem">Иисус Христос с нами.</p>
+      <a class="cta" href="https://t.me/cross_notify_bot">Открыть КРЕСТ</a>
+      <p class="credit">КРЕСТ — платформа управляемого ученичества<br/>Церковь «Любовь Христа» · 2026</p>
     </div>
-  </section>
-
-  <section class="reveal" data-anim="up">
-    <p class="eyebrow">Что дальше</p>
-    <h2>Видение</h2>
-    <div class="steps stagger">
-      <div class="step"><span class="dot"></span><div><b>Английская версия.</b> Открыть курс для англоязычных — со своими материалами.</div></div>
-      <div class="step"><span class="dot"></span><div><b>10 курсов на одной платформе.</b> «10 писем» по тому же принципу — единая экосистема ученичества.</div></div>
-      <div class="step"><span class="dot"></span><div><b>Эпохальные ученики.</b> Те, кто меняет культуру этого мира. Шаг за шагом — к Вечному Завету с Богом.</div></div>
-    </div>
-  </section>
-
-  <section class="reveal thanks" data-anim="scale">
-    <p class="eyebrow">Благодарность</p>
-    <h2>Спасибо, что вы здесь</h2>
-    <p>Особая благодарность <b>Алексу Манье</b> — за возможность реализовать талант и продолжать служение Богу.
-    Спасибо каждому, кто присоединился к этому делу. Вместе — отполируем и запустим.</p>
-    <p style="margin-top:18px;font-weight:700;color:#fff">Иисус с вами. ✝</p>
-    <a class="cta" href="https://t.me/cross_notify_bot">Открыть КРЕСТ</a>
   </section>
 
 </div>
-</main>
-
-<footer>КРЕСТ · платформа управляемого ученичества · <span id="y"></span></footer>
 
 <script>
-  // Раскрытие секций при скролле (keynote-стиль)
-  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.18});
-  document.querySelectorAll('.reveal,.stagger').forEach(el=>io.observe(el));
-  // Параллакс фоновых пятен
-  const orbs=[...document.querySelectorAll('.orb')];
-  let ticking=false;
-  window.addEventListener('scroll',()=>{
-    if(ticking)return;ticking=true;
-    requestAnimationFrame(()=>{
-      const y=window.scrollY;
-      orbs.forEach(o=>{o.style.transform='translateY('+(y*parseFloat(o.dataset.speed||0))+'px)'});
-      ticking=false;
+  const deck=document.getElementById('deck');
+  const slides=[...deck.querySelectorAll('.slide')];
+  const dotsBox=document.getElementById('dots');
+
+  // точки-навигация
+  slides.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.setAttribute('aria-label','Слайд '+(i+1));
+    b.addEventListener('click',()=>s.scrollIntoView({behavior:'smooth'}));
+    dotsBox.appendChild(b);
+  });
+  const dots=[...dotsBox.children];
+
+  // активный слайд = раскрытие контента + подсветка точки
+  const io=new IntersectionObserver((es)=>{
+    es.forEach(e=>{
+      const i=slides.indexOf(e.target);
+      if(e.isIntersecting){
+        e.target.classList.add('active');
+        dots.forEach((d,di)=>d.classList.toggle('on',di===i));
+      }else{
+        e.target.classList.remove('active');
+      }
     });
-  },{passive:true});
-  document.getElementById('y').textContent=new Date().getFullYear();
+  },{root:deck,threshold:0.55});
+  slides.forEach(s=>io.observe(s));
 </script>
 </body>
 </html>
