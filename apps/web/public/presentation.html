@@ -24,9 +24,7 @@
   .orb{position:fixed;border-radius:50%;filter:blur(95px);opacity:.45;z-index:0;pointer-events:none;will-change:transform}
   .orb.a{width:540px;height:540px;background:#8b5cf6;top:-160px;left:-120px}
   .orb.b{width:480px;height:480px;background:#6366f1;bottom:-160px;right:-120px}
-  .bg-cross{position:fixed;inset:0;z-index:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
-  .bg-cross svg{width:46vmin;height:auto;opacity:.045}
-  .bg-cross path{stroke:#fff;stroke-width:5;stroke-linecap:round;fill:none}
+  .orb.c{width:420px;height:420px;background:#a855f7;top:46%;left:50%;transform:translate(-50%,-50%);opacity:.28}
 
   /* ── полноэкранная листалка: один свайп = один экран ── */
   .deck{position:relative;z-index:1;height:100dvh;overflow-y:scroll;scroll-snap-type:y mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
@@ -62,7 +60,11 @@
   .hint b{display:inline-block;animation:bob 1.8s ease-in-out infinite}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
 
-  .num{display:inline-flex;align-items:center;justify-content:center;min-width:56px;height:56px;padding:0 14px;border-radius:16px;background:var(--grad);font-weight:800;font-size:1.4rem;box-shadow:0 12px 30px rgba(124,92,240,.42);margin:0 auto 22px}
+  .num{display:inline-flex;align-items:center;justify-content:center;width:86px;height:86px;border-radius:50%;font-weight:800;font-size:1.6rem;color:#fff;margin:0 auto 26px;
+    background:radial-gradient(circle at 34% 28%,#e2d6ff 0%,#a78bfa 28%,#7c5cf0 58%,#5b4fe0 100%);
+    box-shadow:0 0 52px rgba(124,92,240,.55),0 16px 38px rgba(80,60,200,.4),inset 0 3px 11px rgba(255,255,255,.6),inset 0 -11px 24px rgba(49,46,129,.55);
+    animation:shimmer 6.5s ease-in-out infinite}
+  @keyframes shimmer{0%,100%{filter:hue-rotate(-14deg) saturate(1)}50%{filter:hue-rotate(22deg) saturate(1.25)}}
   .pill{display:inline-block;margin-top:20px;padding:7px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--mut);font-size:.82rem;font-weight:600}
 
   /* видение / благодарность — список */
@@ -89,7 +91,7 @@
 <body>
 <div class="orb a"></div>
 <div class="orb b"></div>
-<div class="bg-cross"><svg viewBox="0 0 60 84" aria-hidden="true"><path d="M30 6 V78"/><path d="M10 30 H50"/></svg></div>
+<div class="orb c"></div>
 <svg width="0" height="0"><defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs></svg>
 
 <nav class="dots" id="dots"></nav>
@@ -214,11 +216,10 @@
   <!-- 13. БЛАГОДАРНОСТЬ -->
   <section class="slide">
     <div class="inner">
-      <svg class="small-cross" viewBox="0 0 60 84" aria-hidden="true"><path d="M30 6 V78"/><path d="M10 30 H50"/></svg>
       <h2>Спасибо, что вы здесь</h2>
       <div class="stack">
         <div class="item"><b>Особая благодарность Алексу Манье</b><p>За возможность реализовать талант и продолжать служение Богу.</p></div>
-        <div class="item"><b>Спасибо пастору</b><p>За его видение и непрерывную работу.</p></div>
+        <div class="item"><b>Спасибо Пастору Андрею Владимировичу Матюжову</b><p>За его непрерывное служение и невероятную самоотдачу.</p></div>
         <div class="item"><b>Спасибо каждому из вас</b><p>Кто присоединился к этому делу. Вместе — отполируем и запустим.</p></div>
       </div>
       <p style="margin-top:24px;font-weight:700;color:#fff;font-size:1.15rem">Иисус Христос с нами.</p>
