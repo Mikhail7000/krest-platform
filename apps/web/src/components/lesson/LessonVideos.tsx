@@ -76,7 +76,8 @@ export function LessonVideos({ videos }: { videos: VideoResource[] }) {
                 videoId={v.kinescope_id}
                 initialMaxWatched={p?.maxWatchedSeconds ?? 0}
                 initialTotal={p?.totalSeconds ?? null}
-                initialCompleted={!!p?.completedAt}
+                // Тестировщик (canSkip): видео сразу «просмотрено» — свободная перемотка
+                initialCompleted={canSkip || !!p?.completedAt}
                 showWatchedButton={canSkip}
               />
             </div>
