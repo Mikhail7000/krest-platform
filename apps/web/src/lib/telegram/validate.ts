@@ -11,28 +11,30 @@ export type TgUser = {
 }
 
 /**
- * Валидирует initData от Telegram WebApp.
- * Returns parsed user if valid, null otherwise.
+ * Валидирует initData от Telegram WebApp по официальной схеме.
+ * https://core.telegram.org/bots/webapps#validating-data-received-from-the-web-app
  */
 export function validateInitData(initData: string): TgUser | null {
   const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
   if (!BOT_TOKEN) {
-    console.warn('TELEGRAM_BOT_TOKEN не установлен')
+    console.warn('⚠️ TELEGRAM_BOT_TOKEN not set')
     return null
   }
 
-  // initData — query string вида: "user=%7B...%7D&auth_date=123&hash=abc"
+  console.log('🔍 Validating initData...')
+
+  // Parse initData as query string: "user=%7B...%7D&auth_date=123&hash=abc"
   const params = new URLSearchParams(initData)
   const hash = params.get('hash')
   const authDate = params.get('auth_date')
   const user = params.get('user')
 
   if (!hash || !authDate || !user) {
-    console.warn('Missing required params in initData')
+    console.warn('⚠️ Missing required params:', { hash: !!hash, authDate: !!authDate, user: !!user })
     return null
   }
 
-  // Собираем data_check_string (всё кроме hash, в алфавитном порядке)
+  // Build data_check_string: all params except hash, sorted alphabetically, joined by \n
   const dataCheckArray: string[] = []
   params.forEach((value, key) => {
     if (key !== 'hash') {
@@ -42,36 +44,43 @@ export function validateInitData(initData: string): TgUser | null {
   dataCheckArray.sort()
   const dataCheckString = dataCheckArray.join('\n')
 
-  // HMAC-SHA256(BOT_TOKEN, dataCheckString) должен совпадать с hash
-  const secretKey = createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest()
-  const expectedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex')
+  // Step 1: secret_key = HMAC_SHA256("WebAppData", bot_token)
+  const secretKey = createHmac('sha256', 'WebAppData')
+    .update(BOT_TOKEN)
+    .digest()
 
-  console.log('🔐 Hash validation:', {
-    dataCheckString: dataCheckString.split('\n'),
+  // Step 2: data_check_hash = HMAC_SHA256(secret_key, data_check_string)
+  const expectedHash = createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex')
+
+  console.log('🔐 HMAC validation:', {
+    hash,
     expectedHash,
-    gotHash: hash,
-    match: expectedHash === hash,
+    match: hash === expectedHash,
   })
 
-  if (expectedHash !== hash) {
+  if (hash !== expectedHash) {
     console.warn('❌ Invalid hash signature')
     return null
   }
-  console.log('✅ Hash signature valid')
+  console.log('✅ Hash valid')
 
-  // Проверяем freshness — auth_date не старше 1 часа
+  // Check freshness: auth_date should not be older than 1 hour
   const authDateNum = parseInt(authDate, 10)
   const now = Math.floor(Date.now() / 1000)
-  if (now - authDateNum > 3600) {
-    console.warn('initData too old')
+  const age = now - authDateNum
+  if (age > 3600) {
+    console.warn(`⚠️ InitData too old (${age}s)`)
     return null
   }
 
   try {
     const userObj = JSON.parse(user) as TgUser
+    console.log('✅ User parsed:', { id: userObj.id, username: userObj.username, first_name: userObj.first_name })
     return userObj
-  } catch {
-    console.warn('Failed to parse user from initData')
+  } catch (err) {
+    console.warn('⚠️ Failed to parse user:', err)
     return null
   }
 }
