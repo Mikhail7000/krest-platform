@@ -46,10 +46,18 @@ export function validateInitData(initData: string): TgUser | null {
   const secretKey = createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest()
   const expectedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex')
 
+  console.log('🔐 Hash validation:', {
+    dataCheckString: dataCheckString.split('\n'),
+    expectedHash,
+    gotHash: hash,
+    match: expectedHash === hash,
+  })
+
   if (expectedHash !== hash) {
-    console.warn('Invalid hash:', { expected: expectedHash, got: hash })
+    console.warn('❌ Invalid hash signature')
     return null
   }
+  console.log('✅ Hash signature valid')
 
   // Проверяем freshness — auth_date не старше 1 часа
   const authDateNum = parseInt(authDate, 10)
