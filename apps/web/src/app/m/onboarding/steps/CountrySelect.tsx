@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase-browser'
 
+const tapScale = { scale: 0.98 }
+
 interface Country {
   id: string
   name_ru: string
@@ -93,13 +95,14 @@ export function CountrySelect({
         </div>
       </motion.div>
 
-      <button
+      <motion.button
         type="button"
         onClick={onBack}
+        whileTap={tapScale}
         className="w-full max-w-sm mx-auto mt-6 px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
       >
         Назад
-      </button>
+      </motion.button>
     </div>
   )
 }

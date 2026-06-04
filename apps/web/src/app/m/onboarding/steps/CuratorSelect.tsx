@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase-browser'
 
+const tapScale = { scale: 0.98 }
+
 interface Curator {
   id: string
   full_name: string
@@ -79,20 +81,22 @@ export function CuratorSelect({
             </p>
           </div>
 
-          <button
+          <motion.button
             type="button"
             onClick={handleSupportClick}
+            whileTap={tapScale}
             className="onb-cta w-full mb-3 px-4 py-3.5 rounded-2xl font-semibold transition-opacity hover:opacity-90"
           >
             Написать в поддержку
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             type="button"
             onClick={onBack}
+            whileTap={tapScale}
             className="w-full px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
           >
             Назад
-          </button>
+          </motion.button>
         </div>
       </div>
     )
@@ -116,7 +120,7 @@ export function CuratorSelect({
             <motion.button
               key={curator.id}
               onClick={() => onSelect(curator.id)}
-              whileTap={{ scale: 0.98 }}
+              whileTap={tapScale}
               className="w-full flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white shadow-sm text-left transition-colors hover:border-gray-300 dark:border-white/12 dark:bg-white/5 dark:shadow-none dark:backdrop-blur-sm dark:hover:border-white/30"
             >
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#16181D] font-semibold text-white dark:border dark:border-white/12 dark:bg-white/10">
@@ -128,13 +132,14 @@ export function CuratorSelect({
         </div>
       </motion.div>
 
-      <button
+      <motion.button
         type="button"
         onClick={onBack}
+        whileTap={tapScale}
         className="w-full max-w-sm mx-auto mt-6 px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
       >
         Назад
-      </button>
+      </motion.button>
     </div>
   )
 }

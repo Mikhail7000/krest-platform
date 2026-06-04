@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase-browser'
 
+const tapScale = { scale: 0.98 }
+
 interface City {
   id: string
   name_ru: string
@@ -116,7 +118,7 @@ export function CitySelect({
             <motion.button
               key={city.id}
               onClick={() => onSelect(city.id)}
-              whileTap={{ scale: 0.98 }}
+              whileTap={tapScale}
               className="w-full p-4 rounded-2xl border border-gray-200 bg-white shadow-sm text-left font-semibold text-[#16181D] transition-colors hover:border-gray-300 dark:border-white/12 dark:bg-white/5 dark:shadow-none dark:backdrop-blur-sm dark:text-white dark:hover:border-white/30"
             >
               {city.name_ru}
@@ -126,20 +128,22 @@ export function CitySelect({
       </motion.div>
 
       <div className="w-full max-w-sm mx-auto mt-6 space-y-3">
-        <button
+        <motion.button
           type="button"
           onClick={() => window.open('tg://resolve/?domain=rogue02', '_blank')}
+          whileTap={tapScale}
           className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 font-medium text-sm text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/70 dark:hover:border-white/30 transition-colors"
         >
           Моего города нету в списке
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           type="button"
           onClick={onBack}
+          whileTap={tapScale}
           className="w-full px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
         >
           Назад
-        </button>
+        </motion.button>
       </div>
     </div>
   )

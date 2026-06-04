@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
 
+const tapScale = { scale: 0.98 }
+
 export function NameInput({
   onSubmit,
   onBack,
@@ -71,22 +73,24 @@ export function NameInput({
         )}
 
         {/* Кнопка всегда активна (имя имеет запасное значение) */}
-        <button
+        <motion.button
           type="button"
           onClick={handleSubmit}
           disabled={loading}
+          whileTap={tapScale}
           className="onb-cta w-full px-4 py-3.5 rounded-2xl font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 mb-3"
         >
           {loading ? 'Сохранение…' : 'Продолжить'}
-        </button>
-        <button
+        </motion.button>
+        <motion.button
           type="button"
           onClick={onBack}
           disabled={loading}
+          whileTap={tapScale}
           className="w-full px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 disabled:opacity-50 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
         >
           Назад
-        </button>
+        </motion.button>
       </motion.div>
     </div>
   )
