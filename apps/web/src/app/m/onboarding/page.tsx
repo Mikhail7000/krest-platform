@@ -7,13 +7,11 @@ import { EnglishPlaceholder } from './EnglishPlaceholder'
 import { LanguageSelect } from './LanguageSelect'
 import { CountrySelect } from './steps/CountrySelect'
 import { CitySelect } from './steps/CitySelect'
+import { CuratorSelect } from './steps/CuratorSelect'
 import { NameInput } from './steps/NameInput'
 
-// Флоу: язык → страна → город → имя → сохранение.
-// Шаг 'curator' (CuratorSelect) готов под обе темы, но отвязан на период теста:
-// кураторов в Бали ещё нет, иначе новый ученик упирается в «Кураторов не найдено».
-// Включить, когда появятся кураторы: вернуть шаг между 'city' и 'name'.
-type OnboardingStep = 'language' | 'english' | 'country' | 'city' | 'name'
+// Флоу: язык → страна → город → наставник → имя → сохранение.
+type OnboardingStep = 'language' | 'english' | 'country' | 'city' | 'curator' | 'name'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -22,6 +20,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<OnboardingStep>('language')
   const [countryId, setCountryId] = useState<string | null>(null)
   const [cityId, setCityId] = useState<string | null>(null)
+  const [curatorId, setCuratorId] = useState<string | null>(null)
 
   const handleLanguageSelect = (lang: 'ru' | 'en') => {
     setStep(lang === 'en' ? 'english' : 'country')
@@ -33,9 +32,12 @@ export default function OnboardingPage() {
     } else if (step === 'city') {
       setCountryId(null)
       setStep('country')
-    } else if (step === 'name') {
+    } else if (step === 'curator') {
       setCityId(null)
       setStep('city')
+    } else if (step === 'name') {
+      setCuratorId(null)
+      setStep('curator')
     }
   }, [step])
 
@@ -46,6 +48,11 @@ export default function OnboardingPage() {
 
   const handleCitySelect = useCallback((cId: string) => {
     setCityId(cId)
+    setStep('curator')
+  }, [])
+
+  const handleCuratorSelect = useCallback((cId: string | null) => {
+    setCuratorId(cId)
     setStep('name')
   }, [])
 
@@ -63,8 +70,9 @@ export default function OnboardingPage() {
           initData,
           country_id: countryId,
           city_id: cityId,
-          curator_id: null, // шаг куратора отвязан на период теста (см. коммент выше)
+          curator_id: curatorId,
           full_name: fullName,
+          lang: 'ru',
         }),
       })
 
@@ -75,7 +83,7 @@ export default function OnboardingPage() {
 
       router.push('/m/dashboard')
     },
-    [countryId, cityId, initData, router],
+    [countryId, cityId, curatorId, initData, router],
   )
 
   let content: React.ReactNode = null
@@ -87,6 +95,8 @@ export default function OnboardingPage() {
     content = <CountrySelect onSelect={handleCountrySelect} onBack={handleBack} />
   } else if (step === 'city' && countryId) {
     content = <CitySelect countryId={countryId} onSelect={handleCitySelect} onBack={handleBack} />
+  } else if (step === 'curator' && cityId) {
+    content = <CuratorSelect cityId={cityId} onSelect={handleCuratorSelect} onBack={handleBack} />
   } else if (step === 'name') {
     content = <NameInput onSubmit={handleNameSubmit} onBack={handleBack} />
   }

@@ -7,9 +7,9 @@ export const dynamic = 'force-dynamic'
 /**
  * POST /api/miniapp/onboarding
  *
- * Завершение онбординга: сохранение выбора страны, города, куратора, имени.
+ * Завершение онбординга: сохранение выбора страны, города, куратора, имени, языка.
  *
- * Body: { initData, country_id, city_id, curator_id, full_name }
+ * Body: { initData, country_id, city_id, curator_id, full_name, lang }
  *
  * Аутентификация — через Telegram initData + resolveUserId (как весь /m/*).
  */
@@ -19,14 +19,14 @@ export async function POST(request: NextRequest) {
       initData?: string
       country_id?: number | string
       city_id?: number | string
-      curator_id?: string
+      curator_id?: string | null
       full_name?: string
+      lang?: 'ru' | 'en'
     }
 
-    const { initData, country_id, city_id, curator_id, full_name } = body
+    const { initData, country_id, city_id, curator_id, full_name, lang } = body
 
-    // curator_id и full_name необязательны (шаги куратора/имени убраны на тест,
-    // имя уже сохранено в профиле из Telegram при первом входе)
+    // curator_id, full_name, lang необязательны (опциональные шаги)
     if (!country_id || !city_id) {
       return NextResponse.json(
         { error: { code: 'BAD_REQUEST', message: 'Missing required fields' } },
@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
       country_id: Number(country_id),
       city_id: Number(city_id),
       onboarding_done: true,
+      lang: lang ?? 'ru',
     }
-    // curator_id обновляем только если явно передан — иначе НЕ затираем уже
-    // привязанного куратора (шаг куратора в онбординге сейчас отключён → шлёт null)
-    if (curator_id) update.curator_id = curator_id
+    // curator_id обновляем только если явно передан — иначе оставляем текущее значение
+    if (curator_id !== undefined && curator_id !== null) update.curator_id = curator_id
     // Имя обновляем только если передано — иначе оставляем уже сохранённое
     if (full_name) update.full_name = full_name
 

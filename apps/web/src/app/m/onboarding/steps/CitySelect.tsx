@@ -125,13 +125,22 @@ export function CitySelect({
         </div>
       </motion.div>
 
-      <button
-        type="button"
-        onClick={onBack}
-        className="w-full max-w-sm mx-auto mt-6 px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
-      >
-        Назад
-      </button>
+      <div className="w-full max-w-sm mx-auto mt-6 space-y-3">
+        <button
+          type="button"
+          onClick={() => window.open('tg://resolve/?domain=rogue02', '_blank')}
+          className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 font-medium text-sm text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/70 dark:hover:border-white/30 transition-colors"
+        >
+          Моего города нету в списке
+        </button>
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-full px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
+        >
+          Назад
+        </button>
+      </div>
     </div>
   )
 }
