@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { supabase } from '@/lib/supabase-browser'
+import { useTelegram } from '@/components/telegram/TelegramProvider'
 
 const tapScale = { scale: 0.98 }
 
@@ -21,36 +21,38 @@ export function CuratorSelect({
   onSelect: (curatorId: string) => void
   onBack: () => void
 }) {
+  const { initData } = useTelegram()
   const [curators, setCurators] = useState<Curator[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
+    // Читаем кураторов через серверный route: RLS на profiles режет анонимный
+    // браузерный клиент (в MiniApp нет Supabase-сессии). См. /api/miniapp/curators.
     const loadCurators = async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (supabase as any)
-          .from('profiles')
-          .select('id, full_name')
-          .eq('role', 'curator')
-          .eq('city_id', cityId)
-          .order('full_name')
-
-        if (error) {
-          console.error('Failed to load curators:', error)
+        const res = await fetch('/api/miniapp/curators', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData, city_id: cityId }),
+        })
+        if (!res.ok) {
+          console.error('Failed to load curators:', res.status)
+          setCurators([])
           return
         }
-
-        setCurators(data || [])
+        const json = (await res.json()) as { curators?: Curator[] }
+        setCurators(json.curators ?? [])
       } catch (err) {
         console.error('Curators load error:', err)
+        setCurators([])
       } finally {
         setLoading(false)
       }
     }
 
     loadCurators()
-  }, [cityId])
+  }, [cityId, initData])
 
   const handleSupportClick = () => {
     router.push('/m/support')

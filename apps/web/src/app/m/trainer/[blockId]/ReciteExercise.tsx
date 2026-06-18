@@ -143,7 +143,7 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
         {isVideo && (rec.state === 'recording' || rec.blobUrl) && (
           <div className="tr-circle">
             {rec.state === 'recording' ? (
-              <video ref={liveRef} className="tr-circle__video" autoPlay muted playsInline />
+              <video ref={liveRef} className="tr-circle__video tr-circle__video--live" autoPlay muted playsInline />
             ) : (
               <video key={rec.blobUrl} className="tr-circle__video" src={rec.blobUrl ?? undefined} playsInline controls />
             )}

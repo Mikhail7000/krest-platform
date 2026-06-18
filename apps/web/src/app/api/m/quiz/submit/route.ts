@@ -9,6 +9,7 @@ import {
   type QuestionRow,
 } from '@/lib/quiz/check'
 import type { Database } from '../../../../../../../../packages/supabase/src/types'
+import { isBlockUnlocked } from '@/lib/access/block-gate'
 
 type BlockProgressUpdate =
   Database['public']['Tables']['student_block_progress']['Update']
@@ -54,6 +55,11 @@ export async function POST(req: NextRequest) {
   const auth = await resolveUserId(initData)
   if (!auth.ok) return err(auth.message, auth.code, auth.status)
   const userId = auth.userId
+
+  // 3. Block-gate: проверяем, что блок разблокирован для этого пользователя
+  if (!(await isBlockUnlocked(userId, blockId))) {
+    return err('Этот блок ещё не открыт.', 'BLOCK_LOCKED', 403)
+  }
 
   const supabase = createServiceSupabase()
 

@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { isBlockUnlocked } from '@/lib/access/block-gate'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,9 +62,14 @@ export async function POST(req: NextRequest, { params }: Params) {
     return err('Invalid block id', 'BAD_BLOCK_ID', 400)
   }
 
+  // 3. Block-gate: проверяем, что блок разблокирован для этого пользователя
+  if (!(await isBlockUnlocked(userId, blockId))) {
+    return err('Этот блок ещё не открыт.', 'BLOCK_LOCKED', 403)
+  }
+
   const supabase = createServiceSupabase()
 
-  // 3. Доступ к местописаниям: либо can_skip_block_lock у профиля (super_admin/тест),
+  // 4. Доступ к местописаниям: либо can_skip_block_lock у профиля (super_admin/тест),
   //    либо квиз блока сдан (quiz_passed_at IS NOT NULL).
   const [{ data: profile }, { data: progress }] = await Promise.all([
     supabase.from('profiles').select('can_skip_block_lock').eq('id', userId).maybeSingle(),
@@ -76,18 +82,18 @@ export async function POST(req: NextRequest, { params }: Params) {
   ])
 
   const canSkip = Boolean(profile?.can_skip_block_lock)
-  let isBlockUnlocked = canSkip || Boolean(progress?.quiz_passed_at)
+  let locationsUnlocked = canSkip || Boolean(progress?.quiz_passed_at)
   let lockedReason: 'previous_not_passed' | 'cooldown_7_days' | undefined
   let unlockAt: string | undefined
 
-  if (!isBlockUnlocked) {
+  if (!locationsUnlocked) {
     lockedReason = 'previous_not_passed'
   } else if (!canSkip && progress?.locations_locked_until) {
     const lockedUntil = new Date(progress.locations_locked_until)
     if (lockedUntil > new Date()) {
       lockedReason = 'cooldown_7_days'
       unlockAt = lockedUntil.toISOString()
-      isBlockUnlocked = false
+      locationsUnlocked = false
     }
   }
 
@@ -205,7 +211,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   return NextResponse.json({
     ok: true,
-    block_unlocked: isBlockUnlocked,
+    block_unlocked: locationsUnlocked,
     ...(lockedReason ? { locked_reason: lockedReason } : {}),
     ...(unlockAt ? { unlock_at: unlockAt } : {}),
     can_skip: canSkip,

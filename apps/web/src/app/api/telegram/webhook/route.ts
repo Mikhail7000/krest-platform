@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { computeActivity } from '@/lib/activity/streak'
+import { createTelegramProfile } from '@/lib/telegram/ensure-profile'
+import {
+  sendTelegramMessage,
+  answerCallbackQuery,
+  editMessageText,
+} from '@/lib/telegram/send'
 
-// Telegram Update types
+// ─── Telegram Update types ────────────────────────────────────────────────
+
 interface TelegramUser {
   id: number
   first_name: string
@@ -26,73 +33,157 @@ interface TelegramMessage {
   text?: string
 }
 
+interface TelegramCallbackQuery {
+  id: string
+  from: TelegramUser
+  message?: { message_id: number; chat: { id: number } }
+  data?: string
+}
+
 interface TelegramUpdate {
   update_id: number
   message?: TelegramMessage
+  callback_query?: TelegramCallbackQuery
 }
 
-// Create Supabase client with service role for writing without RLS
+interface AccessRequest {
+  id: string
+  telegram_chat_id: number
+  username: string | null
+  first_name: string | null
+  last_name: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  approved_role: 'student' | 'curator' | null
+}
+
+// ─── Service Supabase client ──────────────────────────────────────────────
+
 function createServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!url || !serviceKey) {
-    throw new Error('Missing Supabase configuration')
-  }
-
+  if (!url || !serviceKey) throw new Error('Missing Supabase configuration')
   return createClient(url, serviceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+    auth: { autoRefreshToken: false, persistSession: false },
   })
 }
 
-// Send message back to Telegram (optionally with inline keyboard / web_app button)
-async function sendTelegramMessage(
-  chatId: number,
-  text: string,
-  options?: { withMiniAppButton?: boolean; refToken?: string | null }
-): Promise<void> {
-  const token = process.env.TELEGRAM_BOT_TOKEN
-  if (!token) {
-    console.error('TELEGRAM_BOT_TOKEN not configured')
+// ─── Обработчик callback_query ────────────────────────────────────────────
+
+async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
+  const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
+    .split(',')
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => !isNaN(n))
+
+  // Проверяем права
+  if (!adminChatIds.includes(cq.from.id)) {
+    await answerCallbackQuery(cq.id, 'Недостаточно прав')
     return
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://krest-platform-web.vercel.app'
-  const miniAppUrl = options?.refToken
-    ? `${baseUrl}/m/dashboard?ref=${options.refToken}`
-    : `${baseUrl}/m/dashboard`
-
-  const body: Record<string, unknown> = {
-    chat_id: chatId,
-    text,
-    parse_mode: 'HTML',
+  const data = cq.data ?? ''
+  const colonIdx = data.indexOf(':')
+  if (colonIdx === -1) {
+    await answerCallbackQuery(cq.id, 'Неверный формат данных')
+    return
   }
 
-  if (options?.withMiniAppButton) {
-    body.reply_markup = {
-      inline_keyboard: [[
-        { text: '✝️ Открыть КРЕСТ', web_app: { url: miniAppUrl } }
-      ]]
-    }
+  const action = data.slice(0, colonIdx)
+  const requestId = data.slice(colonIdx + 1)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const service = createServiceSupabase() as any
+
+  const { data: req, error: fetchErr } = await service
+    .from('access_requests')
+    .select('id, telegram_chat_id, username, first_name, last_name, status, approved_role')
+    .eq('id', requestId)
+    .maybeSingle() as { data: AccessRequest | null; error: unknown }
+
+  if (fetchErr || !req) {
+    await answerCallbackQuery(cq.id, 'Заявка не найдена')
+    return
   }
 
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+  if (req.status !== 'pending') {
+    await answerCallbackQuery(cq.id, 'Заявка уже обработана')
+    return
+  }
+
+  const name =
+    [req.first_name, req.last_name].filter(Boolean).join(' ') ||
+    (req.username ? `@${req.username}` : `id ${req.telegram_chat_id}`)
+
+  if (action === 'approve_student' || action === 'approve_curator') {
+    const role: 'student' | 'curator' = action === 'approve_student' ? 'student' : 'curator'
+    const roleLabel = role === 'student' ? 'ученик' : 'куратор'
+
+    // Создаём профиль
+    const result = await createTelegramProfile({
+      chatId: Number(req.telegram_chat_id),
+      username: req.username,
+      firstName: req.first_name,
+      lastName: req.last_name,
+      role,
     })
-    if (!res.ok) {
-      const errText = await res.text()
-      console.error('Telegram sendMessage failed:', res.status, errText)
+
+    if (!result.ok) {
+      console.error('[webhook] createTelegramProfile failed:', result)
+      await answerCallbackQuery(cq.id, 'Ошибка создания профиля')
+      return
     }
-  } catch (error) {
-    console.error('Failed to send Telegram message:', error)
+
+    // Обновляем заявку
+    await service.from('access_requests').update({
+      status: 'approved',
+      approved_role: role,
+      decided_by: cq.from.id,
+      decided_at: new Date().toISOString(),
+    }).eq('id', requestId)
+
+    await answerCallbackQuery(cq.id, 'Одобрено')
+
+    // Редактируем сообщение у всех админов (только у того, кто нажал — message доступен)
+    if (cq.message) {
+      await editMessageText(
+        cq.message.chat.id,
+        cq.message.message_id,
+        `✅ Одобрено как ${roleLabel}: <b>${name}</b>`,
+      )
+    }
+
+    // Уведомляем заявителя
+    await sendTelegramMessage(
+      Number(req.telegram_chat_id),
+      'Тебя одобрили! ✝️ Открой приложение и начни обучение.',
+      { withMiniAppButton: true },
+    )
+    return
   }
+
+  if (action === 'reject') {
+    await service.from('access_requests').update({
+      status: 'rejected',
+      decided_by: cq.from.id,
+      decided_at: new Date().toISOString(),
+    }).eq('id', requestId)
+
+    await answerCallbackQuery(cq.id, 'Отклонено')
+
+    if (cq.message) {
+      await editMessageText(
+        cq.message.chat.id,
+        cq.message.message_id,
+        `✖️ Отклонено: <b>${name}</b>`,
+      )
+    }
+    return
+  }
+
+  await answerCallbackQuery(cq.id, 'Неизвестное действие')
 }
+
+// ─── HTTP handlers ────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   // Validate webhook secret if configured
@@ -106,9 +197,19 @@ export async function POST(request: NextRequest) {
 
   let update: TelegramUpdate
   try {
-    update = await request.json() as TelegramUpdate
+    update = (await request.json()) as TelegramUpdate
   } catch {
     return NextResponse.json({ error: 'INVALID_JSON' }, { status: 400 })
+  }
+
+  // callback_query — обработка нажатия inline-кнопок
+  if (update.callback_query) {
+    try {
+      await handleCallbackQuery(update.callback_query)
+    } catch (err) {
+      console.error('[webhook] handleCallbackQuery error:', err)
+    }
+    return NextResponse.json({ ok: true })
   }
 
   // Only process messages with text
@@ -187,7 +288,6 @@ export async function POST(request: NextRequest) {
       try {
         const supabase = createServiceSupabase()
 
-        // Find profile by email
         const { data: profile, error: findError } = await supabase
           .from('profiles')
           .select('id, email, telegram_chat_id')
@@ -197,21 +297,19 @@ export async function POST(request: NextRequest) {
         if (findError || !profile) {
           await sendTelegramMessage(
             chatId,
-            `<b>Аккаунт не найден</b>\n\nПользователь с email <code>${emailArg}</code> не зарегистрирован на платформе КРЕСТ.\n\nСначала зарегистрируйтесь на сайте, затем вернитесь сюда.`
+            `<b>Аккаунт не найден</b>\n\nПользователь с email <code>${emailArg}</code> не зарегистрирован на платформе КРЕСТ.\n\nСначала зарегистрируйтесь на сайте, затем вернитесь сюда.`,
           )
           return NextResponse.json({ ok: true })
         }
 
-        // Check if already linked
         if (profile.telegram_chat_id && profile.telegram_chat_id === chatId) {
           await sendTelegramMessage(
             chatId,
-            `<b>Уже подключено!</b>\n\nВаш Telegram уже связан с аккаунтом КРЕСТ.`
+            `<b>Уже подключено!</b>\n\nВаш Telegram уже связан с аккаунтом КРЕСТ.`,
           )
           return NextResponse.json({ ok: true })
         }
 
-        // Update telegram_chat_id
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ telegram_chat_id: chatId })
@@ -221,35 +319,35 @@ export async function POST(request: NextRequest) {
           console.error('Failed to update telegram_chat_id:', updateError)
           await sendTelegramMessage(
             chatId,
-            `<b>Ошибка</b>\n\nНе удалось связать аккаунт. Попробуйте позже.`
+            `<b>Ошибка</b>\n\nНе удалось связать аккаунт. Попробуйте позже.`,
           )
           return NextResponse.json({ ok: true })
         }
 
         await sendTelegramMessage(
           chatId,
-          `<b>Аккаунт подключен!</b>\n\nВы будете получать уведомления об одобрении блоков лидером.\n\nУдачи в прохождении курса КРЕСТ!`
+          `<b>Аккаунт подключен!</b>\n\nВы будете получать уведомления об одобрении блоков лидером.\n\nУдачи в прохождении курса КРЕСТ!`,
         )
       } catch (error) {
         console.error('Error linking Telegram account:', error)
-        await sendTelegramMessage(
-          chatId,
-          `<b>Ошибка</b>\n\nПроизошла ошибка. Попробуйте позже.`
-        )
+        await sendTelegramMessage(chatId, `<b>Ошибка</b>\n\nПроизошла ошибка. Попробуйте позже.`)
       }
     } else {
-      // /start без аргументов или с ref-токеном церкви → welcome + кнопка Mini App
+      // /start без аргументов или с ref-токеном церкви
       const welcomeText = refToken
         ? `<b>Добро пожаловать в КРЕСТ! ✝️</b>\n\nВас пригласила церковь-партнёр.\n\nОткройте приложение и пройдите 10 блоков знакомства с верой — с живым наставником и в кругу таких же ищущих.`
         : `<b>Добро пожаловать в КРЕСТ! ✝️</b>\n\nПлатформа для изучения Креста.\n\n<b>Что внутри:</b>\n• 10 блоков для изучения\n• Видео-уроки и конспекты\n• Практика по каждому блоку\n\nНажмите кнопку ниже, чтобы открыть приложение.`
 
-      await sendTelegramMessage(chatId, welcomeText, { withMiniAppButton: true, refToken })
+      await sendTelegramMessage(chatId, welcomeText, {
+        withMiniAppButton: true,
+        ...(refToken ? { inlineKeyboard: undefined } : {}),
+      })
     }
 
     return NextResponse.json({ ok: true })
   }
 
-  // Handle other messages — check if user's chat_id matches any profile
+  // Handle other messages
   try {
     const supabase = createServiceSupabase()
 
@@ -262,12 +360,12 @@ export async function POST(request: NextRequest) {
     if (profile) {
       await sendTelegramMessage(
         chatId,
-        `<b>Привет, ${profile.full_name || 'ученик'}!</b>\n\nВаш аккаунт подключен. Вы получите уведомление, когда лидер одобрит ваш блок.`
+        `<b>Привет, ${profile.full_name || 'ученик'}!</b>\n\nВаш аккаунт подключен. Вы получите уведомление, когда лидер одобрит ваш блок.`,
       )
     } else {
       await sendTelegramMessage(
         chatId,
-        `<b>Аккаунт не подключен</b>\n\nОтправьте команду:\n<code>/start ваш@email.com</code>\n\nчтобы связать Telegram с аккаунтом КРЕСТ.`
+        `<b>Аккаунт не подключен</b>\n\nОтправьте команду:\n<code>/start ваш@email.com</code>\n\nчтобы связать Telegram с аккаунтом КРЕСТ.`,
       )
     }
   } catch (error) {

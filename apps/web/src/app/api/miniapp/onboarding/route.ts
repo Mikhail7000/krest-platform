@@ -68,6 +68,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Якорь старта недельной разблокировки блоков. Ставим ОДИН раз
+    // (.is null) — чтобы повторный онбординг не сбросил отсчёт и не залочил
+    // уже продвинувшегося ученика. См. is_block_unlocked / course_started_at.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from('profiles')
+      .update({ course_started_at: new Date().toISOString() })
+      .eq('id', auth.userId)
+      .is('course_started_at', null)
+
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[onboarding POST]', err)

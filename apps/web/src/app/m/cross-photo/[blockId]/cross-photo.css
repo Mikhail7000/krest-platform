@@ -57,6 +57,65 @@
   color: #16181d;
 }
 
+/* ── Карточка задания ────────────────────────────────────────────── */
+.cp-task-card {
+  background: var(--tg-section-bg, rgba(255,255,255,0.06));
+  border: 1px solid var(--tg-section-separator, rgba(255,255,255,0.1));
+  border-radius: 16px;
+  padding: 1rem 1.125rem;
+  margin-bottom: 1.25rem;
+}
+.cp-task-card__heading {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-solid);
+  margin-bottom: 0.375rem;
+}
+.cp-task-card__instruction {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--tg-text, #E5E7EB);
+  line-height: 1.45;
+  margin-bottom: 0.875rem;
+}
+.cp-task-card__rubric { }
+.cp-task-card__rubric-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tg-hint, #9CA3AF);
+  margin-bottom: 0.375rem;
+}
+.cp-task-card__rubric-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.cp-task-card__rubric-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--tg-text, #E5E7EB);
+  margin-top: 0.25rem;
+  padding: 0;
+}
+.cp-task-card__rubric-item {
+  font-size: 0.8125rem;
+  color: var(--tg-hint, #9CA3AF);
+  line-height: 1.5;
+  padding-left: 0.875rem;
+  position: relative;
+}
+.cp-task-card__rubric-item::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--accent-solid);
+}
+
 .cp-progress-bar {
   height: 3px;
   background: var(--track);

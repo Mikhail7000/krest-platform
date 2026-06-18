@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { pickReferenceDistractors } from '@/lib/locations/reference-distractors'
 import { FavStar } from './FavStar'
 import { shuffle, type TrainerVerse } from './types'
 
@@ -24,7 +25,7 @@ export function ReferenceQuiz({ verses }: { verses: TrainerVerse[] }) {
 
   const options = useMemo(() => {
     if (!verse) return []
-    const distractors = shuffle(allRefs.filter((r) => r !== verse.reference)).slice(0, 3)
+    const distractors = pickReferenceDistractors(verse.reference, allRefs, 3)
     return shuffle([verse.reference, ...distractors])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verse?.id, allRefs])

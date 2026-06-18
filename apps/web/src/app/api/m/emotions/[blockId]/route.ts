@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { isBlockUnlocked } from '@/lib/access/block-gate'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,6 +93,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const auth = await resolveUserId(initData)
     if (!auth.ok) return err(auth.message, auth.code, auth.status)
+    if (!(await isBlockUnlocked(auth.userId, blockId))) {
+      return err('Этот блок ещё не открыт.', 'BLOCK_LOCKED', 403)
+    }
     if (!['audio', 'video_note'].includes(kind)) return err('bad kind', 'BAD_KIND', 400)
     if (!file || file.size === 0) return err('file required', 'NO_FILE', 400)
 
@@ -114,6 +118,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   const body = (await req.json().catch(() => ({}))) as { initData?: string; text?: string }
   const auth = await resolveUserId(body.initData ?? '')
   if (!auth.ok) return err(auth.message, auth.code, auth.status)
+  if (!(await isBlockUnlocked(auth.userId, blockId))) {
+    return err('Этот блок ещё не открыт.', 'BLOCK_LOCKED', 403)
+  }
 
   if (typeof body.text === 'string' && body.text.trim().length >= 1) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

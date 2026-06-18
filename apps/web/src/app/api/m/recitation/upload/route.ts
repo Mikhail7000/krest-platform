@@ -25,6 +25,7 @@ import { createServiceSupabase } from '@/lib/supabase-service'
 import { callDeepgram } from '@/lib/ai/deepgram'
 import { checkRecitation } from '@/lib/recitation/check'
 import { STUDENT_RECITATIONS_BUCKET } from '@/lib/ai/constants'
+import { isBlockUnlocked } from '@/lib/access/block-gate'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,6 +90,11 @@ export async function POST(req: NextRequest) {
   const auth = await resolveUserId(initData)
   if (!auth.ok) return err(auth.message, auth.code, auth.status)
   const userId = auth.userId
+
+  // 3a. Block-gate: проверяем, что блок разблокирован для этого пользователя
+  if (!(await isBlockUnlocked(userId, blockId))) {
+    return err('Этот блок ещё не открыт.', 'BLOCK_LOCKED', 403)
+  }
 
   const supabase = createServiceSupabase()
 

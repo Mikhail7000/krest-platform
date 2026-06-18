@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { pickClozeDistractors } from '@/lib/locations/distractors'
 import { FavStar } from './FavStar'
 import { shuffle, type TrainerVerse } from './types'
 
@@ -53,9 +54,11 @@ export function ClozeExercise({ verses }: { verses: TrainerVerse[] }) {
       .sort((a, b) => a.i - b.i)
     const correctWords = blanks.map((b) => b.c)
     const distractorsNeeded = Math.max(4 - k, 3)
-    const distractors = shuffle(
-      wordPool.filter((w) => !correctWords.some((c) => c.toLowerCase() === w.toLowerCase())),
-    ).slice(0, distractorsNeeded)
+    const distractors = pickClozeDistractors({
+      correctWords,
+      wordPool,
+      needed: distractorsNeeded,
+    })
     const options = shuffle([...correctWords, ...distractors]).map((word, key) => ({ key, word }))
     return { tokens, blankIndices: blanks.map((b) => b.i), correctWords, options }
     // eslint-disable-next-line react-hooks/exhaustive-deps

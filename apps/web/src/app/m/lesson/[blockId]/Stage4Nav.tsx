@@ -78,7 +78,8 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__body">
           <span className="lesson-stage4-card__title">Эпоха пятницы</span>
-          <span className="lesson-stage4-card__desc">Передать «Малый крест» и поделиться впечатлениями</span>
+          <span className="lesson-stage4-card__desc">Выйди на места действия и передай «Малый крест» людям</span>
+          <span className="lesson-stage4-badge lesson-stage4-badge--required">обязательно</span>
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
@@ -88,7 +89,8 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__body">
           <span className="lesson-stage4-card__title">Эмоции и свидетельства</span>
-          <span className="lesson-stage4-card__desc">Поделиться опытом — текст, аудио или кружок (необязательно)</span>
+          <span className="lesson-stage4-card__desc">Что ты пережил после — расскажи куратору (текст, аудио, кружок)</span>
+          <span className="lesson-stage4-badge lesson-stage4-badge--optional">по желанию</span>
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>

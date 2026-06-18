@@ -93,7 +93,11 @@ function PdfCard({ resource, url }: { resource: BlockResource; url: string | und
   )
 }
 
-function GuideCard({ resource }: { resource: BlockResource }) {
+/** Карточка guide_pdf — если summary_md есть, а storage_path нет → читабельная markdown-секция */
+function GuideCard({ resource, url }: { resource: BlockResource; url: string | undefined }) {
+  const hasPdf = !!url
+  const hasSummary = !!resource.summary_md
+
   return (
     <section className="lesson-card lesson-card--guide">
       <h2 className="lesson-card__title">
@@ -101,7 +105,23 @@ function GuideCard({ resource }: { resource: BlockResource }) {
         {resource.is_required && <span className="lesson-badge">обязательно</span>}
       </h2>
       {resource.description_ru && <p className="lesson-card__desc">{resource.description_ru}</p>}
-      {resource.transcript_md && (
+
+      {hasPdf && (
+        <a href={url} target="_blank" rel="noopener noreferrer" download className="lesson-button" style={{ display: 'inline-block', marginBottom: '0.75rem' }}>
+          Скачать PDF
+        </a>
+      )}
+
+      {hasSummary && (
+        <details className="lesson-details" open={!hasPdf}>
+          <summary>Развернуть текст гайда</summary>
+          <div className="lesson-summary">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{resource.summary_md!}</ReactMarkdown>
+          </div>
+        </details>
+      )}
+
+      {!hasPdf && !hasSummary && resource.transcript_md && (
         <details className="lesson-details">
           <summary>Развернуть текст гайда</summary>
           <div className="lesson-summary">
@@ -122,6 +142,9 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
   if (!data) notFound()
   const { block, resources, signedByPath } = data
 
+  // Вводный модуль (order_num=0) — без 12-пунктового ДЗ и счётчика дней
+  const isIntroBlock = (block.order_num ?? 1) === 0
+
   const videoResources = resources
     .filter((r) => r.resource_type === 'main_video' || r.resource_type === 'additional_video')
     .filter((r): r is BlockResource & { kinescope_id: string } => !!r.kinescope_id)
@@ -137,16 +160,18 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
   const pdfs = resources.filter((r) => r.resource_type === 'pdf_prayer')
   const guides = resources.filter((r) => r.resource_type === 'guide_pdf')
 
+  const eyebrow = isIntroBlock ? 'Вводный модуль' : `Блок ${block.order_num ?? blockId}`
+
   return (
     <div className="miniapp-container lesson-page">
       <BackToBlocks variant="top" />
       <header className="lesson-header">
-        <p className="lesson-header__eyebrow">Блок {block.order_num ?? blockId}</p>
+        <p className="lesson-header__eyebrow">{eyebrow}</p>
         <h1 className="lesson-header__title">{block.title_ru ?? `Блок ${blockId}`}</h1>
         {block.subtitle_ru && <p className="lesson-header__subtitle">{block.subtitle_ru}</p>}
       </header>
 
-      <BlockProgress blockId={id} />
+      {!isIntroBlock && <BlockProgress blockId={id} />}
 
       <LessonVideos videos={videoResources} />
 
@@ -169,10 +194,10 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
       )}
 
       {guides.map((r) => (
-        <GuideCard key={r.id} resource={r} />
+        <GuideCard key={r.id} resource={r} url={r.storage_path ? signedByPath[r.storage_path] : undefined} />
       ))}
 
-      <Stage4Nav blockId={id} />
+      {!isIntroBlock && <Stage4Nav blockId={id} />}
 
       <BackToBlocks variant="bottom" />
     </div>

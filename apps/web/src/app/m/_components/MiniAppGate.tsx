@@ -6,7 +6,7 @@ import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { SupportRequestScreen } from './SupportRequestScreen'
 
 export function MiniAppGate({ children }: { children: React.ReactNode }) {
-  const { status, initData } = useTelegram()
+  const { status, initData, errorMessage } = useTelegram()
   const router = useRouter()
   const [checkedOnboarding, setCheckedOnboarding] = useState(false)
 
@@ -48,7 +48,26 @@ export function MiniAppGate({ children }: { children: React.ReactNode }) {
 
   // Show support screen when access is denied
   if (status === 'forbidden') {
-    return <SupportRequestScreen />
+    // Если WAITLIST — показываем дружелюбный экран «заявка на рассмотрении»
+    const isWaitlist = errorMessage?.includes('Заявка отправлена') ||
+      errorMessage?.includes('Как только наставник одобрит')
+
+    if (isWaitlist) {
+      return (
+        <SupportRequestScreen
+          title="Заявка на рассмотрении"
+          subtitle={errorMessage ?? 'Как только наставник одобрит — придёт уведомление в этого бота.'}
+          hideForm
+        />
+      )
+    }
+
+    return (
+      <SupportRequestScreen
+        title="Доступ запрещён"
+        subtitle={errorMessage ?? 'Обратитесь к вашему наставнику или напишите нам:'}
+      />
+    )
   }
 
   // Wait for onboarding check to complete before rendering children

@@ -232,7 +232,7 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: Sta
                   </svg>
                 )}
                 {isRecording ? (
-                  <video ref={livePreviewRef} className="location-circle__video" autoPlay muted playsInline />
+                  <video ref={livePreviewRef} className="location-circle__video location-circle__video--live" autoPlay muted playsInline />
                 ) : blobUrl ? (
                   <video key={blobUrl} className="location-circle__video" src={blobUrl} playsInline controls />
                 ) : null}
@@ -304,27 +304,43 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: Sta
           {timerSecs}с / {maxRecordSecs}с
         </div>
       )}
+
+      {/* Плеер для прослушивания записи перед отправкой */}
+      {blob && blobUrl && !isRecording && !isSubmitting && (
+        <audio
+          key={blobUrl}
+          src={blobUrl}
+          controls
+          preload="metadata"
+          style={{ width: '100%', marginBottom: '0.5rem', marginTop: '0.25rem' }}
+        />
+      )}
+
       <div className="location-btn-row">
         {hasMediaDevices ? (
           isRecording ? (
             <button type="button" className="location-btn location-btn--danger" onClick={stopRecording}>
               Остановить
             </button>
+          ) : blob && !isSubmitting ? (
+            <>
+              <button type="button" className="location-btn location-btn--ghost" onClick={startRecording}>
+                Перезаписать
+              </button>
+              <button
+                type="button"
+                className="location-btn"
+                onClick={() => submitBlob(blob, `recording.${ext}`)}
+              >
+                Отправить запись
+              </button>
+            </>
           ) : (
             <button type="button" className="location-btn" onClick={startRecording} disabled={isSubmitting}>
               {label}
             </button>
           )
         ) : null}
-        {blob && !isRecording && state !== 'submitting' && (
-          <button
-            type="button"
-            className="location-btn"
-            onClick={() => submitBlob(blob, `recording.${ext}`)}
-          >
-            Отправить запись
-          </button>
-        )}
       </div>
       {isSubmitting && <p className="location-loading-hint">Отправляем…</p>}
       {error && <p style={{ color: 'var(--tg-destructive, #EF4444)', fontSize: '0.8125rem', marginTop: '0.375rem' }}>{error}</p>}

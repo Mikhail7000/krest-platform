@@ -295,6 +295,10 @@
   height: 100%;
   object-fit: cover;
 }
+/* Зеркало только для live-превью (как в Telegram) — playback не зеркалится */
+.tr-circle__video--live {
+  transform: scaleX(-1);
+}
 .tr-audio {
   width: 100%;
   margin-top: 0.5rem;

@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://krest-platform-web.vercel.app'
     const inviteLink = `${baseUrl}/miniapp/index.html?ref=${church.invite_token}`
-    const telegramInviteLink = `https://t.me/cross_bot?start=ref_${church.invite_token}`
+    const telegramInviteLink = `https://t.me/cross_notify_bot?start=ref_${church.invite_token}`
 
     return NextResponse.json({
       ok: true,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { formatRuDate } from '@/lib/time/format'
 
 interface DayEntry {
   day_index: number
@@ -104,6 +105,7 @@ export function PrayerClient({ blockId }: Props) {
         {days.map((d) => (
           <div key={d.day_index} className={`prayer-day${d.prayed ? ' prayer-day--done' : ''}`}>
             <span className="prayer-day__num">День {d.day_index}</span>
+            <span className="prayer-day__date">{formatRuDate(d.date)}</span>
             <span className="prayer-day__status">{d.prayed ? '✓ Помолился' : '—'}</span>
           </div>
         ))}

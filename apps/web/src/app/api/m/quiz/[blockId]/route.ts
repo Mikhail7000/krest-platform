@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { MAX_QUIZ_ATTEMPTS } from '@/lib/ai/constants'
+import { isBlockUnlocked } from '@/lib/access/block-gate'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +29,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   const blockId = parseInt(blockIdRaw, 10)
   if (!Number.isFinite(blockId) || blockId < 1) {
     return err('Invalid block id', 'BAD_BLOCK_ID', 400)
+  }
+
+  // 4. Block-gate: проверяем, что блок разблокирован для этого пользователя
+  if (!(await isBlockUnlocked(userId, blockId))) {
+    return err('Этот блок ещё не открыт.', 'BLOCK_LOCKED', 403)
   }
 
   const supabase = createServiceSupabase()

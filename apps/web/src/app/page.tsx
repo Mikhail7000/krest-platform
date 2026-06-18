@@ -19,7 +19,7 @@ export default function Home() {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href="https://t.me/cross_bot"
+            href="https://t.me/cross_notify_bot"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-gradient-to-br from-[#229ED9] to-[#1B7BAB] text-white font-bold px-8 py-4 rounded-xl text-lg hover:opacity-90 transition-opacity"

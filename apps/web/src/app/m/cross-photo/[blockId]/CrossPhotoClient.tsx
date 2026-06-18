@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { formatRuDate } from '@/lib/time/format'
 
 interface DayEntry {
   day_index: number
@@ -84,7 +85,7 @@ function DayCard({ day, isToday, blockId, feedback, onUploaded }: DayCardProps) 
     <div className={cardClass}>
       <div className="cp-day-card__header">
         <span className="cp-day-card__num">День {day.day_index}</span>
-        <span className="cp-day-card__date">{day.date}</span>
+        <span className="cp-day-card__date">{formatRuDate(day.date)}</span>
         <span className="cp-day-card__status">
           {day.submitted ? '✅' : isToday ? '⏳' : ''}
         </span>

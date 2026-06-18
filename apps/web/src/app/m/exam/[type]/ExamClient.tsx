@@ -30,7 +30,7 @@ export function ExamClient({ examType }: Props) {
       <div className="quiz-state-card">
         <p className="quiz-state-card__title">Откройте в Telegram</p>
         <p className="quiz-state-card__desc">
-          Экзамен доступен только через Telegram-бота <strong>@cross_bot</strong>.
+          Экзамен доступен только через Telegram-бота <strong>@cross_notify_bot</strong>.
         </p>
       </div>
     )

@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js'
  * ВАЖНО: Telegram Bot API не позволяет создавать группы программно.
  * Пастор делает это вручную:
  *  1. Создаёт супер-группу в Telegram
- *  2. Добавляет @cross_bot как администратора (с правом создавать invite-links)
+ *  2. Добавляет @cross_notify_bot как администратора (с правом создавать invite-links)
  *  3. Получает chat_id (через @userinfobot или отправкой сообщения боту)
  *  4. Через UI пастор привязывает chat_id к конкретной cohort
  *

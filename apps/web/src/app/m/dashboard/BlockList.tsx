@@ -5,9 +5,14 @@ import { useEffect, useState, type ReactNode } from 'react'
 import type { Database } from '../../../../../../packages/supabase/src/types'
 import { IconGraduation, IconStar, IconTrophy } from '@/app/m/_components/icons'
 import { pluralDays } from '@/lib/activity/streak'
+import {
+  isBlockUnlocked,
+  daysUntilUnlock,
+  blockUnlockDate,
+  formatUnlockDate,
+} from '@/lib/access/weekly-unlock'
 import type { DashboardData } from './loadDashboard'
-
-const BLOCK_DAYS = 7
+import { PrepBlockCard } from './PrepBlockCard'
 
 type Block = Database['public']['Tables']['blocks']['Row']
 type BlockProgress = Database['public']['Tables']['student_block_progress']['Row']
@@ -19,31 +24,59 @@ function getInitData(): string {
   return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp?.initData ?? ''
 }
 
+// ── Статус блока (новая недельная модель) ───────────────────────────────────
 function blockStatus(
   block: Block,
   progress: BlockProgress | undefined,
   canSkip: boolean,
-  prevGroupUnlocked: boolean,
+  courseStartedAt: string | null,
 ): { label: string; variant: StatusVariant } {
   if (progress?.block_passed_at) return { label: 'Сдан', variant: 'done' }
   if (progress?.status === 'in_progress') return { label: 'Идёт сдача', variant: 'active' }
-  const num = block.order_num ?? 0
-  const accessible = progress?.block_unlocked_at || canSkip || num === 1 || prevGroupUnlocked
-  if (accessible) return { label: 'Доступен', variant: 'default' }
+
+  const orderNum = block.order_num ?? 0
+  const unlocked = isBlockUnlocked(courseStartedAt, orderNum, canSkip)
+
+  if (unlocked) return { label: 'Доступен', variant: 'default' }
   return { label: 'Заблокирован', variant: 'locked' }
 }
 
+// ── Подсказка о дате открытия для заблокированного блока ────────────────────
+function UnlockHint({
+  courseStartedAt,
+  orderNum,
+}: {
+  courseStartedAt: string | null
+  orderNum: number
+}) {
+  const days = daysUntilUnlock(courseStartedAt, orderNum)
+  if (days <= 0) return null
+
+  const unlockDate = blockUnlockDate(courseStartedAt, orderNum)
+  const dateStr = formatUnlockDate(unlockDate)
+
+  return (
+    <span className="db-block-card__unlock-hint">
+      {dateStr
+        ? `Откроется ${dateStr} · через ${days} ${pluralDays(days)}`
+        : `Откроется через ${days} ${pluralDays(days)}`}
+    </span>
+  )
+}
+
+// ── Карточка блока ──────────────────────────────────────────────────────────
 interface BlockCardProps {
   block: Block
   progress: BlockProgress | undefined
   canSkip: boolean
-  prevGroupUnlocked: boolean
+  courseStartedAt: string | null
 }
 
-function BlockCard({ block, progress, canSkip, prevGroupUnlocked }: BlockCardProps) {
-  const { label, variant } = blockStatus(block, progress, canSkip, prevGroupUnlocked)
+function BlockCard({ block, progress, canSkip, courseStartedAt }: BlockCardProps) {
+  const { label, variant } = blockStatus(block, progress, canSkip, courseStartedAt)
   const isDone = variant === 'done'
   const isLocked = variant === 'locked'
+  const orderNum = block.order_num ?? 0
 
   const cardClass = [
     'db-block-card',
@@ -57,43 +90,35 @@ function BlockCard({ block, progress, canSkip, prevGroupUnlocked }: BlockCardPro
     variant === 'active' && 'db-block-card__status--active',
   ].filter(Boolean).join(' ')
 
-  // «Осталось дней» — блок длится 7 полных дней с момента открытия
-  let daysNode: ReactNode = null
-  const unlockedAt = progress?.block_unlocked_at
-  if (unlockedAt && !progress?.block_passed_at) {
-    const elapsed = Math.min(
-      BLOCK_DAYS,
-      Math.max(0, Math.floor((Date.now() - new Date(unlockedAt).getTime()) / 86_400_000)),
-    )
-    const left = BLOCK_DAYS - elapsed
-    const pct = Math.round((elapsed / BLOCK_DAYS) * 100)
-    daysNode = (
-      <span className="db-block-card__days">
-        <span className="db-block-card__days-label">
-          {left > 0 ? `Осталось ${left} ${pluralDays(left)}` : 'Можно сдавать'} · {elapsed}/{BLOCK_DAYS}
+  const inner = (
+    <>
+      <span className="db-block-card__num">{orderNum || block.id}</span>
+      <span className="db-block-card__body">
+        <span className="db-block-card__title">
+          {block.title_ru ?? `Блок ${orderNum || block.id}`}
         </span>
-        <span className="db-days-bar">
-          <span className="db-days-bar__fill" style={{ width: `${pct}%` }} />
-        </span>
+        <span className={statusClass}>{isDone ? `${label} ✓` : label}</span>
+        {isLocked && (
+          <UnlockHint courseStartedAt={courseStartedAt} orderNum={orderNum} />
+        )}
       </span>
-    )
+      {!isLocked && <span className="db-block-card__arrow">›</span>}
+    </>
+  )
+
+  // Заблокированный блок — не кликабельный div
+  if (isLocked) {
+    return <div className={cardClass}>{inner}</div>
   }
 
   return (
     <Link href={`/m/lesson/${block.id}`} className={cardClass}>
-      <span className="db-block-card__num">{block.order_num ?? block.id}</span>
-      <span className="db-block-card__body">
-        <span className="db-block-card__title">
-          {block.title_ru ?? `Блок ${block.order_num ?? block.id}`}
-        </span>
-        <span className={statusClass}>{isDone ? `${label} ✓` : label}</span>
-        {daysNode}
-      </span>
-      {!isLocked && <span className="db-block-card__arrow">›</span>}
+      {inner}
     </Link>
   )
 }
 
+// ── Карточка экзамена ────────────────────────────────────────────────────────
 interface ExamCardProps {
   href: string
   icon: ReactNode
@@ -122,11 +147,11 @@ function ExamCard({ href, icon, title, hint, active, passed }: ExamCardProps) {
   )
 }
 
+// ── Главный компонент ────────────────────────────────────────────────────────
 export function BlockList() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [group, setGroup] = useState<'g1' | 'g2'>('g1')
-  const [currentUnlockedAt, setCurrentUnlockedAt] = useState<string | null>(null)
 
   useEffect(() => {
     const initData = getInitData()
@@ -147,26 +172,6 @@ export function BlockList() {
     return () => { cancelled = true }
   }, [])
 
-  // Запускаем 7-дневный отсчёт текущего блока при заходе на дашборд (чтобы «осталось дней» было видно сразу)
-  useEffect(() => {
-    if (!data) return
-    const sorted = [...data.blocks].sort((a, b) => (a.order_num ?? 0) - (b.order_num ?? 0))
-    const current = sorted.find((b) => !data.progressByBlockId[b.id]?.block_passed_at)
-    if (!current) return
-    const existing = data.progressByBlockId[current.id]?.block_unlocked_at
-    if (existing) { setCurrentUnlockedAt(existing); return }
-    fetch(`/api/m/block-open/${current.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: getInitData() }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: { block_unlocked_at?: string | null } | null) => {
-        if (d?.block_unlocked_at) setCurrentUnlockedAt(d.block_unlocked_at)
-      })
-      .catch(() => {})
-  }, [data])
-
   if (loading || !data) {
     return (
       <div className="miniapp-container" style={{ paddingTop: 0 }}>
@@ -176,12 +181,17 @@ export function BlockList() {
   }
 
   const {
-    blocks, progressByBlockId, canSkip,
+    blocks, progressByBlockId, canSkip, courseStartedAt,
     midExamPassed, finalExamPassed, courseDone,
   } = data
 
-  const blocks1to5 = blocks.filter((b) => (b.order_num ?? 0) <= 5)
-  const blocks6to10 = blocks.filter((b) => (b.order_num ?? 0) >= 6)
+  // Блок 0 — вводный, вынесен отдельно (не входит в 10 основных)
+  const prepBlock = blocks.find((b) => (b.order_num ?? 1) === 0)
+
+  // Только основные блоки (order_num 1..10) — для прогресса, чипов, сетки
+  const mainBlocks = blocks.filter((b) => (b.order_num ?? 0) >= 1)
+  const blocks1to5 = mainBlocks.filter((b) => (b.order_num ?? 0) <= 5)
+  const blocks6to10 = mainBlocks.filter((b) => (b.order_num ?? 0) >= 6)
 
   const allBlock5Passed = canSkip || blocks1to5.every(
     (b) => !!progressByBlockId[b.id]?.block_passed_at,
@@ -193,24 +203,34 @@ export function BlockList() {
   const midExamActive = allBlock5Passed || canSkip
   const finalExamActive = (midExamPassed && allBlock10Passed) || canSkip
 
-  // Прогресс курса (всегда виден, компактно): % по блокам + дни всего курса (70)
-  const totalBlocks = blocks.length || 10
-  const passedCount = blocks.filter((b) => progressByBlockId[b.id]?.block_passed_at).length
+  // Прогресс курса: только 10 основных блоков (70 дней = 10 × 7)
+  const totalBlocks = mainBlocks.length || 10
+  const passedCount = mainBlocks.filter((b) => progressByBlockId[b.id]?.block_passed_at).length
   const coursePct = Math.round((passedCount / totalBlocks) * 100)
   const totalDays = totalBlocks * 7
-  const sortedBlocks = [...blocks].sort((a, b) => (a.order_num ?? 0) - (b.order_num ?? 0))
-  const currentBlock = sortedBlocks.find((b) => !progressByBlockId[b.id]?.block_passed_at) ?? null
-  const unlockedAt = currentBlock
-    ? progressByBlockId[currentBlock.id]?.block_unlocked_at ?? currentUnlockedAt
-    : null
-  const currentElapsed = unlockedAt
-    ? Math.min(7, Math.max(0, Math.floor((Date.now() - new Date(unlockedAt).getTime()) / 86_400_000)))
-    : 0
-  const daysDone = Math.min(totalDays, passedCount * 7 + currentElapsed)
-  const daysLeft = Math.max(0, totalDays - daysDone)
+
+  // «Осталось дней» всего курса — считаем от course_started_at
+  const now = new Date()
+  const startMs = courseStartedAt ? new Date(courseStartedAt).getTime() : null
+  const elapsedCourseDays = startMs
+    ? Math.min(totalDays, Math.max(0, Math.floor((now.getTime() - startMs) / 86_400_000)))
+    : passedCount * 7
+  const daysLeft = Math.max(0, totalDays - elapsedCourseDays)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prepBlockAny = prepBlock as any
 
   return (
     <div className="miniapp-container" style={{ paddingTop: 0 }}>
+      {prepBlock && (
+        <PrepBlockCard
+          blockId={prepBlock.id}
+          title={prepBlockAny?.title_ru ?? 'Подготовка к обучению'}
+          subtitle={prepBlockAny?.subtitle_ru ?? null}
+          color={prepBlockAny?.color ?? '#7C5CFF'}
+        />
+      )}
+
       <div className="db-course">
         <div className="db-course__top">
           <span className="db-course__label">Прогресс курса · {coursePct}%</span>
@@ -246,7 +266,7 @@ export function BlockList() {
               block={block}
               progress={progressByBlockId[block.id]}
               canSkip={canSkip}
-              prevGroupUnlocked={false}
+              courseStartedAt={courseStartedAt}
             />
           ))}
           <ExamCard
@@ -266,7 +286,7 @@ export function BlockList() {
               block={block}
               progress={progressByBlockId[block.id]}
               canSkip={canSkip}
-              prevGroupUnlocked={midExamPassed}
+              courseStartedAt={courseStartedAt}
             />
           ))}
           <ExamCard

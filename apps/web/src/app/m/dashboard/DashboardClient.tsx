@@ -61,8 +61,8 @@ export function DashboardClient() {
         </p>
         <p className="miniapp-hint" style={{ marginTop: 12 }}>
           Откройте бота{' '}
-          <a href="https://t.me/cross_bot" style={{ color: 'var(--tg-link, #0F8AD2)' }}>
-            @cross_bot
+          <a href="https://t.me/cross_notify_bot" style={{ color: 'var(--tg-link, #0F8AD2)' }}>
+            @cross_notify_bot
           </a>{' '}
           и нажмите кнопку «Открыть КРЕСТ».
         </p>

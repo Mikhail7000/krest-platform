@@ -34,7 +34,7 @@ export function QuizClient({ blockId }: Props) {
       <div className="quiz-state-card">
         <p className="quiz-state-card__title">Откройте в Telegram</p>
         <p className="quiz-state-card__desc">
-          Тест доступен только через Telegram-бота <strong>@cross_bot</strong>.
+          Тест доступен только через Telegram-бота <strong>@cross_notify_bot</strong>.
         </p>
       </div>
     )

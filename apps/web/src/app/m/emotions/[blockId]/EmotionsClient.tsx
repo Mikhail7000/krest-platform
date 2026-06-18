@@ -122,7 +122,7 @@ export function EmotionsClient({ blockId }: Props) {
           {isVideo && (rec.state === 'recording' || rec.blobUrl) && (
             <div className="em-circle">
               {rec.state === 'recording' ? (
-                <video ref={liveRef} className="em-circle__video" autoPlay muted playsInline />
+                <video ref={liveRef} className="em-circle__video em-circle__video--live" autoPlay muted playsInline />
               ) : (
                 <video key={rec.blobUrl} className="em-circle__video" src={rec.blobUrl ?? undefined} playsInline controls />
               )}
