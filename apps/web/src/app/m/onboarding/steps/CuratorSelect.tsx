@@ -1,107 +1,52 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
 
 const tapScale = { scale: 0.98 }
 
-interface Curator {
-  id: string
-  full_name: string
-}
-
+/**
+ * Шаг «ваш наставник»: ученик вводит ник Telegram своего куратора.
+ * Заявка уходит владельцу в бот (+ автопривязка curator_id, если ник совпал
+ * с кем-то из кураторов). См. /api/m/curator-request.
+ * cityId оставлен в сигнатуре для совместимости с вызовом онбординга.
+ */
 export function CuratorSelect({
-  cityId,
   onSelect,
   onBack,
 }: {
   cityId: string
-  onSelect: (curatorId: string) => void
+  onSelect: (curatorId: string | null) => void
   onBack: () => void
 }) {
   const { initData } = useTelegram()
-  const [curators, setCurators] = useState<Curator[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [nick, setNick] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Читаем кураторов через серверный route: RLS на profiles режет анонимный
-    // браузерный клиент (в MiniApp нет Supabase-сессии). См. /api/miniapp/curators.
-    const loadCurators = async () => {
-      try {
-        const res = await fetch('/api/miniapp/curators', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData, city_id: cityId }),
-        })
-        if (!res.ok) {
-          console.error('Failed to load curators:', res.status)
-          setCurators([])
-          return
-        }
-        const json = (await res.json()) as { curators?: Curator[] }
-        setCurators(json.curators ?? [])
-      } catch (err) {
-        console.error('Curators load error:', err)
-        setCurators([])
-      } finally {
+  const handleContinue = async () => {
+    const clean = nick.trim().replace(/^@+/, '')
+    if (clean.length < 1) return
+    setError(null)
+    setLoading(true)
+    try {
+      const res = await fetch('/api/m/curator-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData, curator_nick: clean }),
+      })
+      if (!res.ok) {
+        setError('Проверь ник и попробуй ещё раз')
         setLoading(false)
+        return
       }
+      // curator_id ставится на сервере (если ник нашёлся); продолжаем онбординг
+      onSelect(null)
+    } catch {
+      setError('Не удалось отправить. Попробуй ещё раз')
+      setLoading(false)
     }
-
-    loadCurators()
-  }, [cityId, initData])
-
-  const handleSupportClick = () => {
-    router.push('/m/support')
-  }
-
-  if (loading) {
-    return (
-      <div className="relative z-10 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-[#16181D] dark:border-white/15 dark:border-t-primary mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-white/55">Загрузка кураторов…</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (curators.length === 0) {
-    return (
-      <div className="relative z-10 min-h-screen flex flex-col justify-center px-5 py-8">
-        <div className="w-full max-w-sm mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-extrabold text-[#16181D] dark:text-white mb-2 tracking-tight">
-              Кураторы не найдены
-            </h1>
-            <p className="text-gray-500 dark:text-white/55 leading-relaxed">
-              В вашем городе пока нет куратора. Напишите в поддержку, и мы поможем найти для вас
-              наставника.
-            </p>
-          </div>
-
-          <motion.button
-            type="button"
-            onClick={handleSupportClick}
-            whileTap={tapScale}
-            className="onb-cta w-full mb-3 px-4 py-3.5 rounded-2xl font-semibold transition-opacity hover:opacity-90"
-          >
-            Написать в поддержку
-          </motion.button>
-          <motion.button
-            type="button"
-            onClick={onBack}
-            whileTap={tapScale}
-            className="w-full px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
-          >
-            Назад
-          </motion.button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -113,35 +58,54 @@ export function CuratorSelect({
         className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto"
       >
         <h1 className="text-3xl font-extrabold text-[#16181D] dark:text-white text-center mb-2 tracking-tight">
-          Выберите куратора
+          Ваш наставник
         </h1>
-        <p className="text-gray-500 dark:text-white/55 text-center mb-8">Кто будет вашим наставником?</p>
+        <p className="text-gray-500 dark:text-white/55 text-center mb-8">
+          Введите ник Telegram вашего куратора
+        </p>
 
-        <div className="space-y-3">
-          {curators.map((curator) => (
-            <motion.button
-              key={curator.id}
-              onClick={() => onSelect(curator.id)}
-              whileTap={tapScale}
-              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-gray-200 bg-white shadow-sm text-left transition-colors hover:border-gray-300 dark:border-white/12 dark:bg-white/5 dark:shadow-none dark:backdrop-blur-sm dark:hover:border-white/30"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#16181D] font-semibold text-white dark:border dark:border-white/12 dark:bg-white/10">
-                {curator.full_name.charAt(0).toUpperCase()}
-              </span>
-              <span className="font-semibold text-[#16181D] dark:text-white">{curator.full_name}</span>
-            </motion.button>
-          ))}
+        <div className="relative mb-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-gray-400 dark:text-white/40">
+            @
+          </span>
+          <input
+            type="text"
+            inputMode="text"
+            autoCapitalize="none"
+            autoCorrect="off"
+            placeholder="username"
+            value={nick}
+            onChange={(e) => setNick(e.target.value.replace(/^@+/, ''))}
+            disabled={loading}
+            className="w-full pl-9 pr-4 py-3.5 text-lg rounded-2xl border border-gray-200 bg-white text-[#16181D] shadow-sm placeholder:text-gray-400 focus:outline-none focus:border-[#16181D] disabled:opacity-50 dark:border-white/12 dark:bg-white/5 dark:text-white dark:shadow-none dark:placeholder:text-white/40 dark:focus:border-white/30"
+          />
         </div>
-      </motion.div>
 
-      <motion.button
-        type="button"
-        onClick={onBack}
-        whileTap={tapScale}
-        className="w-full max-w-sm mx-auto mt-6 px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
-      >
-        Назад
-      </motion.button>
+        {error && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-3 mb-4 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+            {error}
+          </div>
+        )}
+
+        <motion.button
+          type="button"
+          onClick={handleContinue}
+          disabled={loading || nick.trim().length < 1}
+          whileTap={tapScale}
+          className="onb-cta w-full px-4 py-3.5 rounded-2xl font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 mb-3"
+        >
+          {loading ? 'Отправляю…' : 'Продолжить'}
+        </motion.button>
+        <motion.button
+          type="button"
+          onClick={onBack}
+          disabled={loading}
+          whileTap={tapScale}
+          className="w-full px-4 py-3 rounded-2xl border border-gray-200 font-medium text-gray-600 hover:border-gray-300 disabled:opacity-50 dark:border-white/15 dark:text-white/80 dark:hover:border-white/30 transition-colors"
+        >
+          Назад
+        </motion.button>
+      </motion.div>
     </div>
   )
 }

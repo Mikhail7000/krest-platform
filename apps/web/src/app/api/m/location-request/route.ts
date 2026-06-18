@@ -10,13 +10,18 @@ export const dynamic = 'force-dynamic'
  * Пользователь в онбординге нажал «нет моей страны/города» → шлём заявку
  * с его ником владельцу платформы (ADMIN_TELEGRAM_CHAT_IDS) в Telegram-бот.
  *
- * Body: { initData, kind?: 'country' | 'city' }
+ * Body: { initData, kind?: 'country' | 'city', location_text?: string }
  */
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json().catch(() => ({}))) as {
       initData?: string
       kind?: 'country' | 'city'
+      location_text?: string
     }
 
     const botToken = process.env.TELEGRAM_BOT_TOKEN
@@ -35,14 +40,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const name = [valid.firstName, valid.lastName].filter(Boolean).join(' ') || 'Без имени'
-    const handle = valid.username ? `@${valid.username}` : 'без username'
+    const name = escapeHtml([valid.firstName, valid.lastName].filter(Boolean).join(' ') || 'Без имени')
+    const handle = valid.username ? `@${escapeHtml(valid.username)}` : 'без username'
     const what =
       body.kind === 'country' ? 'страну' : body.kind === 'city' ? 'город' : 'страну/город'
+    const locationText = escapeHtml((body.location_text ?? '').trim().slice(0, 200))
 
     const text =
       `📍 <b>Заявка на локацию</b>\n\n` +
-      `${name} (${handle}, chat_id <code>${valid.chatId}</code>) просит добавить свою ${what} — её нет в списке онбординга.`
+      `${name} (${handle}, chat_id <code>${valid.chatId}</code>)\n` +
+      `Указал(а) ${what}: «<b>${locationText || '—'}</b>»\n\n` +
+      `Нет в списке онбординга — добавь локацию и занеси ученика в белый список (${handle}).`
 
     const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
       .split(',')
