@@ -5,21 +5,25 @@ import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { BottomNav } from '../_components/BottomNav'
 import { ProfileActivity } from './ProfileActivity'
 import { AddToHomeScreenButton } from './AddToHomeScreenButton'
+import { AvatarUpload } from './AvatarUpload'
 import '../dashboard/dashboard.css'
 import './profile.css'
 
 export default function ProfilePage() {
   const { user } = useTelegram()
   const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Ученик'
-  const initial = (user?.firstName?.[0] ?? 'У').toUpperCase()
 
   return (
     <>
       <div className="db-page miniapp-container">
         <div className="pf-head">
-          <div className="pf-avatar">{initial}</div>
           <h1 className="pf-name">{name}</h1>
           <p className="pf-role">Ученик курса КРЕСТ</p>
+        </div>
+
+        <p className="pf-section">Аватар</p>
+        <div className="pf-card">
+          <AvatarUpload name={name} initialUrl={null} />
         </div>
 
         <p className="pf-section">Активность</p>

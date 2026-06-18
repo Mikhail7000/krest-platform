@@ -20,6 +20,14 @@ function err(message: string, code: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status })
 }
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+const AVATARS_BUCKET = 'avatars'
+
+function avatarUrl(path: string | null | undefined): string | null {
+  if (!path) return null
+  return `${SUPABASE_URL}/storage/v1/object/public/${AVATARS_BUCKET}/${path}`
+}
+
 interface PostRow {
   id: string
   author_id: string
@@ -30,6 +38,7 @@ interface PostRow {
   profiles: {
     full_name: string | null
     role: string | null
+    avatar_path: string | null
     cities: { name_ru: string } | null
   } | null
 }
@@ -71,6 +80,7 @@ export async function POST(req: NextRequest) {
       profiles!community_posts_author_id_fkey (
         full_name,
         role,
+        avatar_path,
         cities ( name_ru )
       )
     `)
@@ -117,6 +127,7 @@ export async function POST(req: NextRequest) {
       media_url: r.storage_path ? (urlByPath.get(r.storage_path) ?? null) : null,
       author_name: r.profiles?.full_name ?? 'Участник',
       author_city: r.profiles?.cities?.name_ru ?? null,
+      author_avatar: avatarUrl(r.profiles?.avatar_path ?? null),
       created_at: r.created_at,
       can_delete: canDelete,
     }

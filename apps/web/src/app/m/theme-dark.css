@@ -147,6 +147,7 @@
 [data-theme="stars"] .db-chip,
 [data-theme="stars"] .pf-card,
 [data-theme="stars"] .tr-card,
+[data-theme="stars"] .lb-card,
 [data-theme="stars"] .db-bottomnav {
   -webkit-backdrop-filter: blur(13px);
   backdrop-filter: blur(13px);

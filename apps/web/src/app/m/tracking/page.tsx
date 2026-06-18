@@ -6,14 +6,13 @@ import './tracking.css'
 
 export const dynamic = 'force-dynamic'
 
-// Трекинг: список участников теста с прогрессом — все видят друг друга
 export default function TrackingPage() {
   return (
     <>
       <div className="db-page miniapp-container">
         <div className="pf-head">
-          <h1 className="pf-name">Трекинг</h1>
-          <p className="pf-role">Прогресс участников теста</p>
+          <h1 className="pf-name">Рейтинг</h1>
+          <p className="pf-role">Закрывай дни подряд — больше очков</p>
         </div>
         <TrackingClient />
       </div>

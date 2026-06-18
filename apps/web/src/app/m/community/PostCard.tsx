@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Avatar } from '../_components/Avatar'
 import type { FeedPost } from './types'
 
 function formatTime(iso: string): string {
@@ -30,10 +31,6 @@ export function PostCard({ post, onDelete }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const authorLine = post.author_city
-    ? `${post.author_name} · ${post.author_city}`
-    : post.author_name
-
   const handleDelete = async () => {
     if (!confirming) {
       setConfirming(true)
@@ -61,10 +58,23 @@ export function PostCard({ post, onDelete }: Props) {
   return (
     <div className="cm-card">
       <div className="cm-card__head">
+        {/* Аватар автора */}
+        <Avatar
+          src={post.author_avatar}
+          name={post.author_name}
+          size={36}
+        />
+
         <div className="cm-card__meta">
-          <span className="cm-card__author">{authorLine}</span>
+          <span className="cm-card__author">
+            {post.author_name}
+            {post.author_city && (
+              <span className="cm-card__city"> · {post.author_city}</span>
+            )}
+          </span>
           <span className="cm-card__time">{formatTime(post.created_at)}</span>
         </div>
+
         {post.can_delete && (
           <button
             type="button"

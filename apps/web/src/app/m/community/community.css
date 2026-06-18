@@ -250,9 +250,9 @@
 /* Шапка карточки */
 .cm-card__head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 .cm-card__meta {
   display: flex;
@@ -272,6 +272,10 @@
   font-size: 0.75rem;
   color: #9097a1;
 }
+.cm-card__city {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
 
 [data-theme="dark"] .cm-card__author,
 [data-theme="stars"] .cm-card__author {
@@ -279,6 +283,10 @@
 }
 [data-theme="dark"] .cm-card__time,
 [data-theme="stars"] .cm-card__time {
+  color: var(--d-muted-2);
+}
+[data-theme="dark"] .cm-card__city,
+[data-theme="stars"] .cm-card__city {
   color: var(--d-muted-2);
 }
 

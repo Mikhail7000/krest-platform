@@ -185,3 +185,98 @@ button.pf-card {
   font-weight: 600;
   color: #16181d;
 }
+
+/* ── Загрузка аватарки ──────────────────────────────────────────────── */
+.av-upload {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.125rem;
+}
+.av-upload__preview {
+  position: relative;
+  flex-shrink: 0;
+}
+/* Спиннер поверх аватарки при загрузке */
+.av-upload__spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.av-upload__spinner::after {
+  content: '';
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 0, 0, 0.15);
+  border-top-color: var(--accent-solid, #6d5dfc);
+  animation: av-spin 0.7s linear infinite;
+}
+@keyframes av-spin {
+  to { transform: rotate(360deg); }
+}
+.av-upload__right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.av-upload__btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: #16181d;
+  color: #fff;
+  border: 0;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.av-upload__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.av-upload__btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.av-upload__hint {
+  font-size: 0.75rem;
+  color: #9097a1;
+}
+.av-upload__error {
+  font-size: 0.8125rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+.av-upload__hidden {
+  display: none;
+}
+.av-upload__circle {
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent-solid, #6d5dfc) 30%, transparent);
+}
+
+/* Тёмные темы для загрузки аватарки */
+[data-theme="dark"] .av-upload__btn,
+[data-theme="stars"] .av-upload__btn {
+  background: var(--accent-gradient, var(--accent-solid, #6d5dfc));
+}
+[data-theme="dark"] .av-upload__hint,
+[data-theme="stars"] .av-upload__hint {
+  color: var(--d-muted-2);
+}
+[data-theme="dark"] .av-upload__spinner,
+[data-theme="stars"] .av-upload__spinner {
+  background: rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] .av-upload__spinner::after,
+[data-theme="stars"] .av-upload__spinner::after {
+  border-color: rgba(255, 255, 255, 0.15);
+  border-top-color: var(--accent-solid, #6d5dfc);
+}
