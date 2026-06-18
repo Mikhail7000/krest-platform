@@ -25,6 +25,7 @@ interface BlockStatus {
   locations: boolean
   recitation: boolean
   recitation_full: boolean
+  trainer: boolean
   cross_photo: RecurringStatus
   prayer: RecurringStatus
   friday: boolean
@@ -163,7 +164,7 @@ function makeBadge(classes: string, text: string): HTMLElement {
 
 function Stage4StatusInserter({ status }: { status: BlockStatus }) {
   useEffect(() => {
-    // Карточки должны иметь data-s4-key="quiz|locations|recitation|cross_photo|prayer|friday|emotions"
+    // Карточки должны иметь data-s4-key="quiz|locations|recitation|trainer|cross_photo|prayer|friday|emotions"
     const cards = document.querySelectorAll<HTMLElement>('[data-s4-key]')
     cards.forEach((card) => {
       const key = card.getAttribute('data-s4-key')
@@ -175,6 +176,9 @@ function Stage4StatusInserter({ status }: { status: BlockStatus }) {
           break
         case 'locations':
           if (status.locations) el = makeBadge('s4-status-badge--done', 'выполнено')
+          break
+        case 'trainer':
+          if (status.trainer) el = makeBadge('s4-status-badge--done', 'пройден')
           break
         case 'recitation':
           if (status.recitation_full) {

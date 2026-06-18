@@ -9,9 +9,12 @@
  * «Выполнен» = quiz_passed_at IS NOT NULL
  *            + recitation_audio_passed_at IS NOT NULL
  *            + recitation_videos_passed_at IS NOT NULL
- *            + crossDays >= 7 уникальных дней с фото.
+ *            + trainer_passed_at IS NOT NULL
+ *            + crossDays >= 7 уникальных дней с фото
+ *            + prayerDays >= 7 уникальных дней молитвы
+ *            + fridayDone = true (хотя бы 1 запись эпохи пятницы).
  *
- * Соответствует SQL-функции is_block_unlocked на сервере (уже обновлена).
+ * Соответствует SQL-функции is_block_unlocked на сервере.
  * Никаких вычислений от course_started_at / calendar здесь нет.
  */
 
@@ -19,21 +22,31 @@ export interface BlockCompletionData {
   quiz_passed_at: string | null | undefined
   recitation_audio_passed_at: string | null | undefined
   recitation_videos_passed_at: string | null | undefined
+  /** trainer_passed_at — тренажёр местописаний пройден */
+  trainer_passed_at: string | null | undefined
   /** Количество уникальных дней с фото креста для этого блока */
   crossDays: number
+  /** Количество уникальных дней молитвы для этого блока */
+  prayerDays: number
+  /** Эпоха пятницы выполнена (хотя бы 1 запись) */
+  fridayDone: boolean
 }
 
 const CROSS_DAYS_REQUIRED = 7
+const PRAYER_DAYS_REQUIRED = 7
 
 /**
- * Блок «выполнен» — все четыре условия выполнены.
+ * Блок «выполнен» — все семь условий выполнены.
  */
 export function isBlockComplete(data: BlockCompletionData): boolean {
   return (
     data.quiz_passed_at != null &&
     data.recitation_audio_passed_at != null &&
     data.recitation_videos_passed_at != null &&
-    data.crossDays >= CROSS_DAYS_REQUIRED
+    data.trainer_passed_at != null &&
+    data.crossDays >= CROSS_DAYS_REQUIRED &&
+    data.prayerDays >= PRAYER_DAYS_REQUIRED &&
+    data.fridayDone
   )
 }
 
@@ -46,9 +59,14 @@ export function blockIncompleteReasons(data: BlockCompletionData): string[] {
   if (!data.quiz_passed_at) reasons.push('квиз не сдан')
   if (!data.recitation_audio_passed_at) reasons.push('аудио местописаний не сдано')
   if (!data.recitation_videos_passed_at) reasons.push('кружки местописаний не сданы')
+  if (!data.trainer_passed_at) reasons.push('тренажёр не пройден')
   if (data.crossDays < CROSS_DAYS_REQUIRED) {
     reasons.push(`дни креста ${data.crossDays}/${CROSS_DAYS_REQUIRED}`)
   }
+  if (data.prayerDays < PRAYER_DAYS_REQUIRED) {
+    reasons.push(`дни молитвы ${data.prayerDays}/${PRAYER_DAYS_REQUIRED}`)
+  }
+  if (!data.fridayDone) reasons.push('эпоха пятницы не выполнена')
   return reasons
 }
 
@@ -93,7 +111,7 @@ export function isBlockUnlockedByCompletion(
 
 /**
  * Для заблокированного блока возвращает что нужно сдать в предыдущем блоке.
- * Пример: «Сдай Блок 2: квиз ✗, аудио ✗, кружки ✓, дни 4/7».
+ * Пример: «Сначала заверши Блок 2: квиз ✓, местописания ✗, пересказ ✓, тренажёр ✗, фото 4/7, молитва 2/7, пятница ✗».
  */
 export function lockedBlockHint(
   blocks: BlockWithOrderNum[],
@@ -115,7 +133,10 @@ export function lockedBlockHint(
   const quizMark = data.quiz_passed_at ? '✓' : '✗'
   const audioMark = data.recitation_audio_passed_at ? '✓' : '✗'
   const videoMark = data.recitation_videos_passed_at ? '✓' : '✗'
-  const daysPart = `дни ${data.crossDays}/${CROSS_DAYS_REQUIRED}`
+  const trainerMark = data.trainer_passed_at ? '✓' : '✗'
+  const crossPart = `фото ${data.crossDays}/${CROSS_DAYS_REQUIRED}`
+  const prayerPart = `молитва ${data.prayerDays}/${PRAYER_DAYS_REQUIRED}`
+  const fridayMark = data.fridayDone ? '✓' : '✗'
 
-  return `Сначала заверши Блок ${orderNum - 1}: квиз ${quizMark}, аудио ${audioMark}, кружки ${videoMark}, ${daysPart}`
+  return `Сначала заверши Блок ${orderNum - 1}: квиз ${quizMark}, местописания ${audioMark}, пересказ ${videoMark}, тренажёр ${trainerMark}, ${crossPart}, ${prayerPart}, пятница ${fridayMark}`
 }

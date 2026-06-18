@@ -25,6 +25,69 @@ function getInitData(): string {
     ?.WebApp?.initData ?? ''
 }
 
+// ─── Баннер завершения тренажёра ─────────────────────────────────────────────
+
+interface TrainerCompleteBannerProps {
+  blockId: number
+  initialPassedAt: string | null
+}
+
+function TrainerCompleteBanner({ blockId, initialPassedAt }: TrainerCompleteBannerProps) {
+  const [passedAt, setPassedAt] = useState<string | null>(initialPassedAt)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleComplete() {
+    setPending(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/m/trainer/${blockId}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: getInitData() }),
+      })
+      const json = (await res.json()) as { ok?: boolean; error?: { message: string } }
+      if (json.ok) {
+        setPassedAt(new Date().toISOString())
+      } else {
+        setError(json.error?.message ?? 'Ошибка сохранения')
+      }
+    } catch {
+      setError('Нет соединения')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  if (passedAt) {
+    return (
+      <div className="trainer-complete-banner trainer-complete-banner--done">
+        <span className="trainer-complete-banner__icon">✓</span>
+        <span className="trainer-complete-banner__text">Тренажёр пройден</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="trainer-complete-banner">
+      <p className="trainer-complete-banner__hint">
+        Выучил все местописания? Отметь тренажёр пройденным — это одно из условий завершения блока.
+      </p>
+      {error && <p className="trainer-complete-banner__error">{error}</p>}
+      <button
+        type="button"
+        className="trainer-complete-btn"
+        onClick={handleComplete}
+        disabled={pending}
+      >
+        {pending ? 'Сохраняем…' : 'Я выучил местописания'}
+      </button>
+    </div>
+  )
+}
+
+// ─── Главный компонент ───────────────────────────────────────────────────────
+
 export function TrainerClient({ blockId }: { blockId: number }) {
   const [data, setData] = useState<TrainerData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -94,6 +157,12 @@ export function TrainerClient({ blockId }: { blockId: number }) {
         <h1 className="trainer-header__title">Тренажёр местописаний</h1>
         <p className="trainer-header__subtitle">Выучи стихи перед сдачей блока</p>
       </header>
+
+      {/* Баннер завершения — только для текущего блока */}
+      <TrainerCompleteBanner
+        blockId={blockId}
+        initialPassedAt={data.trainer_passed_at}
+      />
 
       <div className="trainer-chips">
         {data.blocks.map((b) => (

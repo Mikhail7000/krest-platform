@@ -382,6 +382,62 @@
   line-height: 1.5;
 }
 
+/* ── Баннер «Я выучил местописания» ─────────────────────────────── */
+.trainer-complete-banner {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.125rem;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--surface-2, #f7f8fa);
+}
+.trainer-complete-banner--done {
+  background: color-mix(in srgb, var(--color-success, #16a34a) 9%, #fff);
+  border-color: color-mix(in srgb, var(--color-success, #16a34a) 28%, transparent);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.trainer-complete-banner__icon {
+  font-size: 1.125rem;
+  color: var(--color-success, #16a34a);
+  font-weight: 700;
+}
+.trainer-complete-banner__text {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-success, #16a34a);
+}
+.trainer-complete-banner__hint {
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+.trainer-complete-banner__error {
+  font-size: 0.8125rem;
+  color: var(--color-error, #dc2626);
+  margin-bottom: 0.5rem;
+}
+.trainer-complete-btn {
+  width: 100%;
+  padding: 0.8125rem 1rem;
+  border-radius: 14px;
+  border: none;
+  background: #16181d;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.trainer-complete-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.trainer-complete-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
 .trainer-empty {
   text-align: center;
   color: #6b7280;

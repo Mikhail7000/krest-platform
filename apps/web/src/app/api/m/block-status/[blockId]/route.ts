@@ -10,6 +10,7 @@
  *   quiz:        boolean,
  *   locations:   boolean,           // audio + video сданы хотя бы по одному местописанию
  *   recitation:  boolean,           // audio_passed + video_passed
+ *   trainer:     boolean,           // тренажёр местописаний пройден
  *   cross_photo: { done: number, target: 7 },
  *   prayer:      { done: number, target: 7 },
  *   friday:      boolean,
@@ -37,7 +38,7 @@ function err(message: string, code: string, status: number) {
 }
 
 // Обязательные пункты для подсчёта completed/total
-const REQUIRED_KEYS = ['quiz', 'locations', 'recitation', 'cross_photo', 'prayer', 'friday'] as const
+const REQUIRED_KEYS = ['quiz', 'locations', 'recitation', 'trainer', 'cross_photo', 'prayer', 'friday'] as const
 
 export async function POST(req: NextRequest, { params }: Params) {
   // 1. Auth
@@ -129,6 +130,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   // Quiz
   const quizDone = Boolean((sbp as Record<string, unknown> | null)?.quiz_passed_at)
 
+  // Тренажёр
+  const trainerDone = Boolean((sbp as Record<string, unknown> | null)?.trainer_passed_at)
+
   // Местописания: locations_passed_at — итоговый флаг в sbp (выставляется после прохождения всех)
   const locationsDone = Boolean((sbp as Record<string, unknown> | null)?.locations_passed_at)
 
@@ -163,6 +167,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     quiz: quizDone,
     locations: locationsDone,
     recitation: recitFullDone,
+    trainer: trainerDone,
     cross_photo: crossDone,
     prayer: prayerDone,
     friday: fridayDone,
@@ -176,6 +181,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     locations: locationsDone,
     recitation: recitDone, // audio сдан (ключевой этап)
     recitation_full: recitFullDone, // audio + video оба сданы
+    trainer: trainerDone,
     cross_photo: { done: crossDisplayCount, target: CROSS_TARGET },
     prayer: { done: prayerDisplayCount, target: PRAYER_TARGET },
     friday: fridayDone,

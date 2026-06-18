@@ -6,7 +6,8 @@
  * Body: { initData }
  * Response: { ok, block_unlocked_at, block_passed_at, can_skip,
  *             quiz_passed_at, recitation_audio_passed_at,
- *             recitation_videos_passed_at, cross_days }
+ *             recitation_videos_passed_at, trainer_passed_at,
+ *             cross_days, prayer_days, friday_done }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { data: existing } = await supabase
     .from('student_block_progress')
     .select(
-      'block_unlocked_at, block_passed_at, quiz_passed_at, recitation_audio_passed_at, recitation_videos_passed_at',
+      'block_unlocked_at, block_passed_at, quiz_passed_at, recitation_audio_passed_at, recitation_videos_passed_at, trainer_passed_at',
     )
     .eq('user_id', userId)
     .eq('block_id', blockId)
@@ -61,7 +62,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     unlockedAt = nowIso
   }
 
-  const [{ data: profile }, { data: crossRows }] = await Promise.all([
+  const [
+    { data: profile },
+    { data: crossRows },
+    { data: prayerRows },
+    { data: fridayRow },
+  ] = await Promise.all([
     supabase
       .from('profiles')
       .select('can_skip_block_lock')
@@ -73,10 +79,25 @@ export async function POST(req: NextRequest, { params }: Params) {
       .select('submitted_date')
       .eq('user_id', userId)
       .eq('block_id', blockId),
+    // Уникальные дни молитвы для этого блока
+    supabase
+      .from('student_block_daily_prayer')
+      .select('prayed_date')
+      .eq('user_id', userId)
+      .eq('block_id', blockId),
+    // Эпоха пятницы
+    supabase
+      .from('student_block_friday_practice')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+      .maybeSingle(),
   ])
 
-  // Считаем distinct submitted_date в TS
+  // Считаем distinct дни в TS
   const crossDays = new Set((crossRows ?? []).map((r: { submitted_date: string }) => r.submitted_date)).size
+  const prayerDays = new Set((prayerRows ?? []).map((r: { prayed_date: string }) => r.prayed_date)).size
+  const fridayDone = Boolean(fridayRow)
 
   return NextResponse.json({
     ok: true,
@@ -86,6 +107,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     quiz_passed_at: existing?.quiz_passed_at ?? null,
     recitation_audio_passed_at: existing?.recitation_audio_passed_at ?? null,
     recitation_videos_passed_at: existing?.recitation_videos_passed_at ?? null,
+    trainer_passed_at: existing?.trainer_passed_at ?? null,
     cross_days: crossDays,
+    prayer_days: prayerDays,
+    friday_done: fridayDone,
   })
 }

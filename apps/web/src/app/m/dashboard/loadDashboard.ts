@@ -38,6 +38,8 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
     { data: examRows },
     { data: courseProgress },
     { data: crossRows },
+    { data: prayerRows },
+    { data: fridayRows },
   ] = await Promise.all([
     supabase
       .from('student_block_progress')
@@ -63,6 +65,18 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
       .from('student_block_daily_cross')
       .select('block_id, submitted_date')
       .eq('user_id', userId),
+    // Уникальные дни молитвы (новая таблица, not in types.ts → as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('student_block_daily_prayer')
+      .select('block_id, prayed_date')
+      .eq('user_id', userId) as Promise<{ data: Array<{ block_id: number; prayed_date: string }> | null }>,
+    // Эпоха пятницы (новая таблица, not in types.ts → as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from('student_block_friday_practice')
+      .select('block_id')
+      .eq('user_id', userId) as Promise<{ data: Array<{ block_id: number }> | null }>,
   ])
 
   const progressByBlockId: Record<number, BlockProgress> = {}
@@ -83,7 +97,7 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
 
   const courseDone = courseProgress?.status === 'completed'
 
-  // Считаем уникальные дни фото креста по блоку в TS (distinct submitted_date)
+  // Считаем уникальные дни фото креста по блоку
   const crossDaysByBlockId: Record<number, Set<string>> = {}
   for (const row of crossRows ?? []) {
     const blockId = row.block_id
@@ -93,25 +107,54 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
     crossDaysByBlockId[blockId].add(row.submitted_date)
   }
 
-  // Собираем completionByBlockId из progress + crossDays
+  // Считаем уникальные дни молитвы по блоку
+  const prayerDaysByBlockId: Record<number, Set<string>> = {}
+  for (const row of prayerRows ?? []) {
+    if (!prayerDaysByBlockId[row.block_id]) {
+      prayerDaysByBlockId[row.block_id] = new Set()
+    }
+    prayerDaysByBlockId[row.block_id].add(row.prayed_date)
+  }
+
+  // Блоки с выполненной эпохой пятницы
+  const fridayDoneByBlockId = new Set<number>()
+  for (const row of fridayRows ?? []) {
+    fridayDoneByBlockId.add(row.block_id)
+  }
+
+  // Собираем completionByBlockId из progress + crossDays + prayerDays + fridayDone
   const completionByBlockId: Record<number, BlockCompletionData> = {}
   for (const row of progressRows ?? []) {
-    completionByBlockId[row.block_id] = {
-      quiz_passed_at: row.quiz_passed_at,
-      recitation_audio_passed_at: row.recitation_audio_passed_at,
-      recitation_videos_passed_at: row.recitation_videos_passed_at,
-      crossDays: crossDaysByBlockId[row.block_id]?.size ?? 0,
+    const blockId = row.block_id
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rowAny = row as any
+    completionByBlockId[blockId] = {
+      quiz_passed_at: rowAny.quiz_passed_at ?? null,
+      recitation_audio_passed_at: rowAny.recitation_audio_passed_at ?? null,
+      recitation_videos_passed_at: rowAny.recitation_videos_passed_at ?? null,
+      trainer_passed_at: rowAny.trainer_passed_at ?? null,
+      crossDays: crossDaysByBlockId[blockId]?.size ?? 0,
+      prayerDays: prayerDaysByBlockId[blockId]?.size ?? 0,
+      fridayDone: fridayDoneByBlockId.has(blockId),
     }
   }
-  // Блоки без progress-записи тоже могут иметь cross-данные (edge case)
-  for (const [blockIdStr, daysSet] of Object.entries(crossDaysByBlockId)) {
-    const blockId = Number(blockIdStr)
+
+  // Блоки без progress-записи тоже могут иметь cross/prayer/friday данные (edge case)
+  const allBlockIds = new Set<number>([
+    ...Object.keys(crossDaysByBlockId).map(Number),
+    ...Object.keys(prayerDaysByBlockId).map(Number),
+    ...[...fridayDoneByBlockId],
+  ])
+  for (const blockId of allBlockIds) {
     if (!completionByBlockId[blockId]) {
       completionByBlockId[blockId] = {
         quiz_passed_at: null,
         recitation_audio_passed_at: null,
         recitation_videos_passed_at: null,
-        crossDays: daysSet.size,
+        trainer_passed_at: null,
+        crossDays: crossDaysByBlockId[blockId]?.size ?? 0,
+        prayerDays: prayerDaysByBlockId[blockId]?.size ?? 0,
+        fridayDone: fridayDoneByBlockId.has(blockId),
       }
     }
   }

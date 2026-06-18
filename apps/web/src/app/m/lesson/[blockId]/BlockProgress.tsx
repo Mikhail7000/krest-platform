@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 const CROSS_DAYS_REQUIRED = 7
+const PRAYER_DAYS_REQUIRED = 7
 
 function getInitData(): string {
   if (typeof window === 'undefined') return ''
@@ -16,17 +17,23 @@ interface Data {
   quiz_passed_at?: string | null
   recitation_audio_passed_at?: string | null
   recitation_videos_passed_at?: string | null
+  trainer_passed_at?: string | null
   cross_days?: number
+  prayer_days?: number
+  friday_done?: boolean
 }
 
 interface CheckItem {
   label: string
   done: boolean
+  /** Если recurring — отображать «N / target» вместо ✓/○ */
+  progress?: { done: number; target: number }
 }
 
 /**
- * Баннер прогресса внутри урока — накопительная модель.
- * Показывает: сдан ли квиз, аудио и кружки местописаний, сколько дней фото креста.
+ * Баннер прогресса внутри урока — накопительная модель (7 условий).
+ * Показывает: квиз, аудио и кружки местописаний, тренажёр,
+ * дни фото креста, дни молитвы, эпоха пятницы.
  */
 export function BlockProgress({ blockId }: { blockId: number }) {
   const [data, setData] = useState<Data | null>(null)
@@ -59,19 +66,33 @@ export function BlockProgress({ blockId }: { blockId: number }) {
   }
 
   const crossDays = data.cross_days ?? 0
+  const prayerDays = data.prayer_days ?? 0
+  const fridayDone = data.friday_done ?? false
   const crossPct = Math.round((Math.min(crossDays, CROSS_DAYS_REQUIRED) / CROSS_DAYS_REQUIRED) * 100)
 
   const items: CheckItem[] = [
     { label: 'Квиз', done: !!data.quiz_passed_at },
     { label: 'Аудио местописаний', done: !!data.recitation_audio_passed_at },
     { label: 'Кружки местописаний', done: !!data.recitation_videos_passed_at },
+    { label: 'Тренажёр', done: !!data.trainer_passed_at },
+    {
+      label: 'Фото креста',
+      done: crossDays >= CROSS_DAYS_REQUIRED,
+      progress: { done: crossDays, target: CROSS_DAYS_REQUIRED },
+    },
+    {
+      label: 'Молитва',
+      done: prayerDays >= PRAYER_DAYS_REQUIRED,
+      progress: { done: prayerDays, target: PRAYER_DAYS_REQUIRED },
+    },
+    { label: 'Эпоха пятницы', done: fridayDone },
   ]
 
-  const allDone = items.every((i) => i.done) && crossDays >= CROSS_DAYS_REQUIRED
+  const allDone = items.every((i) => i.done)
 
   return (
     <div className="lesson-progress-banner">
-      {/* Дни фото креста */}
+      {/* Прогресс-бар по дням креста (основной recurring маркер) */}
       <div className="lesson-progress-banner__label">
         <span>
           {allDone ? 'Можно сдавать блок' : `Дней с фото креста: ${crossDays} / ${CROSS_DAYS_REQUIRED}`}
@@ -82,14 +103,18 @@ export function BlockProgress({ blockId }: { blockId: number }) {
         <div className="lesson-progress-bar__fill" style={{ width: `${crossPct}%` }} />
       </div>
 
-      {/* Статусы квиза, аудио, кружков */}
+      {/* Чеклист всех 7 условий */}
       <div className="lesson-progress-checklist">
         {items.map((item) => (
           <span
             key={item.label}
             className={`lesson-progress-check${item.done ? ' lesson-progress-check--done' : ''}`}
           >
-            {item.done ? '✓' : '○'} {item.label}
+            {item.done ? '✓' : '○'}{' '}
+            {item.label}
+            {item.progress && !item.done
+              ? ` ${item.progress.done}/${item.progress.target}`
+              : null}
           </span>
         ))}
       </div>

@@ -17,6 +17,8 @@ export interface TrainerData {
   ok: true
   currentBlockId: number
   currentOrder: number
+  /** ISO-строка если тренажёр уже отмечен пройденным, иначе null */
+  trainer_passed_at: string | null
   blocks: TrainerBlock[]
   verses: TrainerVerse[]
 }

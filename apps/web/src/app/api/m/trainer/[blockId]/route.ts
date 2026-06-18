@@ -10,6 +10,7 @@
  *   ok: true,
  *   currentBlockId: number,
  *   currentOrder: number,
+ *   trainer_passed_at: string | null,   // статус прохождения тренажёра текущего блока
  *   blocks: Array<{ id: number, order_num: number, title_ru: string }>,
  *   verses: Array<{ id, block_id, reference, exact_text, topic_label, order_index }>
  * }
@@ -40,7 +41,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     return err('Invalid block id', 'BAD_BLOCK_ID', 400)
   }
 
-  const supabase = createServiceSupabase()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createServiceSupabase() as any
 
   // 1. order_num текущего блока
   const { data: current, error: curErr } = await supabase
@@ -52,21 +54,33 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (curErr || !current || current.order_num == null) {
     return err('Block not found', 'BLOCK_NOT_FOUND', 404)
   }
-  const currentOrder = current.order_num
+  const currentOrder = current.order_num as number
 
-  // 2. Все блоки до текущего включительно (прогрессивное повторение)
-  const { data: blocksData, error: blocksErr } = await supabase
-    .from('blocks')
-    .select('id, order_num, title_ru')
-    .lte('order_num', currentOrder)
-    .gte('order_num', 1)
-    .order('order_num', { ascending: true })
+  // 2. Все блоки до текущего включительно (прогрессивное повторение) + статус тренажёра
+  const [
+    { data: blocksData, error: blocksErr },
+    { data: progressRow },
+  ] = await Promise.all([
+    supabase
+      .from('blocks')
+      .select('id, order_num, title_ru')
+      .lte('order_num', currentOrder)
+      .gte('order_num', 1)
+      .order('order_num', { ascending: true }) as Promise<{ data: Array<{ id: number; order_num: number; title_ru: string | null }> | null; error: unknown }>,
+    supabase
+      .from('student_block_progress')
+      .select('trainer_passed_at')
+      .eq('user_id', auth.userId)
+      .eq('block_id', blockId)
+      .maybeSingle() as Promise<{ data: { trainer_passed_at: string | null } | null; error: unknown }>,
+  ])
 
   if (blocksErr || !blocksData) {
     return err('Failed to load blocks', 'DB_ERROR', 500)
   }
 
-  const blockIds = blocksData.map((b) => b.id)
+  const blockIds = blocksData.map((b: { id: number }) => b.id)
+  const trainerPassedAt: string | null = progressRow?.trainer_passed_at ?? null
 
   // 3. Местописания этих блоков
   const { data: verses, error: vErr } = await supabase
@@ -77,7 +91,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     .order('order_index', { ascending: true })
 
   if (vErr) {
-    console.error('[trainer] verses fetch error:', vErr)
     return err('Failed to load verses', 'DB_ERROR', 500)
   }
 
@@ -85,12 +98,13 @@ export async function POST(req: NextRequest, { params }: Params) {
     ok: true,
     currentBlockId: blockId,
     currentOrder,
-    blocks: blocksData.map((b) => ({
+    trainer_passed_at: trainerPassedAt,
+    blocks: blocksData.map((b: { id: number; order_num: number; title_ru: string | null }) => ({
       id: b.id,
       order_num: b.order_num,
       title_ru: b.title_ru ?? `Блок ${b.order_num}`,
     })),
-    verses: (verses ?? []).map((v) => ({
+    verses: ((verses ?? []) as Array<{ id: string; block_id: number; reference: string; exact_text: string; topic_label: string | null; order_index: number }>).map((v) => ({
       id: v.id,
       block_id: v.block_id,
       reference: v.reference,
