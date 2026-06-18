@@ -130,6 +130,18 @@ export function IconStar(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+// Лента сообщества — глобус / сеть людей (круг + точки)
+export function IconFeed(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3a14 14 0 0 1 0 18" />
+      <path d="M12 3a14 14 0 0 0 0 18" />
+    </Svg>
+  )
+}
+
 // Сертификат — кубок
 export function IconTrophy(props: SVGProps<SVGSVGElement>) {
   return (

@@ -1,5 +1,6 @@
 // Server Component — навигационные карточки практики блока (под видео и конспектом).
 // Заголовок и тексты — для ученика, без внутренней терминологии разработки.
+// data-s4-key на каждой карточке — для вставки статус-бейджей через Stage4Status.
 
 import Link from 'next/link'
 import {
@@ -22,7 +23,7 @@ export function Stage4Nav({ blockId }: Props) {
   return (
     <div className="lesson-section">
       <h3 className="lesson-section__title">Практика блока</h3>
-      <Link href={`/m/trainer/${blockId}`} className="lesson-stage4-card">
+      <Link href={`/m/trainer/${blockId}`} className="lesson-stage4-card" data-s4-key="trainer">
         <span className="lesson-stage4-card__icon">
           <IconCards className={ICON_CLASS} />
         </span>
@@ -32,7 +33,7 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
-      <Link href={`/m/locations/${blockId}`} className="lesson-stage4-card">
+      <Link href={`/m/locations/${blockId}`} className="lesson-stage4-card" data-s4-key="locations">
         <span className="lesson-stage4-card__icon">
           <IconBook className={ICON_CLASS} />
         </span>
@@ -42,7 +43,7 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
-      <Link href={`/m/recitation/${blockId}`} className="lesson-stage4-card">
+      <Link href={`/m/recitation/${blockId}`} className="lesson-stage4-card" data-s4-key="recitation">
         <span className="lesson-stage4-card__icon">
           <IconMic className={ICON_CLASS} />
         </span>
@@ -52,7 +53,7 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
-      <Link href={`/m/prayer/${blockId}`} className="lesson-stage4-card">
+      <Link href={`/m/prayer/${blockId}`} className="lesson-stage4-card" data-s4-key="prayer">
         <span className="lesson-stage4-card__icon">
           <IconCross className={ICON_CLASS} />
         </span>
@@ -62,7 +63,7 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
-      <Link href={`/m/cross-photo/${blockId}`} className="lesson-stage4-card">
+      <Link href={`/m/cross-photo/${blockId}`} className="lesson-stage4-card" data-s4-key="cross_photo">
         <span className="lesson-stage4-card__icon">
           <IconCamera className={ICON_CLASS} />
         </span>
@@ -72,7 +73,7 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
-      <Link href={`/m/friday/${blockId}`} className="lesson-stage4-card">
+      <Link href={`/m/friday/${blockId}`} className="lesson-stage4-card" data-s4-key="friday">
         <span className="lesson-stage4-card__icon">
           <IconUsers className={ICON_CLASS} />
         </span>
@@ -83,7 +84,7 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
-      <Link href={`/m/emotions/${blockId}`} className="lesson-stage4-card">
+      <Link href={`/m/emotions/${blockId}`} className="lesson-stage4-card" data-s4-key="emotions">
         <span className="lesson-stage4-card__icon">
           <IconMessage className={ICON_CLASS} />
         </span>

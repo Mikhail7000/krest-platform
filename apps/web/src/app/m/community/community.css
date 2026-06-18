@@ -1,0 +1,467 @@
+/* ── Лента сообщества ─────────────────────────────────────────────────
+   Светлая тема по умолчанию (dashboard-стиль), тёмные темы через
+   data-theme="dark" / data-theme="stars" (токены из theme-dark.css).
+   ──────────────────────────────────────────────────────────────────── */
+
+/* Заголовок страницы */
+.cm-header {
+  margin-bottom: 1.25rem;
+}
+.cm-header__title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #16181d;
+  line-height: 1.1;
+}
+.cm-header__sub {
+  font-size: 0.9375rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+[data-theme="dark"] .cm-header__title,
+[data-theme="stars"] .cm-header__title {
+  color: var(--d-text, #f2f4f8);
+}
+[data-theme="dark"] .cm-header__sub,
+[data-theme="stars"] .cm-header__sub {
+  color: var(--d-muted, #9aa3b2);
+}
+
+/* ── Корень ─────────────────────────────────────────────────────────── */
+.cm-root {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Композер ────────────────────────────────────────────────────────── */
+.cm-composer {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 22px;
+  padding: 1rem 1.125rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 14px 30px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+[data-theme="dark"] .cm-composer,
+[data-theme="stars"] .cm-composer {
+  background: var(--d-card);
+  border-color: var(--d-border);
+  box-shadow: var(--d-shadow);
+}
+
+/* Переключатели режимов */
+.cm-modes {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+.cm-mode-btn {
+  padding: 0.4rem 0.875rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.cm-mode-btn:active {
+  transform: scale(0.97);
+}
+.cm-mode-btn--active {
+  background: #16181d;
+  border-color: #16181d;
+  color: #fff;
+}
+
+[data-theme="dark"] .cm-mode-btn,
+[data-theme="stars"] .cm-mode-btn {
+  border-color: var(--d-border);
+  color: var(--d-muted);
+}
+[data-theme="dark"] .cm-mode-btn--active,
+[data-theme="stars"] .cm-mode-btn--active {
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+  color: #fff;
+}
+
+/* Текстовое поле */
+.cm-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.025);
+  color: #16181d;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  font-size: 1rem;
+  line-height: 1.45;
+  resize: vertical;
+  font-family: inherit;
+}
+.cm-textarea:focus {
+  outline: none;
+  border-color: var(--accent-solid);
+}
+.cm-textarea::placeholder {
+  color: #9097a1;
+}
+
+[data-theme="dark"] .cm-textarea,
+[data-theme="stars"] .cm-textarea {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--d-text);
+  border-color: var(--d-border);
+}
+[data-theme="dark"] .cm-textarea::placeholder,
+[data-theme="stars"] .cm-textarea::placeholder {
+  color: var(--d-muted-2);
+}
+
+/* Основная кнопка */
+.cm-submit {
+  display: block;
+  width: 100%;
+  padding: 0.8125rem 1rem;
+  background: #16181d;
+  color: #fff;
+  border: 0;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.cm-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cm-submit:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.cm-submit--danger {
+  background: var(--color-error, #dc2626);
+}
+
+[data-theme="dark"] .cm-submit,
+[data-theme="stars"] .cm-submit {
+  background: var(--accent-gradient);
+}
+
+/* Вторичная кнопка */
+.cm-ghost-btn {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s;
+}
+.cm-ghost-btn:disabled {
+  opacity: 0.4;
+}
+.cm-ghost-btn:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .cm-ghost-btn,
+[data-theme="stars"] .cm-ghost-btn {
+  border-color: var(--d-border);
+  color: var(--d-muted);
+}
+
+/* Запись медиа */
+.cm-rec {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.cm-rec-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.cm-audio-preview {
+  width: 100%;
+  border-radius: 10px;
+}
+
+/* Кружок — переиспользуем классы em-circle из emotions.css */
+
+/* Подсказка */
+.cm-hint {
+  font-size: 0.875rem;
+  color: #9097a1;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+/* Ошибка */
+.cm-error {
+  font-size: 0.875rem;
+  color: var(--color-error, #dc2626);
+  text-align: center;
+}
+
+/* Скрытый input */
+.cm-hidden-input {
+  display: none;
+}
+
+/* ── Лента постов ────────────────────────────────────────────────────── */
+.cm-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+/* ── Карточка поста ─────────────────────────────────────────────────── */
+.cm-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  padding: 1rem 1.125rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 24px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+[data-theme="dark"] .cm-card,
+[data-theme="stars"] .cm-card {
+  background: var(--d-card);
+  border-color: var(--d-border);
+  box-shadow: var(--d-shadow);
+}
+
+/* Шапка карточки */
+.cm-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.cm-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.cm-card__author {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #16181d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cm-card__time {
+  font-size: 0.75rem;
+  color: #9097a1;
+}
+
+[data-theme="dark"] .cm-card__author,
+[data-theme="stars"] .cm-card__author {
+  color: var(--d-text);
+}
+[data-theme="dark"] .cm-card__time,
+[data-theme="stars"] .cm-card__time {
+  color: var(--d-muted-2);
+}
+
+/* Кнопка удаления */
+.cm-card__del {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: transparent;
+  color: #9097a1;
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.cm-card__del:hover {
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.2);
+}
+.cm-card__del--confirm {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.3);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  width: auto;
+  border-radius: 999px;
+  padding: 0 0.5rem;
+}
+
+/* Текст поста */
+.cm-card__text {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: #16181d;
+  white-space: pre-wrap;
+}
+
+[data-theme="dark"] .cm-card__text,
+[data-theme="stars"] .cm-card__text {
+  color: var(--d-text);
+}
+
+/* Аудио */
+.cm-card__audio {
+  width: 100%;
+  border-radius: 10px;
+}
+
+/* Видео-кружок */
+.cm-card__circle-wrap {
+  width: min(56vw, 200px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+  border: 3px solid color-mix(in srgb, var(--accent-solid) 40%, transparent);
+  margin: 0 auto;
+}
+.cm-card__circle {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Фото */
+.cm-card__photo {
+  width: 100%;
+  border-radius: 14px;
+  display: block;
+  max-height: 320px;
+  object-fit: cover;
+}
+
+/* Подпись (к медиа) */
+.cm-card__caption {
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+[data-theme="dark"] .cm-card__caption,
+[data-theme="stars"] .cm-card__caption {
+  color: var(--d-muted);
+}
+
+/* ── Скелетоны загрузки ──────────────────────────────────────────────── */
+.cm-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-top: 0.5rem;
+}
+.cm-skeleton {
+  height: 5.5rem;
+  border-radius: 20px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.06) 25%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: cm-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes cm-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+[data-theme="dark"] .cm-skeleton,
+[data-theme="stars"] .cm-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* ── Пустое состояние ────────────────────────────────────────────────── */
+.cm-empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cm-empty__text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+.cm-empty__hint {
+  font-size: 0.875rem;
+  color: #9097a1;
+}
+
+[data-theme="dark"] .cm-empty__text,
+[data-theme="stars"] .cm-empty__text {
+  color: var(--d-muted);
+}
+[data-theme="dark"] .cm-empty__hint,
+[data-theme="stars"] .cm-empty__hint {
+  color: var(--d-muted-2);
+}
+
+/* ── «Показать ещё» ─────────────────────────────────────────────────── */
+.cm-load-more {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s;
+}
+.cm-load-more:disabled {
+  opacity: 0.5;
+}
+.cm-load-more:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .cm-load-more,
+[data-theme="stars"] .cm-load-more {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--d-border);
+  color: var(--d-muted);
+}

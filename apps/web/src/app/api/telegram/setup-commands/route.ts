@@ -16,6 +16,7 @@ export async function GET() {
   const commands = [
     { command: 'start', description: 'Открыть приложение КРЕСТ' },
     { command: 'progress', description: 'Мой прогресс' },
+    { command: 'students', description: 'Мои ученики (для наставников)' },
     { command: 'help', description: 'Помощь и поддержка' },
   ]
 

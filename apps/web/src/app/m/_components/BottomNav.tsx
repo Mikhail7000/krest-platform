@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { IconHome, IconUser, IconCards, IconUsers } from './icons'
+import { IconHome, IconUser, IconCards, IconUsers, IconFeed } from './icons'
 
 const TABS = [
   { href: '/m/dashboard', label: 'Курс', Icon: IconHome },
   { href: '/m/trainer', label: 'Тренажёр', Icon: IconCards },
   { href: '/m/tracking', label: 'Трекинг', Icon: IconUsers },
+  { href: '/m/community', label: 'Лента', Icon: IconFeed },
   { href: '/m/profile', label: 'Профиль', Icon: IconUser },
 ] as const
 

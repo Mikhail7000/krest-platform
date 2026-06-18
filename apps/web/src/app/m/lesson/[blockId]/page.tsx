@@ -7,6 +7,7 @@ import type { Database } from '../../../../../../../packages/supabase/src/types'
 import { LessonVideos } from '@/components/lesson/LessonVideos'
 import { BlockProgress } from './BlockProgress'
 import { Stage4Nav } from './Stage4Nav'
+import { Stage4Status } from './Stage4Status'
 import './lesson.css'
 
 export const dynamic = 'force-dynamic'
@@ -197,7 +198,12 @@ export default async function LessonPage({ params }: { params: Promise<{ blockId
         <GuideCard key={r.id} resource={r} url={r.storage_path ? signedByPath[r.storage_path] : undefined} />
       ))}
 
-      {!isIntroBlock && <Stage4Nav blockId={id} />}
+      {!isIntroBlock && (
+        <>
+          <Stage4Status blockId={id} />
+          <Stage4Nav blockId={id} />
+        </>
+      )}
 
       <BackToBlocks variant="bottom" />
     </div>

@@ -183,6 +183,105 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
   await answerCallbackQuery(cq.id, 'Неизвестное действие')
 }
 
+// ─── Хелпер: прогресс учеников для команды /students ─────────────────────
+
+interface StudentProgressRow {
+  user_id: string
+  block_id: number
+  block_passed_at: string | null
+}
+
+interface StudentProfileRow {
+  id: string
+  full_name: string | null
+}
+
+interface StudentSummary {
+  id: string
+  full_name: string
+  passed: number
+  currentBlock: number
+}
+
+/**
+ * Загружает учеников куратора и считает их прогресс.
+ * Возвращает упорядоченный список StudentSummary.
+ */
+async function loadStudentsSummary(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  curatorId: string,
+): Promise<StudentSummary[]> {
+  const { data: students, error: studentsError } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .eq('role', 'student')
+    .eq('curator_id', curatorId)
+
+  if (studentsError) {
+    console.error('[webhook/students] profiles query error', studentsError)
+    return []
+  }
+
+  const profiles = (students ?? []) as StudentProfileRow[]
+  if (profiles.length === 0) return []
+
+  const ids = profiles.map((p) => p.id)
+
+  const { data: bpRows } = await supabase
+    .from('student_block_progress')
+    .select('user_id, block_id, block_passed_at')
+    .in('user_id', ids)
+
+  const progressByUser: Record<string, StudentProgressRow[]> = {}
+  for (const row of (bpRows ?? []) as StudentProgressRow[]) {
+    ;(progressByUser[row.user_id] ??= []).push(row)
+  }
+
+  return profiles.map((student) => {
+    const rows = progressByUser[student.id] ?? []
+    const passed = rows.filter((r) => r.block_passed_at !== null).length
+    const currentBlock =
+      rows.length > 0 ? Math.max(...rows.map((r) => r.block_id)) : 1
+    return {
+      id: student.id,
+      full_name: student.full_name ?? 'Без имени',
+      passed,
+      currentBlock,
+    }
+  })
+}
+
+/**
+ * Форматирует HTML-сообщение со списком учеников.
+ * Обрезает до лимита Telegram 4096 символов.
+ */
+function formatStudentsList(students: StudentSummary[]): string {
+  if (students.length === 0) {
+    return 'Пока нет привязанных учеников.'
+  }
+
+  const LIMIT = 4000 // оставляем буфер от 4096
+  const header = `<b>Твои ученики (${students.length})</b>\n\n`
+
+  const lines: string[] = []
+  let bodyLen = 0
+
+  for (let i = 0; i < students.length; i++) {
+    const s = students[i]
+    const line = `${i + 1}. ${s.full_name} — ${s.passed}/10 блоков, сейчас Блок ${s.currentBlock}\n`
+    if (header.length + bodyLen + line.length > LIMIT) {
+      const remaining = students.length - i
+      lines.push(`<i>...и ещё ${remaining} учеников — откройте приложение для полного списка</i>`)
+      break
+    }
+    lines.push(line)
+    bodyLen += line.length
+  }
+
+  return header + lines.join('')
+}
+
 // ─── HTTP handlers ────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -220,6 +319,40 @@ export async function POST(request: NextRequest) {
 
   const chatId = message.chat.id
   const text = message.text.trim()
+
+  // /students — список учеников (только для curator / admin / super_admin)
+  if (text.startsWith('/students')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, role, full_name')
+      .eq('telegram_chat_id', chatId)
+      .maybeSingle() as { data: { id: string; role: string; full_name: string | null } | null }
+
+    if (!profile) {
+      await sendTelegramMessage(
+        chatId,
+        'Сначала открой приложение командой /start.',
+        { withMiniAppButton: true },
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    const allowedRoles = ['curator', 'admin', 'super_admin']
+    if (!allowedRoles.includes(profile.role)) {
+      await sendTelegramMessage(
+        chatId,
+        'Команда /students доступна только наставникам.',
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    const students = await loadStudentsSummary(supabase, profile.id)
+    const replyText = formatStudentsList(students)
+    await sendTelegramMessage(chatId, replyText, { withMiniAppButton: true })
+    return NextResponse.json({ ok: true })
+  }
 
   // /help — помощь и связь с разработчиком
   if (text.startsWith('/help')) {
