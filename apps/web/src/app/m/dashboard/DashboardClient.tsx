@@ -5,7 +5,7 @@ import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { STATUS_PHRASES } from './statusPhrases'
 import { HeaderProgress } from './HeaderProgress'
 
-const FALLBACK_SUBTITLE = 'Путь от вступления до Мастера Креста'
+const FALLBACK_SUBTITLE = 'Путь от вступления до сдачи креста наставнику'
 
 function getInitData(): string {
   if (typeof window === 'undefined') return ''

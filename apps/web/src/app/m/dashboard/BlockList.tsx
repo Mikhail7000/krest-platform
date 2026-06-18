@@ -290,7 +290,7 @@ export function BlockList({ onProgress }: BlockListProps) {
               <span className="db-cert-link__icon">
                 <IconTrophy className="db-cert-link__icon-svg" />
               </span>
-              <span className="db-cert-link__text">Ваш сертификат — Мастер Креста</span>
+              <span className="db-cert-link__text">Курс Креста сдан — к сдаче наставнику</span>
             </Link>
           )}
         </div>

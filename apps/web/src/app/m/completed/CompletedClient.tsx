@@ -81,8 +81,8 @@ export function CompletedClient() {
       {/* Hero */}
       <div className="completed-hero">
         <p className="completed-hero__eyebrow">Курс «КРЕСТ» завершён</p>
-        <h1 className="completed-hero__title">Мастер Креста</h1>
-        <p className="completed-hero__subtitle">Поздравляем с завершением!</p>
+        <h1 className="completed-hero__title">Курс Креста сдан</h1>
+        <p className="completed-hero__subtitle">Теперь — сдача креста наставнику, очно или онлайн.</p>
         {data.final_score !== null && data.final_score !== undefined && (
           <span className="completed-hero__score">
             Финальный экзамен: {data.final_score}%
