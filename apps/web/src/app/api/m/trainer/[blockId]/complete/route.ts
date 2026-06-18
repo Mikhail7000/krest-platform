@@ -8,8 +8,9 @@ type Params = { params: Promise<{ blockId: string }> }
 
 /**
  * POST /api/m/trainer/[blockId]/complete  { initData }
- * Отмечает тренажёр местописаний блока пройденным (trainer_passed_at) —
- * одно из условий открытия следующего блока.
+ * Дневная отметка тренажёра (за сегодня). Тренажёр — одно из 5 ежедневных
+ * заданий: «закрытый день» требует тренажёр+фото+молитву+местописания+пересказ
+ * за одну дату. См. is_block_unlocked.
  */
 export async function POST(req: NextRequest, { params }: Params) {
   const { blockId } = await params
@@ -30,13 +31,15 @@ export async function POST(req: NextRequest, { params }: Params) {
     )
   }
 
+  // Дневная отметка: одна на user×block×дату (UTC, как daily_cross/daily_prayer)
+  const today = new Date().toISOString().slice(0, 10)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
   const { error } = await supabase
-    .from('student_block_progress')
+    .from('student_block_daily_trainer')
     .upsert(
-      { user_id: auth.userId, block_id: blockIdNum, trainer_passed_at: new Date().toISOString() },
-      { onConflict: 'user_id,block_id' },
+      { user_id: auth.userId, block_id: blockIdNum, trained_date: today },
+      { onConflict: 'user_id,block_id,trained_date' },
     )
 
   if (error) {

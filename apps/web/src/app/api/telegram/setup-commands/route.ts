@@ -1,7 +1,8 @@
 /**
  * GET /api/telegram/setup-commands
  * Регистрирует меню команд бота в Telegram (setMyCommands). Вызвать один раз
- * после деплоя. Команды: /start, /help, /progress.
+ * после деплоя. Команды: /start, /help, /progress, /students, /student,
+ * /curators, /stats, /transfer, /delete.
  */
 import { NextResponse } from 'next/server'
 
@@ -18,6 +19,10 @@ export async function GET() {
     { command: 'progress', description: 'Мой прогресс' },
     { command: 'students', description: 'Ученики и прогресс (для наставников)' },
     { command: 'student', description: 'Прогресс ученика: /student @ник' },
+    { command: 'curators', description: 'Кураторы и ученики' },
+    { command: 'stats', description: 'Статистика потока' },
+    { command: 'transfer', description: 'Перевод: /transfer @ученик @куратор' },
+    { command: 'delete', description: 'Удалить ученика: /delete @ник' },
     { command: 'help', description: 'Помощь и поддержка' },
   ]
 

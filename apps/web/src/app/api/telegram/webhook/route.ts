@@ -67,6 +67,22 @@ function createServiceSupabase() {
   })
 }
 
+// ─── Проверка роли admin/super_admin по telegram_chat_id ────────────────
+
+async function getAdminProfile(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  chatId: number,
+): Promise<{ id: string; role: string } | null> {
+  const { data } = (await supabase
+    .from('profiles')
+    .select('id, role')
+    .eq('telegram_chat_id', chatId)
+    .maybeSingle()) as { data: { id: string; role: string } | null }
+  if (!data || !['admin', 'super_admin'].includes(data.role)) return null
+  return data
+}
+
 // ─── Обработчик callback_query ────────────────────────────────────────────
 
 async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
@@ -89,10 +105,101 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
   }
 
   const action = data.slice(0, colonIdx)
-  const requestId = data.slice(colonIdx + 1)
+  const payload = data.slice(colonIdx + 1)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const service = createServiceSupabase() as any
+
+  // ── del_cancel ──────────────────────────────────────────────────────────
+  if (action === 'del_cancel') {
+    await answerCallbackQuery(cq.id, 'Отменено')
+    if (cq.message) {
+      await editMessageText(cq.message.chat.id, cq.message.message_id, '↩️ Удаление отменено.')
+    }
+    return
+  }
+
+  // ── del_student ─────────────────────────────────────────────────────────
+  if (action === 'del_student') {
+    // Двойная проверка прав через profiles.role (не только whitelist)
+    const adminProf = await getAdminProfile(service, cq.from.id)
+    if (!adminProf) {
+      await answerCallbackQuery(cq.id, 'Команда только для администраторов')
+      return
+    }
+
+    const userId = payload
+    const { data: target } = (await service
+      .from('profiles')
+      .select('id, full_name, contact_info, is_protected')
+      .eq('id', userId)
+      .maybeSingle()) as {
+      data: {
+        id: string
+        full_name: string | null
+        contact_info: string | null
+        is_protected: boolean | null
+      } | null
+    }
+
+    if (!target) {
+      await answerCallbackQuery(cq.id, 'Ученик не найден')
+      if (cq.message) {
+        await editMessageText(cq.message.chat.id, cq.message.message_id, '❌ Ученик не найден.')
+      }
+      return
+    }
+
+    if (target.is_protected) {
+      await answerCallbackQuery(cq.id, 'Защищённого нельзя удалить')
+      if (cq.message) {
+        await editMessageText(
+          cq.message.chat.id,
+          cq.message.message_id,
+          '🔒 Защищённого пользователя нельзя удалить.',
+        )
+      }
+      return
+    }
+
+    const displayName = escapeHtmlTg(target.full_name || target.contact_info || userId)
+
+    // Удаляем whitelist-слот по contact_info
+    if (target.contact_info) {
+      await service
+        .from('testing_whitelist')
+        .delete()
+        .ilike('telegram_username', target.contact_info)
+    }
+
+    // Удаляем профиль (каскадом снесёт прогресс благодаря ON DELETE CASCADE)
+    const { error: profileErr } = await service.from('profiles').delete().eq('id', userId)
+    if (profileErr) {
+      console.error('[webhook/del_student] profiles delete error:', profileErr)
+      await answerCallbackQuery(cq.id, 'Ошибка удаления профиля')
+      return
+    }
+
+    // Удаляем auth.users (прямой DELETE через service_role)
+    const { error: authErr } = await service.auth.admin.deleteUser(userId)
+    if (authErr) {
+      // Профиль уже удалён — логируем, но не откатываем
+      console.error('[webhook/del_student] auth.admin.deleteUser error:', authErr)
+    }
+
+    await answerCallbackQuery(cq.id, 'Удалено')
+    if (cq.message) {
+      await editMessageText(
+        cq.message.chat.id,
+        cq.message.message_id,
+        `🗑 Ученик <b>${displayName}</b> удалён.`,
+      )
+    }
+    return
+  }
+
+  // ── approve / reject access requests ────────────────────────────────────
+  const requestId = payload
 
   const { data: req, error: fetchErr } = await service
     .from('access_requests')
@@ -143,7 +250,6 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
 
     await answerCallbackQuery(cq.id, 'Одобрено')
 
-    // Редактируем сообщение у всех админов (только у того, кто нажал — message доступен)
     if (cq.message) {
       await editMessageText(
         cq.message.chat.id,
@@ -414,6 +520,415 @@ async function formatStudentDetail(
   )
 }
 
+// ─── /curators: кураторы и их ученики ────────────────────────────────────
+
+async function handleCurators(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  chatId: number,
+): Promise<void> {
+  const { data: curators, error } = (await supabase
+    .from('profiles')
+    .select('id, full_name, contact_info')
+    .eq('role', 'curator')) as {
+    data: { id: string; full_name: string | null; contact_info: string | null }[] | null
+    error: unknown
+  }
+
+  if (error) {
+    console.error('[webhook/curators] curators query error:', error)
+    await sendTelegramMessage(chatId, 'Ошибка при загрузке кураторов.')
+    return
+  }
+
+  if (!curators || curators.length === 0) {
+    await sendTelegramMessage(chatId, 'Кураторов на платформе пока нет.')
+    return
+  }
+
+  // Все ученики — curator_id + ник
+  const { data: students } = (await supabase
+    .from('profiles')
+    .select('curator_id, contact_info')
+    .eq('role', 'student')
+    .not('curator_id', 'is', null)) as {
+    data: { curator_id: string; contact_info: string | null }[] | null
+  }
+
+  const studentsByC: Record<string, string[]> = {}
+  for (const s of students ?? []) {
+    if (!s.curator_id) continue
+    ;(studentsByC[s.curator_id] ??= []).push(s.contact_info ?? 'без ника')
+  }
+
+  // Сортируем кураторов по числу учеников (убыв.)
+  const sorted = [...curators].sort(
+    (a, b) => (studentsByC[b.id]?.length ?? 0) - (studentsByC[a.id]?.length ?? 0),
+  )
+
+  const LIMIT = 3900
+  const lines: string[] = [`<b>Кураторы (${sorted.length})</b>\n`]
+  let totalLen = lines[0].length
+
+  for (const c of sorted) {
+    const nick = c.contact_info ? ` ${escapeHtmlTg(c.contact_info)}` : ''
+    const list = studentsByC[c.id] ?? []
+    const studentsLine =
+      list.length > 0
+        ? list.map((h) => escapeHtmlTg(h)).join(', ')
+        : '<i>нет учеников</i>'
+    const block =
+      `\n<b>${escapeHtmlTg(c.full_name ?? 'Куратор')}${nick}</b> · ${list.length} уч.\n` +
+      `  ${studentsLine}\n`
+
+    if (totalLen + block.length > LIMIT) {
+      lines.push('\n<i>...список обрезан, полный доступен в приложении</i>')
+      break
+    }
+    lines.push(block)
+    totalLen += block.length
+  }
+
+  await sendTelegramMessage(chatId, lines.join(''))
+}
+
+// ─── /transfer @ученик @куратор ──────────────────────────────────────────
+
+async function handleTransfer(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  chatId: number,
+  args: string,
+): Promise<void> {
+  const parts = args
+    .trim()
+    .split(/\s+/)
+    .map((t) => t.replace(/^@+/, '').toLowerCase())
+    .filter(Boolean)
+
+  if (parts.length < 2) {
+    await sendTelegramMessage(
+      chatId,
+      'Укажи оба ника:\n<code>/transfer @ученик @куратор</code>',
+    )
+    return
+  }
+
+  const [studentNick, curatorNick] = parts
+
+  const [{ data: student }, { data: curator }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, full_name, contact_info')
+      .eq('role', 'student')
+      .ilike('contact_info', `@${studentNick}`)
+      .maybeSingle() as Promise<{
+        data: { id: string; full_name: string | null; contact_info: string | null } | null
+      }>,
+    supabase
+      .from('profiles')
+      .select('id, full_name, contact_info')
+      .eq('role', 'curator')
+      .ilike('contact_info', `@${curatorNick}`)
+      .maybeSingle() as Promise<{
+        data: { id: string; full_name: string | null; contact_info: string | null } | null
+      }>,
+  ])
+
+  if (!student && !curator) {
+    await sendTelegramMessage(
+      chatId,
+      `Не найдены: ученик @${escapeHtmlTg(studentNick)} и куратор @${escapeHtmlTg(curatorNick)}.`,
+    )
+    return
+  }
+  if (!student) {
+    await sendTelegramMessage(
+      chatId,
+      `Ученик @${escapeHtmlTg(studentNick)} не найден (или не является учеником).`,
+    )
+    return
+  }
+  if (!curator) {
+    await sendTelegramMessage(
+      chatId,
+      `Куратор @${escapeHtmlTg(curatorNick)} не найден (или не является куратором).`,
+    )
+    return
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ curator_id: curator.id })
+    .eq('id', student.id)
+
+  if (error) {
+    console.error('[webhook/transfer] update curator_id error:', error)
+    await sendTelegramMessage(chatId, 'Ошибка при переводе. Попробуй позже.')
+    return
+  }
+
+  const sName = escapeHtmlTg(student.full_name || student.contact_info || studentNick)
+  const cName = escapeHtmlTg(curator.full_name || curator.contact_info || curatorNick)
+  await sendTelegramMessage(
+    chatId,
+    `✅ <b>${sName}</b> переведён к куратору <b>${cName}</b>.`,
+  )
+}
+
+// ─── /stats — статистика потока ──────────────────────────────────────────
+
+interface StatsFilter {
+  type: 'city' | 'country' | 'month' | null
+  value: string | null
+}
+
+function parseStatsFilter(args: string): StatsFilter {
+  const parts = args.trim().split(/\s+/)
+  if (parts.length >= 2) {
+    const key = parts[0].toLowerCase()
+    const val = parts.slice(1).join(' ')
+    if (key === 'city') return { type: 'city', value: val }
+    if (key === 'country') return { type: 'country', value: val }
+    if (key === 'month') return { type: 'month', value: val }
+  }
+  return { type: null, value: null }
+}
+
+async function handleStats(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  chatId: number,
+  args: string,
+): Promise<void> {
+  const filter = parseStatsFilter(args)
+
+  // Базовый запрос студентов (реальные, не скрытые из трекинга)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
+    .from('profiles')
+    .select('id, city_id, country_id, course_started_at')
+    .eq('role', 'student')
+    .eq('hidden_from_tracking', false)
+
+  // Применяем фильтр по месяцу на стороне JS (нет простого ilike на timestamptz)
+  const { data: rawStudents, error: studentsErr } = await query
+
+  if (studentsErr) {
+    console.error('[webhook/stats] students query error:', studentsErr)
+    await sendTelegramMessage(chatId, 'Ошибка при загрузке статистики.')
+    return
+  }
+
+  type RawStudent = {
+    id: string
+    city_id: number | null
+    country_id: number | null
+    course_started_at: string | null
+  }
+
+  let students = (rawStudents ?? []) as RawStudent[]
+
+  // Фильтр по месяцу
+  if (filter.type === 'month' && filter.value) {
+    students = students.filter(
+      (s) => s.course_started_at && s.course_started_at.startsWith(filter.value!),
+    )
+  }
+
+  const studentIds = students.map((s) => s.id)
+  const total = students.length
+
+  if (total === 0) {
+    const filterDesc =
+      filter.type === 'month'
+        ? ` за ${escapeHtmlTg(filter.value ?? '')}`
+        : filter.type === 'city'
+          ? ` в городе ${escapeHtmlTg(filter.value ?? '')}`
+          : filter.type === 'country'
+            ? ` в стране ${escapeHtmlTg(filter.value ?? '')}`
+            : ''
+    await sendTelegramMessage(chatId, `Учеников${filterDesc} не найдено.`)
+    return
+  }
+
+  // Загружаем города и страны для join на стороне JS
+  const [citiesRes, countriesRes] = await Promise.all([
+    supabase.from('cities').select('id, name_ru, country_id') as Promise<{
+      data: { id: number; name_ru: string; country_id: number }[] | null
+    }>,
+    supabase.from('countries').select('id, name_ru') as Promise<{
+      data: { id: number; name_ru: string }[] | null
+    }>,
+  ])
+
+  const citiesMap = new Map<number, { name_ru: string; country_id: number }>(
+    (citiesRes.data ?? []).map((c) => [c.id, { name_ru: c.name_ru, country_id: c.country_id }]),
+  )
+  const countriesMap = new Map<number, string>(
+    (countriesRes.data ?? []).map((c) => [c.id, c.name_ru]),
+  )
+
+  // Применяем фильтр по городу / стране
+  let filteredStudents = students
+  if (filter.type === 'city' && filter.value) {
+    const fVal = filter.value.toLowerCase()
+    filteredStudents = students.filter((s) => {
+      if (!s.city_id) return false
+      const city = citiesMap.get(s.city_id)
+      return city?.name_ru.toLowerCase().includes(fVal)
+    })
+  } else if (filter.type === 'country' && filter.value) {
+    const fVal = filter.value.toLowerCase()
+    filteredStudents = students.filter((s) => {
+      // Страна либо напрямую в profiles.country_id, либо через city.country_id
+      const directCountry = s.country_id ? countriesMap.get(s.country_id) : null
+      if (directCountry && directCountry.toLowerCase().includes(fVal)) return true
+      if (s.city_id) {
+        const city = citiesMap.get(s.city_id)
+        const cityCountry = city ? countriesMap.get(city.country_id) : null
+        if (cityCountry && cityCountry.toLowerCase().includes(fVal)) return true
+      }
+      return false
+    })
+  }
+
+  const filteredIds = filteredStudents.map((s) => s.id)
+  const filteredTotal = filteredStudents.length
+
+  // Учатся = course_started_at IS NOT NULL
+  const inProgress = filteredStudents.filter((s) => s.course_started_at !== null).length
+
+  // «Сдали курс» — у ученика есть блок с order_num=10 и block_passed_at IS NOT NULL
+  // Получаем id блока с order_num=10
+  const { data: block10Data } = (await supabase
+    .from('blocks')
+    .select('id')
+    .eq('order_num', 10)
+    .maybeSingle()) as { data: { id: number } | null }
+
+  let finished = 0
+  if (block10Data && filteredIds.length > 0) {
+    const { data: finishers } = (await supabase
+      .from('student_block_progress')
+      .select('user_id')
+      .eq('block_id', block10Data.id)
+      .not('block_passed_at', 'is', null)
+      .in('user_id', filteredIds)) as { data: { user_id: string }[] | null }
+    finished = (finishers ?? []).length
+  }
+
+  // По городам (топ-10)
+  const cityCount: Record<string, number> = {}
+  for (const s of filteredStudents) {
+    const cityName = s.city_id ? (citiesMap.get(s.city_id)?.name_ru ?? 'Без города') : 'Без города'
+    cityCount[cityName] = (cityCount[cityName] ?? 0) + 1
+  }
+  const sortedCities = Object.entries(cityCount).sort((a, b) => b[1] - a[1])
+  const top10Cities = sortedCities.slice(0, 10)
+  const otherCitiesCount = sortedCities.slice(10).reduce((s, [, c]) => s + c, 0)
+
+  // По странам
+  const countryCount: Record<string, number> = {}
+  for (const s of filteredStudents) {
+    let countryName: string | null = null
+    if (s.country_id) {
+      countryName = countriesMap.get(s.country_id) ?? null
+    }
+    if (!countryName && s.city_id) {
+      const city = citiesMap.get(s.city_id)
+      countryName = city ? (countriesMap.get(city.country_id) ?? null) : null
+    }
+    countryName = countryName ?? 'Неизвестно'
+    countryCount[countryName] = (countryCount[countryName] ?? 0) + 1
+  }
+  const sortedCountries = Object.entries(countryCount).sort((a, b) => b[1] - a[1])
+
+  // Формируем сообщение
+  const filterTitle =
+    filter.type === 'month'
+      ? ` · ${escapeHtmlTg(filter.value ?? '')}`
+      : filter.type === 'city'
+        ? ` · город ${escapeHtmlTg(filter.value ?? '')}`
+        : filter.type === 'country'
+          ? ` · страна ${escapeHtmlTg(filter.value ?? '')}`
+          : ''
+
+  const citiesBlock = top10Cities
+    .map(([name, cnt]) => `  ${escapeHtmlTg(name)}: ${cnt}`)
+    .join('\n')
+  const otherCitiesLine = otherCitiesCount > 0 ? `\n  прочие: ${otherCitiesCount}` : ''
+
+  const countriesBlock = sortedCountries
+    .map(([name, cnt]) => `  ${escapeHtmlTg(name)}: ${cnt}`)
+    .join('\n')
+
+  const msg =
+    `<b>Статистика потока${filterTitle}</b>\n\n` +
+    `👥 Всего учеников: <b>${filteredTotal}</b>\n` +
+    `📖 Учатся сейчас: <b>${inProgress}</b>\n` +
+    `🏆 Сдали курс: <b>${finished}</b>\n` +
+    `🔄 В процессе: <b>${inProgress - finished}</b>\n\n` +
+    `<b>По городам:</b>\n${citiesBlock}${otherCitiesLine}\n\n` +
+    `<b>По странам:</b>\n${countriesBlock}`
+
+  await sendTelegramMessage(chatId, msg)
+}
+
+// ─── /delete @ученик ─────────────────────────────────────────────────────
+
+async function handleDelete(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  chatId: number,
+  args: string,
+): Promise<void> {
+  const rawNick = args.trim().replace(/^@+/, '').toLowerCase()
+  if (!rawNick) {
+    await sendTelegramMessage(chatId, 'Укажи ник ученика:\n<code>/delete @ник</code>')
+    return
+  }
+
+  const handle = `@${rawNick}`
+  const { data: student } = (await supabase
+    .from('profiles')
+    .select('id, full_name, contact_info, is_protected')
+    .eq('role', 'student')
+    .ilike('contact_info', handle)
+    .maybeSingle()) as {
+    data: {
+      id: string
+      full_name: string | null
+      contact_info: string | null
+      is_protected: boolean | null
+    } | null
+  }
+
+  if (!student) {
+    await sendTelegramMessage(
+      chatId,
+      `Ученик ${escapeHtmlTg(handle)} не найден.`,
+    )
+    return
+  }
+
+  if (student.is_protected) {
+    await sendTelegramMessage(chatId, '🔒 Защищённого пользователя нельзя удалить.')
+    return
+  }
+
+  const displayName = escapeHtmlTg(student.full_name || student.contact_info || rawNick)
+
+  await sendTelegramMessage(chatId, `Удалить ученика <b>${displayName}</b>?`, {
+    inlineKeyboard: [
+      [
+        { text: `🗑 Удалить ${displayName}`, callback_data: `del_student:${student.id}` },
+        { text: 'Отмена', callback_data: `del_cancel:_` },
+      ],
+    ],
+  })
+}
+
 // ─── HTTP handlers ────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -452,9 +967,8 @@ export async function POST(request: NextRequest) {
   const chatId = message.chat.id
   const text = message.text.trim()
 
-  // /add @nick1 @nick2 — добавить учеников по нику. ТОЛЬКО владелец платформы (rogue02).
+  // /add @nick1 @nick2 — добавить учеников по нику. Только admin/super_admin.
   if (text.startsWith('/add')) {
-    // Доступно admin / super_admin (Михаил, Алекс, Эля), не только владельцу.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServiceSupabase() as any
     const { data: adminProfile } = (await supabase
@@ -514,7 +1028,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // /students — список учеников (только для curator / admin / super_admin)
+  // /curators — список всех кураторов и их учеников (только admin/super_admin)
+  if (text.startsWith('/curators')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const adminProf = await getAdminProfile(supabase, chatId)
+    if (!adminProf) {
+      await sendTelegramMessage(chatId, 'Команда только для администраторов.')
+      return NextResponse.json({ ok: true })
+    }
+    await handleCurators(supabase, chatId)
+    return NextResponse.json({ ok: true })
+  }
+
+  // /students — список учеников (curator / admin / super_admin)
+  // ВАЖНО: /students проверяется ДО /student
   if (text.startsWith('/students')) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServiceSupabase() as any
@@ -552,7 +1080,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // /student @ник — детальный прогресс одного ученика (задержки, дни, блок)
+  // /student @ник — детальный прогресс одного ученика
   // Проверяется ПОСЛЕ /students (иначе "/students" совпал бы с префиксом).
   if (text.startsWith('/student')) {
     const arg = text.slice('/student'.length).trim()
@@ -574,6 +1102,48 @@ export async function POST(request: NextRequest) {
     }
     const detail = await formatStudentDetail(supabase, profile, arg)
     await sendTelegramMessage(chatId, detail, { withMiniAppButton: true })
+    return NextResponse.json({ ok: true })
+  }
+
+  // /stats [city|country|month <значение>] — статистика потока (только admin/super_admin)
+  if (text.startsWith('/stats')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const adminProf = await getAdminProfile(supabase, chatId)
+    if (!adminProf) {
+      await sendTelegramMessage(chatId, 'Команда только для администраторов.')
+      return NextResponse.json({ ok: true })
+    }
+    const args = text.slice('/stats'.length).trim()
+    await handleStats(supabase, chatId, args)
+    return NextResponse.json({ ok: true })
+  }
+
+  // /transfer @ученик @куратор — перевод ученика (только admin/super_admin)
+  if (text.startsWith('/transfer')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const adminProf = await getAdminProfile(supabase, chatId)
+    if (!adminProf) {
+      await sendTelegramMessage(chatId, 'Команда только для администраторов.')
+      return NextResponse.json({ ok: true })
+    }
+    const args = text.slice('/transfer'.length).trim()
+    await handleTransfer(supabase, chatId, args)
+    return NextResponse.json({ ok: true })
+  }
+
+  // /delete @ученик — удаление ученика с подтверждением (только admin/super_admin)
+  if (text.startsWith('/delete')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const adminProf = await getAdminProfile(supabase, chatId)
+    if (!adminProf) {
+      await sendTelegramMessage(chatId, 'Команда только для администраторов.')
+      return NextResponse.json({ ok: true })
+    }
+    const args = text.slice('/delete'.length).trim()
+    await handleDelete(supabase, chatId, args)
     return NextResponse.json({ ok: true })
   }
 
