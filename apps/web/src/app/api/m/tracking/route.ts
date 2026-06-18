@@ -58,12 +58,6 @@ interface ProfileRow {
   cities: { name_ru: string } | null | any
 }
 
-interface BlockProgressRow {
-  user_id: string
-  block_passed_at: string | null
-  block_id: number
-}
-
 type Tier = 'gold' | 'silver' | 'bronze' | 'normal'
 
 export async function POST(request: NextRequest) {
@@ -118,24 +112,12 @@ export async function POST(request: NextRequest) {
     closedByUser.set(uid, dates.sort())
   }
 
-  // 3. Прогресс блоков (батч по всем ученикам)
+  // 3. Реально сданные блоки по дневной модели (rpc, без block_passed_at)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: bpRaw } = await (supabase as any)
-    .from('student_block_progress')
-    .select('user_id, block_id, block_passed_at')
-    .in('user_id', ids)
-
-  // blocksPassed = кол-во блоков с block_passed_at IS NOT NULL
-  // currentBlock = max block_id с любой записью прогресса (или 1 если нет)
+  const { data: passedRaw } = await (supabase as any).rpc('passed_blocks_all')
   const passedCountByUser = new Map<string, number>()
-  const maxBlockByUser = new Map<string, number>()
-
-  for (const row of (bpRaw ?? []) as BlockProgressRow[]) {
-    if (row.block_passed_at) {
-      passedCountByUser.set(row.user_id, (passedCountByUser.get(row.user_id) ?? 0) + 1)
-    }
-    const cur = maxBlockByUser.get(row.user_id) ?? 0
-    if (row.block_id > cur) maxBlockByUser.set(row.user_id, row.block_id)
+  for (const row of (passedRaw ?? []) as { user_id: string; blocks_passed: number }[]) {
+    passedCountByUser.set(row.user_id, row.blocks_passed)
   }
 
   // 4. Считаем очки и стрики по закрытым датам (в TS, без доп. запросов)
@@ -193,7 +175,7 @@ export async function POST(request: NextRequest) {
     }
 
     const blocksPassed = passedCountByUser.get(p.id) ?? 0
-    const currentBlock = maxBlockByUser.get(p.id) ?? 1
+    const currentBlock = Math.min(blocksPassed + 1, 10)
 
     // Ачивки
     const achievements: string[] = []

@@ -291,19 +291,13 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
 
 // ─── Хелпер: прогресс учеников для команды /students ─────────────────────
 
-interface StudentProgressRow {
-  user_id: string
-  block_id: number
-  block_passed_at: string | null
-}
-
 interface StudentSummary {
   id: string
   full_name: string
   handle: string | null
   passed: number
   currentBlock: number
-  daysClosed: number // уникальных закрытых дней (фото креста) для текущего блока
+  daysClosed: number // закрытых дней в текущем блоке по дневной модели
   daysSilent: number | null // дней без активности
 }
 
@@ -312,7 +306,7 @@ function escapeHtmlTg(s: string): string {
 }
 
 /**
- * Загружает учеников куратора и считает их прогресс.
+ * Загружает учеников куратора и считает их прогресс через RPC passed_blocks_all.
  * Возвращает упорядоченный список StudentSummary.
  */
 async function loadStudentsSummary(
@@ -341,11 +335,12 @@ async function loadStudentsSummary(
 
   const ids = profiles.map((p) => p.id)
 
-  const [bp, cross, act] = await Promise.all([
-    supabase
-      .from('student_block_progress')
-      .select('user_id, block_id, block_passed_at')
-      .in('user_id', ids),
+  // Один вызов RPC для реального числа сданных блоков (дневная модель)
+  const [passedAllRes, closedDaysRes, actRes] = await Promise.all([
+    supabase.rpc('passed_blocks_all') as Promise<{
+      data: { user_id: string; blocks_passed: number }[] | null
+      error: unknown
+    }>,
     supabase
       .from('student_block_daily_cross')
       .select('user_id, block_id, submitted_date')
@@ -357,24 +352,31 @@ async function loadStudentsSummary(
       .eq('opened', true),
   ])
 
-  const bpByUser: Record<string, StudentProgressRow[]> = {}
-  for (const r of (bp.data ?? []) as StudentProgressRow[]) {
-    if (r.block_id > 0 && r.block_id <= 10) (bpByUser[r.user_id] ??= []).push(r)
+  if (passedAllRes.error) {
+    console.error('[webhook/students] passed_blocks_all rpc error', passedAllRes.error)
   }
-  const crossDays: Record<string, Set<string>> = {} // user:block → set дат
-  for (const r of (cross.data ?? []) as { user_id: string; block_id: number; submitted_date: string }[]) {
-    ;(crossDays[`${r.user_id}:${r.block_id}`] ??= new Set()).add(r.submitted_date)
+
+  // Map user_id → blocks_passed из RPC (отсутствующие = 0)
+  const passedMap = new Map<string, number>()
+  for (const r of (passedAllRes.data ?? []) as { user_id: string; blocks_passed: number }[]) {
+    passedMap.set(r.user_id, r.blocks_passed)
   }
+
+  // Закрытые дни по блокам: user:block → Set<date>
+  const closedByBlock: Record<string, Set<string>> = {}
+  for (const r of (closedDaysRes.data ?? []) as { user_id: string; block_id: number; submitted_date: string }[]) {
+    ;(closedByBlock[`${r.user_id}:${r.block_id}`] ??= new Set()).add(r.submitted_date)
+  }
+
   const lastAct: Record<string, string> = {}
-  for (const r of (act.data ?? []) as { user_id: string; activity_date: string }[]) {
+  for (const r of (actRes.data ?? []) as { user_id: string; activity_date: string }[]) {
     if (!lastAct[r.user_id] || r.activity_date > lastAct[r.user_id]) lastAct[r.user_id] = r.activity_date
   }
 
   return profiles.map((student) => {
-    const rows = bpByUser[student.id] ?? []
-    const passed = rows.filter((r) => r.block_passed_at !== null).length
-    const currentBlock = rows.length > 0 ? Math.max(...rows.map((r) => r.block_id)) : 1
-    const daysClosed = crossDays[`${student.id}:${currentBlock}`]?.size ?? 0
+    const passed = passedMap.get(student.id) ?? 0
+    const currentBlock = Math.min(passed + 1, 10)
+    const daysClosed = closedByBlock[`${student.id}:${currentBlock}`]?.size ?? 0
     const last = lastAct[student.id]
     const daysSilent = last
       ? Math.floor((Date.now() - new Date(`${last}T00:00:00Z`).getTime()) / 86400000)
@@ -433,6 +435,7 @@ function ruDayMonth(iso: string): string {
 /**
  * Детальный прогресс одного ученика по нику (для /student @ник).
  * curator видит только своих; admin/super_admin — любого.
+ * Использует дневную модель: passed_blocks_all + user_closed_days.
  */
 async function formatStudentDetail(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -441,82 +444,82 @@ async function formatStudentDetail(
   rawNick: string,
 ): Promise<string> {
   const handle = `@${rawNick.replace(/^@+/, '').toLowerCase()}`
-  const { data: s } = await supabase
+  const { data: s } = (await supabase
     .from('profiles')
     .select('id, full_name, contact_info, curator_id, course_started_at')
     .eq('role', 'student')
     .ilike('contact_info', handle)
-    .maybeSingle()
+    .maybeSingle()) as {
+    data: {
+      id: string
+      full_name: string | null
+      contact_info: string | null
+      curator_id: string | null
+      course_started_at: string | null
+    } | null
+  }
   if (!s) return `Ученик ${escapeHtmlTg(handle)} не найден.`
   if (requester.role === 'curator' && s.curator_id !== requester.id) {
     return `${escapeHtmlTg(s.full_name || handle)} — не твой ученик.`
   }
 
-  const [bp, cross] = await Promise.all([
-    supabase
-      .from('student_block_progress')
-      .select('block_id, quiz_passed_at, recitation_audio_passed_at, recitation_videos_passed_at')
-      .eq('user_id', s.id),
-    supabase
-      .from('student_block_daily_cross')
-      .select('block_id, submitted_date')
-      .eq('user_id', s.id),
+  // passed_blocks_all и user_closed_days — параллельно
+  const [passedAllRes, closedDaysRes] = await Promise.all([
+    supabase.rpc('passed_blocks_all') as Promise<{
+      data: { user_id: string; blocks_passed: number }[] | null
+      error: unknown
+    }>,
+    supabase.rpc('user_closed_days', { p_user_id: s.id }) as Promise<{
+      data: { block_id: number; days: number }[] | null
+      error: unknown
+    }>,
   ])
 
-  type Bp = {
-    block_id: number
-    quiz_passed_at: string | null
-    recitation_audio_passed_at: string | null
-    recitation_videos_passed_at: string | null
-  }
-  const bpRows = ((bp.data ?? []) as Bp[]).filter((r) => r.block_id > 0 && r.block_id <= 10)
+  if (passedAllRes.error) console.error('[webhook/student] passed_blocks_all error', passedAllRes.error)
+  if (closedDaysRes.error) console.error('[webhook/student] user_closed_days error', closedDaysRes.error)
 
-  const datesByBlock: Record<number, Set<string>> = {}
-  for (const r of (cross.data ?? []) as { block_id: number; submitted_date: string }[]) {
-    ;(datesByBlock[r.block_id] ??= new Set()).add(r.submitted_date)
-  }
+  // Сколько блоков реально сдано этим учеником
+  const passedRow = (passedAllRes.data ?? []).find((r) => r.user_id === s.id)
+  const passed = passedRow?.blocks_passed ?? 0
+  const currentBlock = Math.min(passed + 1, 10)
 
-  const isComplete = (r: Bp) =>
-    !!r.quiz_passed_at &&
-    !!r.recitation_audio_passed_at &&
-    !!r.recitation_videos_passed_at &&
-    (datesByBlock[r.block_id]?.size ?? 0) >= 7
+  // Закрытых дней в текущем блоке из RPC
+  const closedRow = (closedDaysRes.data ?? []).find((r) => r.block_id === currentBlock)
+  const daysClosed = closedRow?.days ?? 0
 
-  const completed = bpRows.filter(isComplete).length
-  const currentBlock = bpRows.length > 0 ? Math.max(...bpRows.map((r) => r.block_id)) : 1
-  const cur = bpRows.find((r) => r.block_id === currentBlock)
-  const curDates = Array.from(datesByBlock[currentBlock] ?? []).sort()
+  // Квиз и эпоха пятницы текущего блока из таблиц (лёгкие запросы)
+  const [quizRes, fridayRes] = await Promise.all([
+    supabase
+      .from('student_block_progress')
+      .select('quiz_passed_at')
+      .eq('user_id', s.id)
+      .eq('block_id', currentBlock)
+      .maybeSingle() as Promise<{ data: { quiz_passed_at: string | null } | null }>,
+    supabase
+      .from('student_block_friday_practice')
+      .select('id')
+      .eq('user_id', s.id)
+      .eq('block_id', currentBlock)
+      .maybeSingle() as Promise<{ data: { id: string } | null }>,
+  ])
 
-  let maxGap = 0
-  for (let i = 1; i < curDates.length; i++) {
-    const g = Math.round(
-      (new Date(`${curDates[i]}T00:00:00Z`).getTime() -
-        new Date(`${curDates[i - 1]}T00:00:00Z`).getTime()) / 86400000,
-    )
-    if (g > maxGap) maxGap = g
-  }
-  const lastClosed = curDates.length ? curDates[curDates.length - 1] : null
-  const lastAgo = lastClosed
-    ? Math.floor((Date.now() - new Date(`${lastClosed}T00:00:00Z`).getTime()) / 86400000)
-    : null
+  const quizPassed = !!quizRes.data?.quiz_passed_at
+  const fridayPassed = !!fridayRes.data
+
   const inProgress = s.course_started_at
     ? Math.floor((Date.now() - new Date(s.course_started_at).getTime()) / 86400000)
     : null
-  const yn = (v: unknown) => (v ? '✅' : '❌')
+  const yn = (v: boolean) => (v ? '✅' : '❌')
 
   return (
     `<b>${escapeHtmlTg(s.full_name || 'Ученик')}</b> ${escapeHtmlTg(s.contact_info || '')}\n\n` +
-    `📚 Сдано блоков: <b>${completed}/10</b>\n` +
+    `📚 Сдано блоков: <b>${passed}/10</b>\n` +
     `📍 Текущий блок: <b>${currentBlock}</b>\n` +
     (inProgress != null ? `⏱ На курсе: ${inProgress} дн.\n` : '') +
     `\n<b>Блок ${currentBlock}:</b>\n` +
-    `• Дней закрыто: <b>${curDates.length}/7</b>\n` +
-    `• Квиз: ${yn(cur?.quiz_passed_at)}\n` +
-    `• Местописания: ${yn(cur?.recitation_audio_passed_at && cur?.recitation_videos_passed_at)}\n` +
-    (lastClosed
-      ? `• Последний закрытый день: ${ruDayMonth(lastClosed)} (${lastAgo} дн. назад)\n`
-      : '• Ещё нет закрытых дней\n') +
-    (maxGap > 1 ? `• Макс. перерыв между днями: <b>${maxGap} дн.</b>\n` : '')
+    `• Закрыто дней: <b>${daysClosed}/7</b>\n` +
+    `• Квиз: ${yn(quizPassed)}\n` +
+    `• Эпоха пятницы: ${yn(fridayPassed)}\n`
   )
 }
 
@@ -799,23 +802,20 @@ async function handleStats(
   // Учатся = course_started_at IS NOT NULL
   const inProgress = filteredStudents.filter((s) => s.course_started_at !== null).length
 
-  // «Сдали курс» — у ученика есть блок с order_num=10 и block_passed_at IS NOT NULL
-  // Получаем id блока с order_num=10
-  const { data: block10Data } = (await supabase
-    .from('blocks')
-    .select('id')
-    .eq('order_num', 10)
-    .maybeSingle()) as { data: { id: number } | null }
-
+  // «Сдали курс» — blocks_passed >= 10 по дневной модели через RPC passed_blocks_all
   let finished = 0
-  if (block10Data && filteredIds.length > 0) {
-    const { data: finishers } = (await supabase
-      .from('student_block_progress')
-      .select('user_id')
-      .eq('block_id', block10Data.id)
-      .not('block_passed_at', 'is', null)
-      .in('user_id', filteredIds)) as { data: { user_id: string }[] | null }
-    finished = (finishers ?? []).length
+  if (filteredIds.length > 0) {
+    const { data: passedAllData, error: passedAllErr } = (await supabase.rpc('passed_blocks_all')) as {
+      data: { user_id: string; blocks_passed: number }[] | null
+      error: unknown
+    }
+    if (passedAllErr) {
+      console.error('[webhook/stats] passed_blocks_all rpc error', passedAllErr)
+    }
+    const filteredIdSet = new Set(filteredIds)
+    finished = (passedAllData ?? []).filter(
+      (r) => filteredIdSet.has(r.user_id) && r.blocks_passed >= 10,
+    ).length
   }
 
   // По городам (топ-10)
@@ -1172,17 +1172,20 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json({ ok: true })
     }
-    const [{ data: bp }, { data: act }] = await Promise.all([
-      supabase.from('student_block_progress').select('block_passed_at').eq('user_id', profile.id),
+    const [passedAllRes, { data: act }] = await Promise.all([
+      supabase.rpc('passed_blocks_all') as Promise<{
+        data: { user_id: string; blocks_passed: number }[] | null
+        error: unknown
+      }>,
       supabase
         .from('student_daily_activity')
         .select('activity_date')
         .eq('user_id', profile.id)
         .eq('opened', true),
     ])
-    const passed = ((bp ?? []) as { block_passed_at: string | null }[]).filter(
-      (b) => b.block_passed_at,
-    ).length
+    if (passedAllRes.error) console.error('[webhook/progress] passed_blocks_all error', passedAllRes.error)
+    const passedRow = (passedAllRes.data ?? []).find((r) => r.user_id === profile.id)
+    const passed = passedRow?.blocks_passed ?? 0
     const streak = computeActivity(
       ((act ?? []) as { activity_date: string }[]).map((r) => r.activity_date),
       [],
