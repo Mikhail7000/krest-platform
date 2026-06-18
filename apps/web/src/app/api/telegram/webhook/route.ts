@@ -320,6 +320,81 @@ export async function POST(request: NextRequest) {
   const chatId = message.chat.id
   const text = message.text.trim()
 
+  // /add @nick1 @nick2 — добавить учеников по нику. ТОЛЬКО владелец платформы (rogue02).
+  if (text.startsWith('/add')) {
+    const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => !isNaN(n))
+    if (!adminChatIds.includes(chatId)) {
+      await sendTelegramMessage(chatId, 'Эта команда доступна только владельцу платформы.')
+      return NextResponse.json({ ok: true })
+    }
+
+    // Ники через пробел/запятую, с @ или без → нормализуем в @lowercase
+    const handles = Array.from(
+      new Set(
+        text
+          .slice(4)
+          .split(/[\s,]+/)
+          .map((t) => t.trim().replace(/^@+/, '').toLowerCase())
+          .filter((t) => /^[a-z0-9_]{4,32}$/.test(t))
+          .map((t) => `@${t}`),
+      ),
+    )
+    if (handles.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        'Укажи ники через пробел: <code>/add @ivan @maria</code>',
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    // added_by обязателен (NOT NULL) — берём профиль администратора
+    const { data: adminProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('telegram_chat_id', chatId)
+      .maybeSingle()
+    if (!adminProfile) {
+      await sendTelegramMessage(
+        chatId,
+        'Сначала открой приложение командой /start, потом добавляй учеников.',
+        { withMiniAppButton: true },
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    const added: string[] = []
+    for (const handle of handles) {
+      const { data: existing } = await supabase
+        .from('testing_whitelist')
+        .select('id')
+        .ilike('telegram_username', handle)
+        .maybeSingle()
+      if (existing) {
+        // уже в списке — освобождаем слот, чтобы вошёл как впервые
+        await supabase
+          .from('testing_whitelist')
+          .update({ claimed_chat_id: null })
+          .eq('id', (existing as { id: number }).id)
+      } else {
+        await supabase
+          .from('testing_whitelist')
+          .insert({ telegram_username: handle, assign_role: null, added_by: adminProfile.id })
+      }
+      added.push(handle)
+    }
+
+    await sendTelegramMessage(
+      chatId,
+      `✅ Добавлены как ученики (${added.length}):\n${added.join(', ')}\n\nТеперь они могут открыть бота и войти в приложение.`,
+    )
+    return NextResponse.json({ ok: true })
+  }
+
   // /students — список учеников (только для curator / admin / super_admin)
   if (text.startsWith('/students')) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

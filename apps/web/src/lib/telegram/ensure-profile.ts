@@ -170,7 +170,7 @@ export async function ensureWhitelistedProfile(params: {
     const { data: slot } = await (service as any)
       .from('testing_whitelist')
       .select('id, claimed_chat_id')
-      .eq('telegram_username', handle)
+      .ilike('telegram_username', handle) // ники Telegram регистронезависимы
       .maybeSingle()
 
     if (slot) {
