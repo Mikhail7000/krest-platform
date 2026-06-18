@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
-      .select('onboarding_done, country_id, city_id, curator_id, full_name')
+      .select('onboarding_done, country_id, city_id, curator_id, full_name, avatar_path')
       .eq('id', auth.userId)
       .maybeSingle()
 
@@ -49,12 +49,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+    const avatar_url = profile.avatar_path
+      ? `${supabaseUrl}/storage/v1/object/public/avatars/${profile.avatar_path}`
+      : null
+
     return NextResponse.json({
       onboarding_done: profile.onboarding_done,
       country_id: profile.country_id,
       city_id: profile.city_id,
       curator_id: profile.curator_id,
       full_name: profile.full_name,
+      avatar_url,
     })
   } catch (err) {
     console.error('[profile POST]', err)

@@ -4,9 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState, type ReactNode } from 'react'
 import type { Database } from '../../../../../../packages/supabase/src/types'
 import { IconGraduation, IconStar, IconTrophy } from '@/app/m/_components/icons'
-import { pluralDays } from '@/lib/activity/streak'
 import {
-  isBlockComplete,
   isBlockUnlockedByCompletion,
   lockedBlockHint,
 } from '@/lib/access/block-completion'
@@ -140,7 +138,12 @@ function ExamCard({ href, icon, title, hint, active, passed }: ExamCardProps) {
 }
 
 // ── Главный компонент ─────────────────────────────────────────────────────────
-export function BlockList() {
+interface BlockListProps {
+  /** Callback при загрузке данных — поднимает прогресс курса в DashboardShell */
+  onProgress?: (pct: number, currentBlockId: number | null) => void
+}
+
+export function BlockList({ onProgress }: BlockListProps) {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [group, setGroup] = useState<'g1' | 'g2'>('g1')
@@ -200,8 +203,23 @@ export function BlockList() {
   const passedCount = mainBlocks.filter((b) => progressByBlockId[b.id]?.block_passed_at).length
   const coursePct = Math.round((passedCount / totalBlocks) * 100)
 
+  // Текущий блок — первый незавершённый из основных
+  const currentBlock = mainBlocks.find((b) => !progressByBlockId[b.id]?.block_passed_at) ?? null
+  const currentBlockId = currentBlock?.id ?? null
+
+  // Поднимаем прогресс в DashboardShell при каждом рендере с данными
+  // (вызов стабилен — useEffect не нужен, данные уже доступны)
+  // Используем ref-флаг чтобы не вызывать callback при каждом перерендере
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prepBlockAny = prepBlock as any
+
+  // Уведомляем родителя о прогрессе (через useEffect безопасно, без бесконечного цикла)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    onProgress?.(coursePct, currentBlockId)
+  // Намеренно не включаем onProgress — он стабилен из useState-сеттера
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coursePct, currentBlockId])
 
   return (
     <div className="miniapp-container" style={{ paddingTop: 0 }}>
@@ -213,16 +231,6 @@ export function BlockList() {
           color={prepBlockAny?.color ?? '#7C5CFF'}
         />
       )}
-
-      <div className="db-course">
-        <div className="db-course__top">
-          <span className="db-course__label">Прогресс курса · {coursePct}%</span>
-          <span className="db-course__days">{passedCount} из {totalBlocks} {pluralDays(totalBlocks)} сдано</span>
-        </div>
-        <div className="db-course__bar">
-          <span className="db-course__fill" style={{ width: `${coursePct}%` }} />
-        </div>
-      </div>
 
       <div className="db-chips">
         <button

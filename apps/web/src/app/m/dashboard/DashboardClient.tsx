@@ -3,16 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { STATUS_PHRASES } from './statusPhrases'
+import { HeaderProgress } from './HeaderProgress'
 
 const FALLBACK_SUBTITLE = 'Путь от вступления до Мастера Креста'
-
-function pluralDays(n: number): string {
-  const m10 = n % 10
-  const m100 = n % 100
-  if (m10 === 1 && m100 !== 11) return 'день'
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'дня'
-  return 'дней'
-}
 
 function getInitData(): string {
   if (typeof window === 'undefined') return ''
@@ -20,10 +13,16 @@ function getInitData(): string {
     ?.initData ?? ''
 }
 
-export function DashboardClient() {
+interface Props {
+  /** % завершения курса (0–100), прокидывается из DashboardShell */
+  coursePct?: number
+  /** ID текущего активного блока */
+  currentBlockId?: number | null
+}
+
+export function DashboardClient({ coursePct = 0, currentBlockId = null }: Props) {
   const { status, user, errorMessage } = useTelegram()
   const [streak, setStreak] = useState<number | null>(null)
-  // Случайная мотивационная фраза при каждом заходе в приложение
   const [phraseIdx] = useState(() => Math.floor(Math.random() * STATUS_PHRASES.length))
 
   useEffect(() => {
@@ -55,7 +54,7 @@ export function DashboardClient() {
   if (status === 'no-tg') {
     return (
       <div className="miniapp-container">
-        <h1 className="miniapp-headline">✝️ КРЕСТ</h1>
+        <h1 className="miniapp-headline">КРЕСТ</h1>
         <p className="miniapp-status-error" style={{ marginTop: 16 }}>
           {errorMessage}
         </p>
@@ -90,7 +89,6 @@ export function DashboardClient() {
 
   const name = user?.firstName ?? 'друг'
   const initial = (user?.firstName?.[0] ?? 'У').toUpperCase()
-  // Случайная фраза при входе (показывается сразу, не зависит от стрика)
   const subtitle = STATUS_PHRASES[phraseIdx] ?? FALLBACK_SUBTITLE
 
   return (
@@ -102,16 +100,12 @@ export function DashboardClient() {
             <span className="db-topbar__eyebrow">Курс ученичества</span>
             <span className="db-topbar__greeting">Привет, {name}</span>
           </div>
-          {streak !== null && streak > 0 && (
-            <div className="db-streak-badge" aria-label={`${streak} ${pluralDays(streak)} подряд`}>
-              <span className="db-streak-badge__num">{streak}</span>
-              <span className="db-streak-badge__cap">
-                {pluralDays(streak)}
-                <br />
-                подряд
-              </span>
-            </div>
-          )}
+          {/* Компактный виджет прогресса — правый верхний угол */}
+          <HeaderProgress
+            coursePct={coursePct}
+            currentBlockId={currentBlockId}
+            streak={streak}
+          />
         </div>
         <div className="db-hero">
           <h1 className="db-hero__title">КРЕСТ</h1>

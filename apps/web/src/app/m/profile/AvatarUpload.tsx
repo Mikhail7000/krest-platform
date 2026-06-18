@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Avatar } from '../_components/Avatar'
 
 function getInitData(): string {
@@ -21,6 +21,29 @@ export function AvatarUpload({ name, initialUrl }: Props) {
   const [uploading, setUploading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Подгружаем уже сохранённую аватарку при заходе на профиль
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch('/api/miniapp/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: getInitData() }),
+        })
+        if (!res.ok) return
+        const data = (await res.json()) as { avatar_url?: string | null }
+        if (!cancelled && data.avatar_url) setUrl(data.avatar_url)
+      } catch {
+        /* тихо — просто не покажем аватар */
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -51,7 +74,8 @@ export function AvatarUpload({ name, initialUrl }: Props) {
 
       const data = (await res.json()) as { ok: boolean; avatar_url: string }
       if (data.ok && data.avatar_url) {
-        setUrl(data.avatar_url)
+        // путь стабильный (userId.ext) → добавляем метку, чтобы сбросить кеш
+        setUrl(`${data.avatar_url}?t=${Date.now()}`)
       } else {
         throw new Error('Не удалось получить URL аватарки')
       }

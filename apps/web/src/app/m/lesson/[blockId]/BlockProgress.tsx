@@ -96,22 +96,25 @@ export function BlockProgress({ blockId }: { blockId: number }) {
       {closedDays < target && (
         <div className="lesson-progress-today">
           {todayAllDone ? (
-            <span className="lesson-progress-today__done">✅ День закрыт!</span>
+            <span className="lesson-progress-today__done">День закрыт!</span>
           ) : (
             <>
               <span className="lesson-progress-today__hint">
                 Сегодня закрой день — осталось:
               </span>
-              <div className="lesson-progress-checklist">
+              <ul className="lesson-progress-checklist">
                 {DAY_TASKS.map((t) => (
-                  <span
+                  <li
                     key={t.key}
                     className={`lesson-progress-check${today[t.key] ? ' lesson-progress-check--done' : ''}`}
                   >
-                    {today[t.key] ? '✓' : '○'} {t.label}
-                  </span>
+                    <span className="lesson-progress-check__marker">
+                      {today[t.key] ? '✓' : '○'}
+                    </span>
+                    <span className="lesson-progress-check__label">{t.label}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
               <span className="lesson-progress-today__count">
                 Осталось: {pendingTasks.length} из {DAY_TASKS.length}
               </span>
@@ -121,14 +124,17 @@ export function BlockProgress({ blockId }: { blockId: number }) {
       )}
 
       {/* Разовые условия: квиз и эпоха пятницы */}
-      <div className="lesson-progress-checklist lesson-progress-checklist--once">
-        <span className={`lesson-progress-check${quiz ? ' lesson-progress-check--done' : ''}`}>
-          {quiz ? '✓' : '○'} Квиз
-        </span>
-        <span className={`lesson-progress-check${friday ? ' lesson-progress-check--done' : ''}`}>
-          {friday ? '✓' : '○'} Эпоха пятницы
-        </span>
-      </div>
+      <div className="lesson-progress-once-label">Разовые задания</div>
+      <ul className="lesson-progress-checklist lesson-progress-checklist--once">
+        <li className={`lesson-progress-check${quiz ? ' lesson-progress-check--done' : ''}`}>
+          <span className="lesson-progress-check__marker">{quiz ? '✓' : '○'}</span>
+          <span className="lesson-progress-check__label">Квиз</span>
+        </li>
+        <li className={`lesson-progress-check${friday ? ' lesson-progress-check--done' : ''}`}>
+          <span className="lesson-progress-check__marker">{friday ? '✓' : '○'}</span>
+          <span className="lesson-progress-check__label">Эпоха пятницы</span>
+        </li>
+      </ul>
     </div>
   )
 }

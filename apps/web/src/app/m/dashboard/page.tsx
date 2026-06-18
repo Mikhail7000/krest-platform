@@ -1,5 +1,4 @@
-import { BlockList } from './BlockList'
-import { DashboardClient } from './DashboardClient'
+import { DashboardShell } from './DashboardShell'
 import { BottomNav } from '../_components/BottomNav'
 import './dashboard.css'
 
@@ -9,8 +8,7 @@ export default function DashboardPage() {
   return (
     <>
       <div className="db-page">
-        <DashboardClient />
-        <BlockList />
+        <DashboardShell />
       </div>
       <BottomNav />
     </>
