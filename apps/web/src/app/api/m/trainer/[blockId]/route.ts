@@ -10,8 +10,8 @@
  *   ok: true,
  *   currentBlockId: number,
  *   currentOrder: number,
- *   trainer_passed_at: string | null,   // статус прохождения тренажёра текущего блока
- *   blocks: Array<{ id: number, order_num: number, title_ru: string }>,
+ *   trainer_today: boolean,   // тренажёр уже отмечен за сегодня (дневная модель)
+ *   blocks: Array<{ id, order_num, title_ru }>,
  *   verses: Array<{ id, block_id, reference, exact_text, topic_label, order_index }>
  * }
  */
@@ -28,6 +28,10 @@ interface Params {
 
 function err(message: string, code: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status })
+}
+
+function todayUTC(): string {
+  return new Date().toISOString().slice(0, 10)
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -56,23 +60,29 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
   const currentOrder = current.order_num as number
 
-  // 2. Все блоки до текущего включительно (прогрессивное повторение) + статус тренажёра
+  const today = todayUTC()
+
+  // 2. Параллельно: блоки + отметка тренажёра за сегодня
   const [
     { data: blocksData, error: blocksErr },
-    { data: progressRow },
+    { data: trainerTodayRows },
   ] = await Promise.all([
     supabase
       .from('blocks')
       .select('id, order_num, title_ru')
       .lte('order_num', currentOrder)
       .gte('order_num', 1)
-      .order('order_num', { ascending: true }) as Promise<{ data: Array<{ id: number; order_num: number; title_ru: string | null }> | null; error: unknown }>,
+      .order('order_num', { ascending: true }) as Promise<{
+        data: Array<{ id: number; order_num: number; title_ru: string | null }> | null
+        error: unknown
+      }>,
     supabase
-      .from('student_block_progress')
-      .select('trainer_passed_at')
+      .from('student_block_daily_trainer')
+      .select('trained_date')
       .eq('user_id', auth.userId)
       .eq('block_id', blockId)
-      .maybeSingle() as Promise<{ data: { trainer_passed_at: string | null } | null; error: unknown }>,
+      .eq('trained_date', today)
+      .limit(1) as Promise<{ data: Array<{ trained_date: string }> | null }>,
   ])
 
   if (blocksErr || !blocksData) {
@@ -80,7 +90,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const blockIds = blocksData.map((b: { id: number }) => b.id)
-  const trainerPassedAt: string | null = progressRow?.trainer_passed_at ?? null
+  const trainerToday = (trainerTodayRows?.length ?? 0) > 0
 
   // 3. Местописания этих блоков
   const { data: verses, error: vErr } = await supabase
@@ -98,13 +108,22 @@ export async function POST(req: NextRequest, { params }: Params) {
     ok: true,
     currentBlockId: blockId,
     currentOrder,
-    trainer_passed_at: trainerPassedAt,
+    trainer_today: trainerToday,
     blocks: blocksData.map((b: { id: number; order_num: number; title_ru: string | null }) => ({
       id: b.id,
       order_num: b.order_num,
       title_ru: b.title_ru ?? `Блок ${b.order_num}`,
     })),
-    verses: ((verses ?? []) as Array<{ id: string; block_id: number; reference: string; exact_text: string; topic_label: string | null; order_index: number }>).map((v) => ({
+    verses: (
+      (verses ?? []) as Array<{
+        id: string
+        block_id: number
+        reference: string
+        exact_text: string
+        topic_label: string | null
+        order_index: number
+      }>
+    ).map((v) => ({
       id: v.id,
       block_id: v.block_id,
       reference: v.reference,

@@ -1,37 +1,32 @@
 'use client'
 
 /**
- * Stage4Status — клиентский компонент трекинга практических пунктов блока.
- * Фетчит /api/m/block-status/[blockId] и рисует бейджи статуса рядом с
- * каждой карточкой Stage4Nav. Не трогает существующие бейджи обязательности.
- *
- * Бейдж статуса:
- *  - выполнено → зелёный "выполнено"
- *  - recurring → "N / 7" (серый пока не выполнено, зелёный когда N>=7)
- *  - не выполнено → ничего (карточка и так понятна)
+ * Stage4Status — клиентский компонент трекинга практики блока (дневная модель).
+ * Фетчит /api/m/block-status/[blockId] и отображает:
+ * - Сводку «Закрыто дней N/7»
+ * - Бейджи статуса «сегодня» на дневных карточках (cross_photo, prayer, trainer)
+ * - Бейджи разовых пунктов (quiz, friday) — всегда
+ * - Местописания (recitationAudio, recitationVideo) — дневные
  */
 
 import { useEffect, useReducer } from 'react'
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 
-interface RecurringStatus {
-  done: number
-  target: number
+interface TodayStatus {
+  cross: boolean
+  prayer: boolean
+  recitationAudio: boolean
+  recitationVideo: boolean
+  trainer: boolean
 }
 
 interface BlockStatus {
+  closedDays: number
+  target: number
+  today: TodayStatus
   quiz: boolean
-  locations: boolean
-  recitation: boolean
-  recitation_full: boolean
-  trainer: boolean
-  cross_photo: RecurringStatus
-  prayer: RecurringStatus
   friday: boolean
-  emotions: boolean
-  completed: number
-  total: number
 }
 
 type State =
@@ -64,15 +59,15 @@ function getInitData(): string {
   )
 }
 
-// ─── Мини-сводка ────────────────────────────────────────────────────────────
+// ─── Мини-сводка «Дней N/7» ─────────────────────────────────────────────────
 
-function SummaryBar({ completed, total }: { completed: number; total: number }) {
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0
-  const allDone = completed >= total
+function SummaryBar({ closedDays, target }: { closedDays: number; target: number }) {
+  const pct = target > 0 ? Math.round((Math.min(closedDays, target) / target) * 100) : 0
+  const allDone = closedDays >= target
   return (
     <div className={`s4-summary ${allDone ? 's4-summary--done' : ''}`}>
       <span className="s4-summary__label">
-        {allDone ? 'Все задания выполнены' : `Выполнено ${completed} из ${total}`}
+        {allDone ? `Закрыто дней ${target}/${target} ✓` : `Закрыто дней: ${closedDays} / ${target}`}
       </span>
       {!allDone && (
         <div className="s4-summary__bar">
@@ -126,30 +121,22 @@ export function Stage4Status({ blockId }: Props) {
   return (
     <>
       {/* Сводка прогресса над карточками */}
-      <SummaryBar completed={status.completed} total={status.total} />
+      <SummaryBar closedDays={status.closedDays} target={status.target} />
 
       {/*
-       * Бейджи для каждой карточки выдаются через data-атрибут на карточке.
-       * Поскольку Stage4Nav — Server Component и рендерит <a>-теги напрямую,
-       * вставить бейджи внутрь него без гидрации нельзя.
-       * Используем порталы через DOM после монтирования — они ищут
-       * data-s4-key атрибуты на карточках и рендерят бейджи рядом.
-       * Компонент ниже (Stage4StatusInserter) вставляет бейджи через insertAdjacentElement.
+       * Бейджи статуса вставляются в DOM-карточки Stage4Nav (Server Component)
+       * через insertAdjacentElement после монтирования.
        */}
-
       <Stage4StatusInserter status={status} />
     </>
   )
 }
 
-// ─── Вставка бейджей в DOM-карточки Stage4Nav ────────────────────────────────
-// Stage4Nav — Server Component, его дом-элементы доступны после гидрации.
-// Находим <a data-s4-key="..."> и вставляем span с бейджем в .lesson-stage4-card__body.
+// ─── DOM-вставка бейджей в карточки Stage4Nav ────────────────────────────────
 
 function upsertBadge(card: HTMLElement, el: HTMLElement) {
   const body = card.querySelector('.lesson-stage4-card__body')
   if (!body) return
-  // Удалить предыдущий статус-бейдж если есть
   const old = body.querySelector('.s4-status-badge')
   if (old) old.remove()
   body.appendChild(el)
@@ -164,7 +151,6 @@ function makeBadge(classes: string, text: string): HTMLElement {
 
 function Stage4StatusInserter({ status }: { status: BlockStatus }) {
   useEffect(() => {
-    // Карточки должны иметь data-s4-key="quiz|locations|recitation|trainer|cross_photo|prayer|friday|emotions"
     const cards = document.querySelectorAll<HTMLElement>('[data-s4-key]')
     cards.forEach((card) => {
       const key = card.getAttribute('data-s4-key')
@@ -172,45 +158,57 @@ function Stage4StatusInserter({ status }: { status: BlockStatus }) {
 
       switch (key) {
         case 'quiz':
-          if (status.quiz) el = makeBadge('s4-status-badge--done', 'выполнено')
-          break
-        case 'locations':
-          if (status.locations) el = makeBadge('s4-status-badge--done', 'выполнено')
+          el = makeBadge(
+            status.quiz ? 's4-status-badge--done' : '',
+            status.quiz ? 'сдан' : 'не сдан',
+          )
           break
         case 'trainer':
-          if (status.trainer) el = makeBadge('s4-status-badge--done', 'пройден')
-          break
-        case 'recitation':
-          if (status.recitation_full) {
-            el = makeBadge('s4-status-badge--done', 'выполнено')
-          } else if (status.recitation) {
-            el = makeBadge('s4-status-badge--partial', 'аудио сдано')
+          // Дневной: «сегодня» отмечен?
+          if (status.today.trainer) {
+            el = makeBadge('s4-status-badge--done', 'сегодня ✓')
           }
           break
-        case 'cross_photo': {
-          const { done, target } = status.cross_photo
-          const cls = done >= target ? 's4-status-badge--done' : 's4-status-badge--recurring'
-          el = makeBadge(cls, `${done} / ${target}`)
+        case 'cross_photo':
+          // Дневной: фото сегодня
+          if (status.today.cross) {
+            el = makeBadge('s4-status-badge--done', 'сегодня ✓')
+          }
           break
-        }
-        case 'prayer': {
-          const { done, target } = status.prayer
-          const cls = done >= target ? 's4-status-badge--done' : 's4-status-badge--recurring'
-          el = makeBadge(cls, `${done} / ${target}`)
+        case 'prayer':
+          // Дневной: молитва сегодня
+          if (status.today.prayer) {
+            el = makeBadge('s4-status-badge--done', 'сегодня ✓')
+          }
           break
-        }
+        case 'recitation':
+          // Дневной: аудио + видео пересказа сегодня
+          if (status.today.recitationAudio && status.today.recitationVideo) {
+            el = makeBadge('s4-status-badge--done', 'сегодня ✓')
+          } else if (status.today.recitationAudio) {
+            el = makeBadge('s4-status-badge--partial', 'аудио сегодня ✓')
+          } else if (status.today.recitationVideo) {
+            el = makeBadge('s4-status-badge--partial', 'кружок сегодня ✓')
+          }
+          break
+        case 'locations':
+          // Местописания — нет дневного статуса в новой модели, показываем нейтрально
+          break
         case 'friday':
-          if (status.friday) el = makeBadge('s4-status-badge--done', 'выполнено')
+          el = makeBadge(
+            status.friday ? 's4-status-badge--done' : '',
+            status.friday ? 'выполнено' : '',
+          )
+          if (!status.friday) el = null // не показываем бейдж если не выполнено
           break
         case 'emotions':
-          if (status.emotions) el = makeBadge('s4-status-badge--done', 'отправлено')
+          // Опциональный пункт — нет в новой модели block-status
           break
       }
 
       if (el) upsertBadge(card, el)
     })
 
-    // Очищаем при размонтировании
     return () => {
       cards.forEach((card) => {
         const body = card.querySelector('.lesson-stage4-card__body')
@@ -223,7 +221,5 @@ function Stage4StatusInserter({ status }: { status: BlockStatus }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status])
 
-  // Ничего не рендерим — только DOM-эффект
   return null
 }
-

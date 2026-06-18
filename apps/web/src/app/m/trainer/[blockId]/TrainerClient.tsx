@@ -25,15 +25,15 @@ function getInitData(): string {
     ?.WebApp?.initData ?? ''
 }
 
-// ─── Баннер завершения тренажёра ─────────────────────────────────────────────
+// ─── Дневной баннер тренажёра ─────────────────────────────────────────────────
 
 interface TrainerCompleteBannerProps {
   blockId: number
-  initialPassedAt: string | null
+  initialTrainerToday: boolean
 }
 
-function TrainerCompleteBanner({ blockId, initialPassedAt }: TrainerCompleteBannerProps) {
-  const [passedAt, setPassedAt] = useState<string | null>(initialPassedAt)
+function TrainerCompleteBanner({ blockId, initialTrainerToday }: TrainerCompleteBannerProps) {
+  const [todayDone, setTodayDone] = useState(initialTrainerToday)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,7 +48,7 @@ function TrainerCompleteBanner({ blockId, initialPassedAt }: TrainerCompleteBann
       })
       const json = (await res.json()) as { ok?: boolean; error?: { message: string } }
       if (json.ok) {
-        setPassedAt(new Date().toISOString())
+        setTodayDone(true)
       } else {
         setError(json.error?.message ?? 'Ошибка сохранения')
       }
@@ -59,11 +59,11 @@ function TrainerCompleteBanner({ blockId, initialPassedAt }: TrainerCompleteBann
     }
   }
 
-  if (passedAt) {
+  if (todayDone) {
     return (
       <div className="trainer-complete-banner trainer-complete-banner--done">
         <span className="trainer-complete-banner__icon">✓</span>
-        <span className="trainer-complete-banner__text">Тренажёр пройден</span>
+        <span className="trainer-complete-banner__text">Тренажёр за сегодня отмечен</span>
       </div>
     )
   }
@@ -71,7 +71,7 @@ function TrainerCompleteBanner({ blockId, initialPassedAt }: TrainerCompleteBann
   return (
     <div className="trainer-complete-banner">
       <p className="trainer-complete-banner__hint">
-        Выучил все местописания? Отметь тренажёр пройденным — это одно из условий завершения блока.
+        Позанимался сегодня? Отметь тренажёр за сегодня — это одно из 5 ежедневных заданий для закрытия дня.
       </p>
       {error && <p className="trainer-complete-banner__error">{error}</p>}
       <button
@@ -80,7 +80,7 @@ function TrainerCompleteBanner({ blockId, initialPassedAt }: TrainerCompleteBann
         onClick={handleComplete}
         disabled={pending}
       >
-        {pending ? 'Сохраняем…' : 'Я выучил местописания'}
+        {pending ? 'Сохраняем…' : 'Отметить тренажёр за сегодня'}
       </button>
     </div>
   )
@@ -121,8 +121,7 @@ export function TrainerClient({ blockId }: { blockId: number }) {
     if (filter === 'fav') return data.verses.filter((v) => isFav(v.id))
     if (filter === 'all') return data.verses
     return data.verses.filter((v) => v.block_id === filter)
-    // favKey влияет ТОЛЬКО на фильтр «Избранное». В обычных блоках добавление
-    // в избранное не должно пересобирать список (иначе карточка сбрасывается).
+    // favKey влияет ТОЛЬКО на фильтр «Избранное».
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, filter, filter === 'fav' ? favKey : ''])
 
@@ -158,10 +157,10 @@ export function TrainerClient({ blockId }: { blockId: number }) {
         <p className="trainer-header__subtitle">Выучи стихи перед сдачей блока</p>
       </header>
 
-      {/* Баннер завершения — только для текущего блока */}
+      {/* Дневной баннер — каждый день кнопка снова активна */}
       <TrainerCompleteBanner
         blockId={blockId}
-        initialPassedAt={data.trainer_passed_at}
+        initialTrainerToday={data.trainer_today}
       />
 
       <div className="trainer-chips">
