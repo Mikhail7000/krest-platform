@@ -6,13 +6,11 @@ import { addDaysStr, baliToday } from '@/lib/time/bali'
 
 export const dynamic = 'force-dynamic'
 
-// Скрытые из трекинга профили (тихий доступ — не показываем никому в списке)
-const HIDDEN_IDS = new Set(['314c6920-cb80-471b-9869-770dfb1bd86e'])
-
 /**
  * POST /api/m/tracking  { initData }
- * Список участников теста с прогрессом — все видят друг друга (наглядность).
- * Участники = профили, чей @username есть в testing_whitelist (Оля туда не входит → скрыта).
+ * Список участников с прогрессом — все видят друг друга (наглядность).
+ * Участники = реальные ученики (role=student), кроме скрытых
+ * (hidden_from_tracking: админы, скрытые тестировщики — Оля, единичка).
  */
 export async function POST(request: NextRequest) {
   const { initData } = (await request.json().catch(() => ({}))) as { initData?: string }
@@ -23,20 +21,15 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceSupabase()
 
-  // 1. Белый список → набор @username (lower)
+  // Участники трекинга = реальные ученики, не скрытые (админы/тестировщики скрыты)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: wl } = await (supabase as any).from('testing_whitelist').select('telegram_username')
-  const handles = new Set(
-    ((wl ?? []) as { telegram_username: string }[]).map((r) => r.telegram_username.toLowerCase()),
-  )
-
-  // 2. Профили-участники теста (по username, без скрытых)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: profs } = await (supabase as any).from('profiles').select('id, full_name, contact_info, role')
+  const { data: profs } = await (supabase as any)
+    .from('profiles')
+    .select('id, full_name, contact_info, role, hidden_from_tracking')
+    .eq('role', 'student')
+    .eq('hidden_from_tracking', false)
   type Prof = { id: string; full_name: string | null; contact_info: string | null; role: string }
-  const participants = ((profs ?? []) as Prof[]).filter(
-    (p) => p.contact_info && handles.has(p.contact_info.toLowerCase()) && !HIDDEN_IDS.has(p.id),
-  )
+  const participants = (profs ?? []) as Prof[]
   const ids = participants.map((p) => p.id)
   if (ids.length === 0) return NextResponse.json({ ok: true, list: [] })
 

@@ -42,6 +42,8 @@ export interface CreateTelegramProfileParams {
   lastName: string | null
   /** Если передан — после создания ставится этот role (ПОСЛЕ триггера, отдельным update). */
   role?: 'student' | 'curator'
+  /** Скрыть из общего трекинга (скрытые тестировщики, напр. единичка). */
+  hidden?: boolean
 }
 
 /**
@@ -52,7 +54,7 @@ export interface CreateTelegramProfileParams {
 export async function createTelegramProfile(
   params: CreateTelegramProfileParams,
 ): Promise<EnsureProfileResult> {
-  const { chatId, username, firstName, lastName, role } = params
+  const { chatId, username, firstName, lastName, role, hidden } = params
   const service = createServiceSupabase()
 
   const botToken = process.env.TELEGRAM_BOT_TOKEN
@@ -94,6 +96,7 @@ export async function createTelegramProfile(
     full_name: fullName,
     is_whitelisted: true,
     ...(handle ? { contact_info: handle } : {}),
+    ...(hidden ? { hidden_from_tracking: true } : {}),
   }).eq('id', userId)
 
   // Если нужна конкретная роль — ставим отдельным update ПОСЛЕ триггера,
@@ -169,7 +172,7 @@ export async function ensureWhitelistedProfile(params: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: slot } = await (service as any)
       .from('testing_whitelist')
-      .select('id, claimed_chat_id')
+      .select('id, claimed_chat_id, hidden')
       .ilike('telegram_username', handle) // ники Telegram регистронезависимы
       .maybeSingle()
 
@@ -189,7 +192,11 @@ export async function ensureWhitelistedProfile(params: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (service as any)
           .from('profiles')
-          .update({ is_whitelisted: true, contact_info: handle })
+          .update({
+            is_whitelisted: true,
+            contact_info: handle,
+            ...(slot.hidden ? { hidden_from_tracking: true } : {}),
+          })
           .eq('id', existing.id)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (service as any)
@@ -199,8 +206,14 @@ export async function ensureWhitelistedProfile(params: {
         return { ok: true, userId: existing.id }
       }
 
-      // 3b. Профиля нет — создаём через общую функцию
-      const created = await createTelegramProfile({ chatId, username, firstName, lastName })
+      // 3b. Профиля нет — создаём через общую функцию (с переносом флага hidden)
+      const created = await createTelegramProfile({
+        chatId,
+        username,
+        firstName,
+        lastName,
+        hidden: slot.hidden === true,
+      })
       if (!created.ok) return created
 
       // Занимаем слот whitelist

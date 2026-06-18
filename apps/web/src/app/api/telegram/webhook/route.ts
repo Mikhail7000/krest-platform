@@ -454,16 +454,20 @@ export async function POST(request: NextRequest) {
 
   // /add @nick1 @nick2 — добавить учеников по нику. ТОЛЬКО владелец платформы (rogue02).
   if (text.startsWith('/add')) {
-    const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
-      .split(',')
-      .map((s) => parseInt(s.trim(), 10))
-      .filter((n) => !isNaN(n))
-    if (!adminChatIds.includes(chatId)) {
-      await sendTelegramMessage(chatId, 'Эта команда доступна только владельцу платформы.')
+    // Доступно admin / super_admin (Михаил, Алекс, Эля), не только владельцу.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const { data: adminProfile } = (await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('telegram_chat_id', chatId)
+      .maybeSingle()) as { data: { id: string; role: string } | null }
+    if (!adminProfile || !['admin', 'super_admin'].includes(adminProfile.role)) {
+      await sendTelegramMessage(chatId, 'Команда доступна только администраторам.')
       return NextResponse.json({ ok: true })
     }
 
-    // Ники через пробел/запятую, с @ или без → нормализуем в @lowercase
+    // Ники через пробел / запятую / новую строку, с @ или без → @lowercase
     const handles = Array.from(
       new Set(
         text
@@ -477,24 +481,7 @@ export async function POST(request: NextRequest) {
     if (handles.length === 0) {
       await sendTelegramMessage(
         chatId,
-        'Укажи ники через пробел: <code>/add @ivan @maria</code>',
-      )
-      return NextResponse.json({ ok: true })
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = createServiceSupabase() as any
-    // added_by обязателен (NOT NULL) — берём профиль администратора
-    const { data: adminProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('telegram_chat_id', chatId)
-      .maybeSingle()
-    if (!adminProfile) {
-      await sendTelegramMessage(
-        chatId,
-        'Сначала открой приложение командой /start, потом добавляй учеников.',
-        { withMiniAppButton: true },
+        'Укажи ники (через пробел, запятую или с новой строки):\n<code>/add @ivan @maria</code>',
       )
       return NextResponse.json({ ok: true })
     }
