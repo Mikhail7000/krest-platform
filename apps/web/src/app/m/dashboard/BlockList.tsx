@@ -167,6 +167,21 @@ export function BlockList({ onProgress }: BlockListProps) {
     return () => { cancelled = true }
   }, [])
 
+  // Поднимаем прогресс курса в DashboardShell. Хук ОБЯЗАН быть ДО раннего
+  // return ниже — иначе порядок хуков меняется между рендерами и страница
+  // падает («Rendered more hooks than previous render»).
+  useEffect(() => {
+    if (!data) return
+    const main = data.blocks.filter((b) => (b.order_num ?? 0) >= 1)
+    const total = main.length || 10
+    const passed = main.filter((b) => data.progressByBlockId[b.id]?.block_passed_at).length
+    const pct = Math.round((passed / total) * 100)
+    const cur = main.find((b) => !data.progressByBlockId[b.id]?.block_passed_at)?.id ?? null
+    onProgress?.(pct, cur)
+    // onProgress стабилен (сеттер useState) — не включаем в deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
   if (loading || !data) {
     return (
       <div className="miniapp-container" style={{ paddingTop: 0 }}>
@@ -198,28 +213,8 @@ export function BlockList({ onProgress }: BlockListProps) {
   const midExamActive = allBlock5Passed || canSkip
   const finalExamActive = (midExamPassed && allBlock10Passed) || canSkip
 
-  // Прогресс курса: % сданных из 10 основных блоков
-  const totalBlocks = mainBlocks.length || 10
-  const passedCount = mainBlocks.filter((b) => progressByBlockId[b.id]?.block_passed_at).length
-  const coursePct = Math.round((passedCount / totalBlocks) * 100)
-
-  // Текущий блок — первый незавершённый из основных
-  const currentBlock = mainBlocks.find((b) => !progressByBlockId[b.id]?.block_passed_at) ?? null
-  const currentBlockId = currentBlock?.id ?? null
-
-  // Поднимаем прогресс в DashboardShell при каждом рендере с данными
-  // (вызов стабилен — useEffect не нужен, данные уже доступны)
-  // Используем ref-флаг чтобы не вызывать callback при каждом перерендере
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prepBlockAny = prepBlock as any
-
-  // Уведомляем родителя о прогрессе (через useEffect безопасно, без бесконечного цикла)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(() => {
-    onProgress?.(coursePct, currentBlockId)
-  // Намеренно не включаем onProgress — он стабилен из useState-сеттера
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coursePct, currentBlockId])
 
   return (
     <div className="miniapp-container" style={{ paddingTop: 0 }}>
