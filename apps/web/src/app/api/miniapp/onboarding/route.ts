@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { sendTelegramMessage } from '@/lib/telegram/send'
 
 export const dynamic = 'force-dynamic'
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
 /**
  * POST /api/miniapp/onboarding
@@ -77,6 +82,30 @@ export async function POST(request: NextRequest) {
       .update({ course_started_at: new Date().toISOString() })
       .eq('id', auth.userId)
       .is('course_started_at', null)
+
+    // Уведомление владельцу: ученик завершил регистрацию и попал на учёбу.
+    // Только для role=student (кураторы при ре-онбординге не шлют).
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: prof } = await (supabase as any)
+        .from('profiles')
+        .select('role, full_name, contact_info')
+        .eq('id', auth.userId)
+        .maybeSingle()
+      if (prof?.role === 'student') {
+        const who = escapeHtml(prof.full_name || 'Ученик')
+        const handle = prof.contact_info ? escapeHtml(prof.contact_info) : 'без username'
+        const text =
+          `🎓 <b>Новый ученик на учёбе</b>\n\n${who} (${handle}) завершил регистрацию и попал на курс.`
+        const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
+          .split(',')
+          .map((s) => parseInt(s.trim(), 10))
+          .filter((n) => !isNaN(n))
+        await Promise.all(adminChatIds.map((cid) => sendTelegramMessage(cid, text)))
+      }
+    } catch (e) {
+      console.error('[onboarding notify]', e)
+    }
 
     return NextResponse.json({ success: true })
   } catch (err) {

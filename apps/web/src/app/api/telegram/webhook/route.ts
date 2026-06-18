@@ -191,16 +191,18 @@ interface StudentProgressRow {
   block_passed_at: string | null
 }
 
-interface StudentProfileRow {
-  id: string
-  full_name: string | null
-}
-
 interface StudentSummary {
   id: string
   full_name: string
+  handle: string | null
   passed: number
   currentBlock: number
+  daysClosed: number // уникальных закрытых дней (фото креста) для текущего блока
+  daysSilent: number | null // дней без активности
+}
+
+function escapeHtmlTg(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 /**
@@ -210,44 +212,75 @@ interface StudentSummary {
 async function loadStudentsSummary(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
-  curatorId: string,
+  opts: { curatorId?: string; all?: boolean },
 ): Promise<StudentSummary[]> {
-  const { data: students, error: studentsError } = await supabase
+  let query = supabase
     .from('profiles')
-    .select('id, full_name')
+    .select('id, full_name, contact_info')
     .eq('role', 'student')
-    .eq('curator_id', curatorId)
+  if (!opts.all) query = query.eq('curator_id', opts.curatorId)
+  const { data: students, error: studentsError } = await query
 
   if (studentsError) {
     console.error('[webhook/students] profiles query error', studentsError)
     return []
   }
 
-  const profiles = (students ?? []) as StudentProfileRow[]
+  const profiles = (students ?? []) as {
+    id: string
+    full_name: string | null
+    contact_info: string | null
+  }[]
   if (profiles.length === 0) return []
 
   const ids = profiles.map((p) => p.id)
 
-  const { data: bpRows } = await supabase
-    .from('student_block_progress')
-    .select('user_id, block_id, block_passed_at')
-    .in('user_id', ids)
+  const [bp, cross, act] = await Promise.all([
+    supabase
+      .from('student_block_progress')
+      .select('user_id, block_id, block_passed_at')
+      .in('user_id', ids),
+    supabase
+      .from('student_block_daily_cross')
+      .select('user_id, block_id, submitted_date')
+      .in('user_id', ids),
+    supabase
+      .from('student_daily_activity')
+      .select('user_id, activity_date')
+      .in('user_id', ids)
+      .eq('opened', true),
+  ])
 
-  const progressByUser: Record<string, StudentProgressRow[]> = {}
-  for (const row of (bpRows ?? []) as StudentProgressRow[]) {
-    ;(progressByUser[row.user_id] ??= []).push(row)
+  const bpByUser: Record<string, StudentProgressRow[]> = {}
+  for (const r of (bp.data ?? []) as StudentProgressRow[]) {
+    if (r.block_id > 0 && r.block_id <= 10) (bpByUser[r.user_id] ??= []).push(r)
+  }
+  const crossDays: Record<string, Set<string>> = {} // user:block → set дат
+  for (const r of (cross.data ?? []) as { user_id: string; block_id: number; submitted_date: string }[]) {
+    ;(crossDays[`${r.user_id}:${r.block_id}`] ??= new Set()).add(r.submitted_date)
+  }
+  const lastAct: Record<string, string> = {}
+  for (const r of (act.data ?? []) as { user_id: string; activity_date: string }[]) {
+    if (!lastAct[r.user_id] || r.activity_date > lastAct[r.user_id]) lastAct[r.user_id] = r.activity_date
   }
 
   return profiles.map((student) => {
-    const rows = progressByUser[student.id] ?? []
+    const rows = bpByUser[student.id] ?? []
     const passed = rows.filter((r) => r.block_passed_at !== null).length
-    const currentBlock =
-      rows.length > 0 ? Math.max(...rows.map((r) => r.block_id)) : 1
+    const currentBlock = rows.length > 0 ? Math.max(...rows.map((r) => r.block_id)) : 1
+    const daysClosed = crossDays[`${student.id}:${currentBlock}`]?.size ?? 0
+    const last = lastAct[student.id]
+    const daysSilent = last
+      ? Math.floor((Date.now() - new Date(`${last}T00:00:00Z`).getTime()) / 86400000)
+      : null
     return {
       id: student.id,
       full_name: student.full_name ?? 'Без имени',
+      handle: student.contact_info,
       passed,
       currentBlock,
+      daysClosed,
+      daysSilent,
     }
   })
 }
@@ -256,23 +289,27 @@ async function loadStudentsSummary(
  * Форматирует HTML-сообщение со списком учеников.
  * Обрезает до лимита Telegram 4096 символов.
  */
-function formatStudentsList(students: StudentSummary[]): string {
+function formatStudentsList(students: StudentSummary[], isAdmin: boolean): string {
   if (students.length === 0) {
-    return 'Пока нет привязанных учеников.'
+    return isAdmin ? 'Пока нет учеников на платформе.' : 'Пока нет привязанных учеников.'
   }
 
-  const LIMIT = 4000 // оставляем буфер от 4096
-  const header = `<b>Твои ученики (${students.length})</b>\n\n`
+  const LIMIT = 3800 // оставляем буфер от 4096
+  const header = `<b>${isAdmin ? 'Все ученики' : 'Твои ученики'} (${students.length})</b>\n\n`
 
   const lines: string[] = []
   let bodyLen = 0
 
   for (let i = 0; i < students.length; i++) {
     const s = students[i]
-    const line = `${i + 1}. ${s.full_name} — ${s.passed}/10 блоков, сейчас Блок ${s.currentBlock}\n`
+    const handle = s.handle ? ` ${escapeHtmlTg(s.handle)}` : ''
+    const silent = s.daysSilent != null && s.daysSilent >= 2 ? ` · 🔕 молчит ${s.daysSilent} дн.` : ''
+    const line =
+      `${i + 1}. <b>${escapeHtmlTg(s.full_name)}</b>${handle}\n` +
+      `   📚 ${s.passed}/10 блоков · Блок ${s.currentBlock} · дней закрыто ${s.daysClosed}/7${silent}\n`
     if (header.length + bodyLen + line.length > LIMIT) {
       const remaining = students.length - i
-      lines.push(`<i>...и ещё ${remaining} учеников — откройте приложение для полного списка</i>`)
+      lines.push(`<i>...и ещё ${remaining} — открой приложение для полного списка</i>`)
       break
     }
     lines.push(line)
@@ -423,8 +460,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    const students = await loadStudentsSummary(supabase, profile.id)
-    const replyText = formatStudentsList(students)
+    const isAdmin = profile.role === 'admin' || profile.role === 'super_admin'
+    const students = await loadStudentsSummary(
+      supabase,
+      isAdmin ? { all: true } : { curatorId: profile.id },
+    )
+    const replyText = formatStudentsList(students, isAdmin)
     await sendTelegramMessage(chatId, replyText, { withMiniAppButton: true })
     return NextResponse.json({ ok: true })
   }
