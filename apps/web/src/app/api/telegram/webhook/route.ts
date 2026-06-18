@@ -319,6 +319,101 @@ function formatStudentsList(students: StudentSummary[], isAdmin: boolean): strin
   return header + lines.join('')
 }
 
+function ruDayMonth(iso: string): string {
+  const [, m, d] = iso.split('-')
+  return d && m ? `${d}.${m}` : iso
+}
+
+/**
+ * Детальный прогресс одного ученика по нику (для /student @ник).
+ * curator видит только своих; admin/super_admin — любого.
+ */
+async function formatStudentDetail(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  requester: { id: string; role: string },
+  rawNick: string,
+): Promise<string> {
+  const handle = `@${rawNick.replace(/^@+/, '').toLowerCase()}`
+  const { data: s } = await supabase
+    .from('profiles')
+    .select('id, full_name, contact_info, curator_id, course_started_at')
+    .eq('role', 'student')
+    .ilike('contact_info', handle)
+    .maybeSingle()
+  if (!s) return `Ученик ${escapeHtmlTg(handle)} не найден.`
+  if (requester.role === 'curator' && s.curator_id !== requester.id) {
+    return `${escapeHtmlTg(s.full_name || handle)} — не твой ученик.`
+  }
+
+  const [bp, cross] = await Promise.all([
+    supabase
+      .from('student_block_progress')
+      .select('block_id, quiz_passed_at, recitation_audio_passed_at, recitation_videos_passed_at')
+      .eq('user_id', s.id),
+    supabase
+      .from('student_block_daily_cross')
+      .select('block_id, submitted_date')
+      .eq('user_id', s.id),
+  ])
+
+  type Bp = {
+    block_id: number
+    quiz_passed_at: string | null
+    recitation_audio_passed_at: string | null
+    recitation_videos_passed_at: string | null
+  }
+  const bpRows = ((bp.data ?? []) as Bp[]).filter((r) => r.block_id > 0 && r.block_id <= 10)
+
+  const datesByBlock: Record<number, Set<string>> = {}
+  for (const r of (cross.data ?? []) as { block_id: number; submitted_date: string }[]) {
+    ;(datesByBlock[r.block_id] ??= new Set()).add(r.submitted_date)
+  }
+
+  const isComplete = (r: Bp) =>
+    !!r.quiz_passed_at &&
+    !!r.recitation_audio_passed_at &&
+    !!r.recitation_videos_passed_at &&
+    (datesByBlock[r.block_id]?.size ?? 0) >= 7
+
+  const completed = bpRows.filter(isComplete).length
+  const currentBlock = bpRows.length > 0 ? Math.max(...bpRows.map((r) => r.block_id)) : 1
+  const cur = bpRows.find((r) => r.block_id === currentBlock)
+  const curDates = Array.from(datesByBlock[currentBlock] ?? []).sort()
+
+  let maxGap = 0
+  for (let i = 1; i < curDates.length; i++) {
+    const g = Math.round(
+      (new Date(`${curDates[i]}T00:00:00Z`).getTime() -
+        new Date(`${curDates[i - 1]}T00:00:00Z`).getTime()) / 86400000,
+    )
+    if (g > maxGap) maxGap = g
+  }
+  const lastClosed = curDates.length ? curDates[curDates.length - 1] : null
+  const lastAgo = lastClosed
+    ? Math.floor((Date.now() - new Date(`${lastClosed}T00:00:00Z`).getTime()) / 86400000)
+    : null
+  const inProgress = s.course_started_at
+    ? Math.floor((Date.now() - new Date(s.course_started_at).getTime()) / 86400000)
+    : null
+  const yn = (v: unknown) => (v ? '✅' : '❌')
+
+  return (
+    `<b>${escapeHtmlTg(s.full_name || 'Ученик')}</b> ${escapeHtmlTg(s.contact_info || '')}\n\n` +
+    `📚 Сдано блоков: <b>${completed}/10</b>\n` +
+    `📍 Текущий блок: <b>${currentBlock}</b>\n` +
+    (inProgress != null ? `⏱ На курсе: ${inProgress} дн.\n` : '') +
+    `\n<b>Блок ${currentBlock}:</b>\n` +
+    `• Дней закрыто: <b>${curDates.length}/7</b>\n` +
+    `• Квиз: ${yn(cur?.quiz_passed_at)}\n` +
+    `• Местописания: ${yn(cur?.recitation_audio_passed_at && cur?.recitation_videos_passed_at)}\n` +
+    (lastClosed
+      ? `• Последний закрытый день: ${ruDayMonth(lastClosed)} (${lastAgo} дн. назад)\n`
+      : '• Ещё нет закрытых дней\n') +
+    (maxGap > 1 ? `• Макс. перерыв между днями: <b>${maxGap} дн.</b>\n` : '')
+  )
+}
+
 // ─── HTTP handlers ────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -467,6 +562,31 @@ export async function POST(request: NextRequest) {
     )
     const replyText = formatStudentsList(students, isAdmin)
     await sendTelegramMessage(chatId, replyText, { withMiniAppButton: true })
+    return NextResponse.json({ ok: true })
+  }
+
+  // /student @ник — детальный прогресс одного ученика (задержки, дни, блок)
+  // Проверяется ПОСЛЕ /students (иначе "/students" совпал бы с префиксом).
+  if (text.startsWith('/student')) {
+    const arg = text.slice('/student'.length).trim()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const { data: profile } = (await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('telegram_chat_id', chatId)
+      .maybeSingle()) as { data: { id: string; role: string } | null }
+
+    if (!profile || !['curator', 'admin', 'super_admin'].includes(profile.role)) {
+      await sendTelegramMessage(chatId, 'Команда доступна только наставникам.')
+      return NextResponse.json({ ok: true })
+    }
+    if (!arg) {
+      await sendTelegramMessage(chatId, 'Укажи ник: <code>/student @ivan</code>')
+      return NextResponse.json({ ok: true })
+    }
+    const detail = await formatStudentDetail(supabase, profile, arg)
+    await sendTelegramMessage(chatId, detail, { withMiniAppButton: true })
     return NextResponse.json({ ok: true })
   }
 

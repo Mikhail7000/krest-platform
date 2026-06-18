@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../../../../../../packages/supabase/src/types'
+import type { BlockCompletionData } from '@/lib/access/block-completion'
 
 type Block = Database['public']['Tables']['blocks']['Row']
 type BlockProgress = Database['public']['Tables']['student_block_progress']['Row']
@@ -7,8 +8,9 @@ type BlockProgress = Database['public']['Tables']['student_block_progress']['Row
 export interface DashboardData {
   blocks: Block[]
   progressByBlockId: Record<number, BlockProgress>
+  /** Накопительные данные для определения разблокировки блоков */
+  completionByBlockId: Record<number, BlockCompletionData>
   canSkip: boolean
-  courseStartedAt: string | null
   midExamPassed: boolean
   finalExamPassed: boolean
   courseDone: boolean
@@ -35,6 +37,7 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
     { data: profile },
     { data: examRows },
     { data: courseProgress },
+    { data: crossRows },
   ] = await Promise.all([
     supabase
       .from('student_block_progress')
@@ -42,8 +45,7 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
       .eq('user_id', userId),
     supabase
       .from('profiles')
-      // course_started_at — новая колонка, типы ещё не регенерированы
-      .select('can_skip_block_lock, course_started_at')
+      .select('can_skip_block_lock')
       .eq('id', userId)
       .maybeSingle(),
     supabase
@@ -56,6 +58,11 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
       .eq('user_id', userId)
       .eq('course_id', 1)
       .maybeSingle(),
+    // Уникальные дни фото креста: один row = один день в одном блоке
+    supabase
+      .from('student_block_daily_cross')
+      .select('block_id, submitted_date')
+      .eq('user_id', userId),
   ])
 
   const progressByBlockId: Record<number, BlockProgress> = {}
@@ -66,7 +73,6 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const profileAny = profile as any
   const canSkip = profileAny?.can_skip_block_lock ?? false
-  const courseStartedAt: string | null = profileAny?.course_started_at ?? null
 
   const midExamPassed = !!(examRows ?? []).find(
     (e) => e.exam_type === 'mid' && e.passed_at,
@@ -77,11 +83,44 @@ export async function loadDashboardData(userId: string): Promise<DashboardData> 
 
   const courseDone = courseProgress?.status === 'completed'
 
+  // Считаем уникальные дни фото креста по блоку в TS (distinct submitted_date)
+  const crossDaysByBlockId: Record<number, Set<string>> = {}
+  for (const row of crossRows ?? []) {
+    const blockId = row.block_id
+    if (!crossDaysByBlockId[blockId]) {
+      crossDaysByBlockId[blockId] = new Set()
+    }
+    crossDaysByBlockId[blockId].add(row.submitted_date)
+  }
+
+  // Собираем completionByBlockId из progress + crossDays
+  const completionByBlockId: Record<number, BlockCompletionData> = {}
+  for (const row of progressRows ?? []) {
+    completionByBlockId[row.block_id] = {
+      quiz_passed_at: row.quiz_passed_at,
+      recitation_audio_passed_at: row.recitation_audio_passed_at,
+      recitation_videos_passed_at: row.recitation_videos_passed_at,
+      crossDays: crossDaysByBlockId[row.block_id]?.size ?? 0,
+    }
+  }
+  // Блоки без progress-записи тоже могут иметь cross-данные (edge case)
+  for (const [blockIdStr, daysSet] of Object.entries(crossDaysByBlockId)) {
+    const blockId = Number(blockIdStr)
+    if (!completionByBlockId[blockId]) {
+      completionByBlockId[blockId] = {
+        quiz_passed_at: null,
+        recitation_audio_passed_at: null,
+        recitation_videos_passed_at: null,
+        crossDays: daysSet.size,
+      }
+    }
+  }
+
   return {
     blocks: (blocks ?? []) as Block[],
     progressByBlockId,
+    completionByBlockId,
     canSkip,
-    courseStartedAt,
     midExamPassed,
     finalExamPassed,
     courseDone,

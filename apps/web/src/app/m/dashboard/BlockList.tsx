@@ -6,11 +6,10 @@ import type { Database } from '../../../../../../packages/supabase/src/types'
 import { IconGraduation, IconStar, IconTrophy } from '@/app/m/_components/icons'
 import { pluralDays } from '@/lib/activity/streak'
 import {
-  isBlockUnlocked,
-  daysUntilUnlock,
-  blockUnlockDate,
-  formatUnlockDate,
-} from '@/lib/access/weekly-unlock'
+  isBlockComplete,
+  isBlockUnlockedByCompletion,
+  lockedBlockHint,
+} from '@/lib/access/block-completion'
 import type { DashboardData } from './loadDashboard'
 import { PrepBlockCard } from './PrepBlockCard'
 
@@ -24,56 +23,45 @@ function getInitData(): string {
   return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp?.initData ?? ''
 }
 
-// ── Статус блока (новая недельная модель) ───────────────────────────────────
-function blockStatus(
+// ── Статус блока (накопительная модель) ──────────────────────────────────────
+function blockStatusVariant(
   block: Block,
   progress: BlockProgress | undefined,
-  canSkip: boolean,
-  courseStartedAt: string | null,
+  unlocked: boolean,
 ): { label: string; variant: StatusVariant } {
   if (progress?.block_passed_at) return { label: 'Сдан', variant: 'done' }
   if (progress?.status === 'in_progress') return { label: 'Идёт сдача', variant: 'active' }
-
-  const orderNum = block.order_num ?? 0
-  const unlocked = isBlockUnlocked(courseStartedAt, orderNum, canSkip)
-
   if (unlocked) return { label: 'Доступен', variant: 'default' }
   return { label: 'Заблокирован', variant: 'locked' }
 }
 
-// ── Подсказка о дате открытия для заблокированного блока ────────────────────
-function UnlockHint({
-  courseStartedAt,
-  orderNum,
+// ── Подсказка о том, что нужно сдать в предыдущем блоке ─────────────────────
+function LockedHint({
+  blocks,
+  blockId,
+  completionByBlockId,
 }: {
-  courseStartedAt: string | null
-  orderNum: number
+  blocks: Block[]
+  blockId: number
+  completionByBlockId: DashboardData['completionByBlockId']
 }) {
-  const days = daysUntilUnlock(courseStartedAt, orderNum)
-  if (days <= 0) return null
-
-  const unlockDate = blockUnlockDate(courseStartedAt, orderNum)
-  const dateStr = formatUnlockDate(unlockDate)
-
-  return (
-    <span className="db-block-card__unlock-hint">
-      {dateStr
-        ? `Откроется ${dateStr} · через ${days} ${pluralDays(days)}`
-        : `Откроется через ${days} ${pluralDays(days)}`}
-    </span>
-  )
+  const hint = lockedBlockHint(blocks, blockId, completionByBlockId)
+  if (!hint) return null
+  return <span className="db-block-card__unlock-hint">{hint}</span>
 }
 
-// ── Карточка блока ──────────────────────────────────────────────────────────
+// ── Карточка блока ────────────────────────────────────────────────────────────
 interface BlockCardProps {
   block: Block
   progress: BlockProgress | undefined
+  blocks: Block[]
   canSkip: boolean
-  courseStartedAt: string | null
+  completionByBlockId: DashboardData['completionByBlockId']
 }
 
-function BlockCard({ block, progress, canSkip, courseStartedAt }: BlockCardProps) {
-  const { label, variant } = blockStatus(block, progress, canSkip, courseStartedAt)
+function BlockCard({ block, progress, blocks, canSkip, completionByBlockId }: BlockCardProps) {
+  const unlocked = isBlockUnlockedByCompletion(blocks, block.id, canSkip, completionByBlockId)
+  const { label, variant } = blockStatusVariant(block, progress, unlocked)
   const isDone = variant === 'done'
   const isLocked = variant === 'locked'
   const orderNum = block.order_num ?? 0
@@ -99,7 +87,11 @@ function BlockCard({ block, progress, canSkip, courseStartedAt }: BlockCardProps
         </span>
         <span className={statusClass}>{isDone ? `${label} ✓` : label}</span>
         {isLocked && (
-          <UnlockHint courseStartedAt={courseStartedAt} orderNum={orderNum} />
+          <LockedHint
+            blocks={blocks}
+            blockId={block.id}
+            completionByBlockId={completionByBlockId}
+          />
         )}
       </span>
       {!isLocked && <span className="db-block-card__arrow">›</span>}
@@ -118,7 +110,7 @@ function BlockCard({ block, progress, canSkip, courseStartedAt }: BlockCardProps
   )
 }
 
-// ── Карточка экзамена ────────────────────────────────────────────────────────
+// ── Карточка экзамена ─────────────────────────────────────────────────────────
 interface ExamCardProps {
   href: string
   icon: ReactNode
@@ -147,7 +139,7 @@ function ExamCard({ href, icon, title, hint, active, passed }: ExamCardProps) {
   )
 }
 
-// ── Главный компонент ────────────────────────────────────────────────────────
+// ── Главный компонент ─────────────────────────────────────────────────────────
 export function BlockList() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -181,14 +173,14 @@ export function BlockList() {
   }
 
   const {
-    blocks, progressByBlockId, canSkip, courseStartedAt,
+    blocks, progressByBlockId, completionByBlockId, canSkip,
     midExamPassed, finalExamPassed, courseDone,
   } = data
 
-  // Блок 0 — вводный, вынесен отдельно (не входит в 10 основных)
+  // Блок 0 — вводный, вынесен отдельно
   const prepBlock = blocks.find((b) => (b.order_num ?? 1) === 0)
 
-  // Только основные блоки (order_num 1..10) — для прогресса, чипов, сетки
+  // Только основные блоки (order_num 1..10)
   const mainBlocks = blocks.filter((b) => (b.order_num ?? 0) >= 1)
   const blocks1to5 = mainBlocks.filter((b) => (b.order_num ?? 0) <= 5)
   const blocks6to10 = mainBlocks.filter((b) => (b.order_num ?? 0) >= 6)
@@ -203,19 +195,10 @@ export function BlockList() {
   const midExamActive = allBlock5Passed || canSkip
   const finalExamActive = (midExamPassed && allBlock10Passed) || canSkip
 
-  // Прогресс курса: только 10 основных блоков (70 дней = 10 × 7)
+  // Прогресс курса: % сданных из 10 основных блоков
   const totalBlocks = mainBlocks.length || 10
   const passedCount = mainBlocks.filter((b) => progressByBlockId[b.id]?.block_passed_at).length
   const coursePct = Math.round((passedCount / totalBlocks) * 100)
-  const totalDays = totalBlocks * 7
-
-  // «Осталось дней» всего курса — считаем от course_started_at
-  const now = new Date()
-  const startMs = courseStartedAt ? new Date(courseStartedAt).getTime() : null
-  const elapsedCourseDays = startMs
-    ? Math.min(totalDays, Math.max(0, Math.floor((now.getTime() - startMs) / 86_400_000)))
-    : passedCount * 7
-  const daysLeft = Math.max(0, totalDays - elapsedCourseDays)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prepBlockAny = prepBlock as any
@@ -234,7 +217,7 @@ export function BlockList() {
       <div className="db-course">
         <div className="db-course__top">
           <span className="db-course__label">Прогресс курса · {coursePct}%</span>
-          <span className="db-course__days">осталось {daysLeft} {pluralDays(daysLeft)}</span>
+          <span className="db-course__days">{passedCount} из {totalBlocks} {pluralDays(totalBlocks)} сдано</span>
         </div>
         <div className="db-course__bar">
           <span className="db-course__fill" style={{ width: `${coursePct}%` }} />
@@ -265,8 +248,9 @@ export function BlockList() {
               key={block.id}
               block={block}
               progress={progressByBlockId[block.id]}
+              blocks={blocks}
               canSkip={canSkip}
-              courseStartedAt={courseStartedAt}
+              completionByBlockId={completionByBlockId}
             />
           ))}
           <ExamCard
@@ -285,8 +269,9 @@ export function BlockList() {
               key={block.id}
               block={block}
               progress={progressByBlockId[block.id]}
+              blocks={blocks}
               canSkip={canSkip}
-              courseStartedAt={courseStartedAt}
+              completionByBlockId={completionByBlockId}
             />
           ))}
           <ExamCard

@@ -1,10 +1,12 @@
 /**
  * POST /api/m/block-open/[blockId]
- * Отмечает начало блока: ставит block_unlocked_at (если ещё не стоит) —
- * с этого момента идёт 7-дневный отсчёт блока. Возвращает прогресс блока.
+ * Отмечает начало блока: ставит block_unlocked_at (если ещё не стоит).
+ * Возвращает прогресс блока для накопительной модели.
  *
  * Body: { initData }
- * Response: { ok, block_unlocked_at, block_passed_at, can_skip }
+ * Response: { ok, block_unlocked_at, block_passed_at, can_skip,
+ *             quiz_passed_at, recitation_audio_passed_at,
+ *             recitation_videos_passed_at, cross_days }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
@@ -36,7 +38,9 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const { data: existing } = await supabase
     .from('student_block_progress')
-    .select('block_unlocked_at, block_passed_at')
+    .select(
+      'block_unlocked_at, block_passed_at, quiz_passed_at, recitation_audio_passed_at, recitation_videos_passed_at',
+    )
     .eq('user_id', userId)
     .eq('block_id', blockId)
     .maybeSingle()
@@ -57,16 +61,31 @@ export async function POST(req: NextRequest, { params }: Params) {
     unlockedAt = nowIso
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('can_skip_block_lock')
-    .eq('id', userId)
-    .maybeSingle()
+  const [{ data: profile }, { data: crossRows }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('can_skip_block_lock')
+      .eq('id', userId)
+      .maybeSingle(),
+    // Уникальные дни фото креста для этого блока
+    supabase
+      .from('student_block_daily_cross')
+      .select('submitted_date')
+      .eq('user_id', userId)
+      .eq('block_id', blockId),
+  ])
+
+  // Считаем distinct submitted_date в TS
+  const crossDays = new Set((crossRows ?? []).map((r: { submitted_date: string }) => r.submitted_date)).size
 
   return NextResponse.json({
     ok: true,
     block_unlocked_at: unlockedAt,
     block_passed_at: existing?.block_passed_at ?? null,
     can_skip: Boolean(profile?.can_skip_block_lock),
+    quiz_passed_at: existing?.quiz_passed_at ?? null,
+    recitation_audio_passed_at: existing?.recitation_audio_passed_at ?? null,
+    recitation_videos_passed_at: existing?.recitation_videos_passed_at ?? null,
+    cross_days: crossDays,
   })
 }
