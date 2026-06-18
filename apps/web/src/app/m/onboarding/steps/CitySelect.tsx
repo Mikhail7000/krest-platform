@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase-browser'
+import { LocationRequestButton } from './LocationRequestButton'
 
 const tapScale = { scale: 0.98 }
 
@@ -128,14 +129,7 @@ export function CitySelect({
       </motion.div>
 
       <div className="w-full max-w-sm mx-auto mt-6 space-y-3">
-        <motion.button
-          type="button"
-          onClick={() => window.open('tg://resolve/?domain=rogue02', '_blank')}
-          whileTap={tapScale}
-          className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 font-medium text-sm text-gray-600 hover:border-gray-300 dark:border-white/15 dark:text-white/70 dark:hover:border-white/30 transition-colors"
-        >
-          Моего города нету в списке
-        </motion.button>
+        <LocationRequestButton kind="city" />
         <motion.button
           type="button"
           onClick={onBack}
