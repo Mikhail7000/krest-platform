@@ -27,6 +27,7 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<Result | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [hasAttempted, setHasAttempted] = useState(false)
 
   const isVideo = medium === 'video_note'
   const rec = useRecorder(isVideo, MAX_SECS)
@@ -40,6 +41,7 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
   useEffect(() => {
     setResult(null)
     setSendError(null)
+    setHasAttempted(false)
     rec.reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, medium, verses])
@@ -92,9 +94,9 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
   const goto = (d: number) => setIndex((i) => Math.max(0, Math.min(verses.length - 1, i + d)))
   const score = result ? Math.round(result.similarity_score) : 0
 
-  // Текст скрываем во время записи (и голос, и кружок). Кружок — скрыт всегда
-  // до разбора. После «Разобрать» эталон раскрываем, чтобы сверить.
-  const showVerse = result != null || (!isVideo && rec.state === 'idle')
+  // Эталон показываем: до ПЕРВОЙ записи (прочитать) и после разбора (сверить).
+  // Во время записи и после попытки/перезаписи — скрыт: произносить по памяти.
+  const showVerse = result != null || (!isVideo && rec.state === 'idle' && !hasAttempted)
 
   return (
     <>
@@ -168,7 +170,16 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
             </button>
           ) : rec.state === 'recorded' ? (
             <>
-              <button type="button" className="trainer-btn" onClick={rec.reset} disabled={analyzing}>
+              <button
+                type="button"
+                className="trainer-btn"
+                onClick={() => {
+                  setResult(null)
+                  setSendError(null)
+                  rec.reset()
+                }}
+                disabled={analyzing}
+              >
                 Перезаписать
               </button>
               <button
@@ -181,7 +192,16 @@ export function ReciteExercise({ verses }: { verses: TrainerVerse[] }) {
               </button>
             </>
           ) : (
-            <button type="button" className="trainer-btn trainer-btn--primary" onClick={rec.start}>
+            <button
+              type="button"
+              className="trainer-btn trainer-btn--primary"
+              onClick={() => {
+                setHasAttempted(true)
+                setResult(null)
+                setSendError(null)
+                rec.start()
+              }}
+            >
               {isVideo ? 'Записать кружок' : 'Записать голос'}
             </button>
           )}

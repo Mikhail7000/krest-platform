@@ -152,3 +152,206 @@
   -webkit-backdrop-filter: blur(13px);
   backdrop-filter: blur(13px);
 }
+
+/* ── Экран урока (lesson/[blockId]) ───────────────────────────────── */
+
+/* Заголовок страницы */
+[data-theme="dark"] .lesson-header__title,
+[data-theme="stars"] .lesson-header__title { color: var(--d-text); }
+
+[data-theme="dark"] .lesson-header__subtitle,
+[data-theme="stars"] .lesson-header__subtitle { color: var(--d-muted); }
+
+/* Базовые карточки */
+[data-theme="dark"] .lesson-card,
+[data-theme="stars"] .lesson-card {
+  background: var(--d-card);
+  border-color: var(--d-border);
+  box-shadow: var(--d-shadow);
+}
+
+[data-theme="dark"] .lesson-card__title,
+[data-theme="stars"] .lesson-card__title { color: var(--d-text); }
+
+[data-theme="dark"] .lesson-card__desc,
+[data-theme="stars"] .lesson-card__desc { color: var(--d-muted); }
+
+/* GuideCard — тонированный gradient-фон заменяем тёмной карточкой */
+[data-theme="dark"] .lesson-card--guide,
+[data-theme="stars"] .lesson-card--guide {
+  background: var(--d-card);
+  border-color: color-mix(in srgb, var(--accent-solid) 25%, var(--d-border));
+}
+
+/* Текст markdown-гайда */
+[data-theme="dark"] .lesson-guide-text,
+[data-theme="stars"] .lesson-guide-text { color: var(--d-text); }
+
+/* Details summary — раскрыватель конспекта */
+[data-theme="dark"] .lesson-details > summary,
+[data-theme="stars"] .lesson-details > summary { color: var(--accent-solid); }
+
+/* Блок lesson-summary (markdown-контент: конспект, молитвы, гайд Блок 0) */
+[data-theme="dark"] .lesson-summary,
+[data-theme="stars"] .lesson-summary {
+  background: color-mix(in srgb, var(--accent-solid) 7%, #15171c);
+  color: var(--d-text);
+}
+
+[data-theme="dark"] .lesson-summary h1,
+[data-theme="stars"] .lesson-summary h1,
+[data-theme="dark"] .lesson-summary h2,
+[data-theme="stars"] .lesson-summary h2,
+[data-theme="dark"] .lesson-summary strong,
+[data-theme="stars"] .lesson-summary strong,
+[data-theme="dark"] .lesson-summary th,
+[data-theme="stars"] .lesson-summary th,
+[data-theme="dark"] .lesson-summary td,
+[data-theme="stars"] .lesson-summary td { color: var(--d-text); }
+
+[data-theme="dark"] .lesson-summary h3,
+[data-theme="stars"] .lesson-summary h3 { color: var(--accent-solid); }
+
+[data-theme="dark"] .lesson-summary em,
+[data-theme="stars"] .lesson-summary em { color: var(--d-muted); }
+
+[data-theme="dark"] .lesson-summary h2,
+[data-theme="stars"] .lesson-summary h2 { border-top-color: var(--d-border); }
+
+[data-theme="dark"] .lesson-summary hr,
+[data-theme="stars"] .lesson-summary hr { border-top-color: var(--d-border); }
+
+[data-theme="dark"] .lesson-summary th,
+[data-theme="stars"] .lesson-summary th,
+[data-theme="dark"] .lesson-summary td,
+[data-theme="stars"] .lesson-summary td { border-color: var(--d-border); }
+
+[data-theme="dark"] .lesson-summary blockquote,
+[data-theme="stars"] .lesson-summary blockquote { color: var(--d-text); }
+
+[data-theme="dark"] .lesson-summary blockquote p + p,
+[data-theme="stars"] .lesson-summary blockquote p + p { color: var(--d-muted); }
+
+[data-theme="dark"] .lesson-summary code,
+[data-theme="stars"] .lesson-summary code {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent-solid);
+}
+
+/* Транскрипт */
+[data-theme="dark"] .lesson-transcript,
+[data-theme="stars"] .lesson-transcript {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--d-text);
+}
+
+/* Лоадер видео / pending-надпись */
+[data-theme="dark"] .lesson-videos-loading,
+[data-theme="stars"] .lesson-videos-loading,
+[data-theme="dark"] .lesson-summary-pending,
+[data-theme="stars"] .lesson-summary-pending { color: var(--d-muted); }
+
+/* Плашка «Просмотрено» под видео — исправляем светлый фон */
+[data-theme="dark"] .kp-watched,
+[data-theme="stars"] .kp-watched {
+  background: color-mix(in srgb, var(--color-success, #16a34a) 18%, transparent);
+}
+
+/* Секции (Аудио-молитвы, PDF) */
+[data-theme="dark"] .lesson-section__title,
+[data-theme="stars"] .lesson-section__title { color: var(--d-muted-2); }
+
+/* Прогресс-баннер (BlockProgress) */
+[data-theme="dark"] .lesson-progress-banner,
+[data-theme="stars"] .lesson-progress-banner {
+  background: var(--d-card);
+  border-color: var(--d-border);
+  box-shadow: var(--d-shadow);
+  color: var(--d-muted);
+}
+
+[data-theme="dark"] .lesson-progress-banner__label,
+[data-theme="stars"] .lesson-progress-banner__label { color: var(--accent-solid); }
+
+[data-theme="dark"] .lesson-progress-bar,
+[data-theme="stars"] .lesson-progress-bar { background: var(--d-track); }
+
+/* Сегодняшний чеклист внутри баннера */
+[data-theme="dark"] .lesson-progress-today__hint,
+[data-theme="stars"] .lesson-progress-today__hint,
+[data-theme="dark"] .lesson-progress-today__count,
+[data-theme="stars"] .lesson-progress-today__count { color: var(--d-muted); }
+
+/* Чипы чеклиста */
+[data-theme="dark"] .lesson-progress-check,
+[data-theme="stars"] .lesson-progress-check {
+  background: color-mix(in srgb, var(--d-muted) 8%, transparent);
+  color: var(--d-text);
+}
+
+[data-theme="dark"] .lesson-progress-once-label,
+[data-theme="stars"] .lesson-progress-once-label { color: var(--d-muted-2); }
+
+/* Stage 4 навигационные карточки */
+[data-theme="dark"] .lesson-stage4-card,
+[data-theme="stars"] .lesson-stage4-card {
+  background: var(--d-card);
+  border-color: var(--d-border);
+  box-shadow: var(--d-shadow);
+}
+
+[data-theme="dark"] .lesson-stage4-card__title,
+[data-theme="stars"] .lesson-stage4-card__title { color: var(--d-text); }
+
+[data-theme="dark"] .lesson-stage4-card__desc,
+[data-theme="stars"] .lesson-stage4-card__desc { color: var(--d-muted); }
+
+[data-theme="dark"] .lesson-stage4-card__arrow,
+[data-theme="stars"] .lesson-stage4-card__arrow { color: var(--d-arrow); }
+
+/* Бейджи required/optional на карточках Stage 4 */
+[data-theme="dark"] .lesson-stage4-badge--optional,
+[data-theme="stars"] .lesson-stage4-badge--optional {
+  background: color-mix(in srgb, var(--d-muted) 12%, transparent);
+  color: var(--d-muted);
+  border-color: color-mix(in srgb, var(--d-muted) 25%, transparent);
+}
+
+/* Stage 4 сводка-баннер (прогресс над карточками) */
+[data-theme="dark"] .s4-summary,
+[data-theme="stars"] .s4-summary {
+  background: var(--d-card);
+  border-color: color-mix(in srgb, var(--accent-solid) 18%, var(--d-border));
+}
+
+[data-theme="dark"] .s4-summary__label,
+[data-theme="stars"] .s4-summary__label { color: var(--d-muted); }
+
+[data-theme="dark"] .s4-summary__bar,
+[data-theme="stars"] .s4-summary__bar { background: var(--d-track); }
+
+/* Бейдж статуса в Stage 4 (recurring/partial остаются цветными; только мутный вариант нейтрализуем) */
+[data-theme="dark"] .s4-status-badge--recurring,
+[data-theme="stars"] .s4-status-badge--recurring {
+  background: color-mix(in srgb, var(--d-muted) 12%, transparent);
+  color: var(--d-muted);
+  border-color: color-mix(in srgb, var(--d-muted) 25%, transparent);
+}
+
+/* Звёзды — стеклянный блюр на карточках урока */
+[data-theme="stars"] .lesson-card,
+[data-theme="stars"] .lesson-stage4-card,
+[data-theme="stars"] .lesson-progress-banner,
+[data-theme="stars"] .s4-summary {
+  -webkit-backdrop-filter: blur(13px);
+  backdrop-filter: blur(13px);
+}
+
+/* stars: lesson-summary — полупрозрачный тёмный фон вместо сплошного */
+[data-theme="stars"] .lesson-summary {
+  background: color-mix(in srgb, var(--accent-solid) 7%, rgba(255, 255, 255, 0.06));
+}
+
+[data-theme="stars"] .lesson-transcript {
+  background: rgba(255, 255, 255, 0.06);
+}
