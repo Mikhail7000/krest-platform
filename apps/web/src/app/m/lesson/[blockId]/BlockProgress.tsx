@@ -13,6 +13,7 @@ function getInitData(): string {
 interface TodayStatus {
   cross: boolean
   prayer: boolean
+  mestopisaniya: boolean
   pereskaz: boolean
 }
 
@@ -21,7 +22,6 @@ interface BlockStatusResponse {
   closedDays: number
   target: number
   today: TodayStatus
-  locationsComplete: boolean
   quiz: boolean
   friday: boolean
 }
@@ -34,6 +34,7 @@ interface DayTask {
 const DAY_TASKS: DayTask[] = [
   { key: 'cross', label: 'Фото Креста' },
   { key: 'prayer', label: 'Молитва' },
+  { key: 'mestopisaniya', label: 'Местописания' },
   { key: 'pereskaz', label: 'Пересказ' },
 ]
 
@@ -63,12 +64,12 @@ export function BlockProgress({ blockId }: { blockId: number }) {
 
   if (!data) return null
 
-  const { closedDays, target, today, locationsComplete } = data
+  const { closedDays, target, today } = data
   const pct = Math.round((Math.min(closedDays, target) / target) * 100)
 
   const todayAllDone = DAY_TASKS.every((t) => today[t.key])
   const pendingTasks = DAY_TASKS.filter((t) => !today[t.key])
-  const blockComplete = closedDays >= target && locationsComplete
+  const blockComplete = closedDays >= target
 
   if (blockComplete) {
     return (
@@ -119,15 +120,6 @@ export function BlockProgress({ blockId }: { blockId: number }) {
           )}
         </div>
       )}
-
-      {/* Разовое условие блока — местописания (все стихи закрыты видеокружком) */}
-      <div className="lesson-progress-once-label">Разово за блок</div>
-      <ul className="lesson-progress-checklist lesson-progress-checklist--once">
-        <li className={`lesson-progress-check${locationsComplete ? ' lesson-progress-check--done' : ''}`}>
-          <span className="lesson-progress-check__marker">{locationsComplete ? '✓' : '○'}</span>
-          <span className="lesson-progress-check__label">Местописания</span>
-        </li>
-      </ul>
     </div>
   )
 }

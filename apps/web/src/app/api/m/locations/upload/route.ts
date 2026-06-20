@@ -175,6 +175,30 @@ export async function POST(req: NextRequest) {
   // Нормализуем similarity_score в 0..1 для БД (поле NUMERIC(4,3))
   const similarityDb = Math.round(checkResult.similarity_score) / 100
 
+  // Ускоренный тест-режим: виртуальная дата видеокружка местописания.
+  // День N = '2000-01-01' + (кол-во уже сделанных видеокружков ЭТОГО стиха),
+  // чтобы N-е прочтение каждого стиха попадало на одну виртуальную дату.
+  let effectiveDate: string | null = null
+  if (medium === 'video_note') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: accelProf } = await (supabase as any)
+      .from('profiles')
+      .select('test_daily_accel')
+      .eq('id', userId)
+      .maybeSingle()
+    if (accelProf?.test_daily_accel) {
+      const { count: existingVN } = await supabase
+        .from('student_location_attempts')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('location_id', locationId)
+        .eq('medium', 'video_note')
+      const d = new Date(Date.UTC(2000, 0, 1))
+      d.setUTCDate(d.getUTCDate() + (existingVN ?? 0))
+      effectiveDate = d.toISOString().slice(0, 10)
+    }
+  }
+
   // 8. INSERT student_location_attempts
   const insertRow: LocationAttemptInsert = {
     user_id: userId,
@@ -189,6 +213,8 @@ export async function POST(req: NextRequest) {
     ai_call_id: checkResult.ai_call_id,
     duration_seconds: durationSec > 0 ? durationSec : null,
   }
+  // effective_date — для ускоренного режима (вне сгенерированного типа)
+  ;(insertRow as unknown as Record<string, unknown>).effective_date = effectiveDate
 
   // cast через unknown — поле medium добавлено миграцией 20260510140000, ещё не в types.ts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -17,13 +17,13 @@ interface TodayStatus {
   cross: boolean
   prayer: boolean
   pereskaz: boolean
+  mestopisaniya: boolean
 }
 
 interface BlockStatus {
   closedDays: number
   target: number
   today: TodayStatus
-  locationsComplete: boolean
   quiz: boolean
   friday: boolean
 }
@@ -185,9 +185,9 @@ function Stage4StatusInserter({ status }: { status: BlockStatus }) {
           }
           break
         case 'locations':
-          // «Местописания» = разовое (все стихи закрыты видеокружком)
-          if (status.locationsComplete) {
-            el = makeBadge('s4-status-badge--done', 'завершено ✓')
+          // «Местописания» = ежедневно (все стихи закрыты видеокружком сегодня)
+          if (status.today.mestopisaniya) {
+            el = makeBadge('s4-status-badge--done', 'сегодня ✓')
           }
           break
         case 'emotions':

@@ -64,7 +64,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     { data: crossToday },
     { data: prayerToday },
     { data: recitAudioToday },
-    { data: locComplete },
+    { data: requiredLocs },
+    { data: locDoneToday },
     { data: sbp },
     { data: fridayRow },
   ] = await Promise.all([
@@ -103,9 +104,23 @@ export async function POST(req: NextRequest, { params }: Params) {
       .lt('created_at', `${today}T23:59:59.999Z`)
       .limit(1) as Promise<{ data: Array<{ id: string }> | null }>,
 
-    // Местописания завершены (все обязательные стихи закрыты видеокружком) — разовое
-    supabase.rpc('locations_complete', { p_user_id: userId, p_block_id: blockId }) as Promise<{
-      data: boolean | null
+    // Обязательные стихи блока (для проверки «все местописания за сегодня»)
+    supabase
+      .from('block_locations_to_recite')
+      .select('id')
+      .eq('block_id', blockId)
+      .eq('is_required', true) as Promise<{ data: Array<{ id: string }> | null }>,
+
+    // Местописания (видеокружок) сделанные сегодня
+    supabase
+      .from('student_location_attempts')
+      .select('location_id')
+      .eq('user_id', userId)
+      .eq('medium', 'video_note')
+      .eq('passed', true)
+      .gte('created_at', `${today}T00:00:00.000Z`)
+      .lt('created_at', `${today}T23:59:59.999Z`) as Promise<{
+      data: Array<{ location_id: string }> | null
     }>,
 
     // Квиз
@@ -131,15 +146,22 @@ export async function POST(req: NextRequest, { params }: Params) {
   )
   const closedDays = closedDaysRow ? Number(closedDaysRow.days) : 0
 
-  // 5. Статусы «сделано сегодня»
-  // «Пересказ» (аудио, ежедневно) — student_block_recitations medium='audio'
+  // 5. Местописания за сегодня = ВСЕ обязательные стихи закрыты видеокружком сегодня
+  const requiredIds = new Set((requiredLocs ?? []).map((r: { id: string }) => r.id))
+  const doneTodayIds = new Set(
+    (locDoneToday ?? []).map((r: { location_id: string }) => r.location_id),
+  )
+  const mestopisaniyaToday =
+    requiredIds.size > 0 && [...requiredIds].every((id) => doneTodayIds.has(id))
+
+  // 6. Статусы «сделано сегодня». Пересказ (аудио, ежедневно) = recitations medium='audio'
   const todayStatus = {
     cross: (crossToday?.length ?? 0) > 0,
     prayer: (prayerToday?.length ?? 0) > 0,
     pereskaz: (recitAudioToday?.length ?? 0) > 0,
+    mestopisaniya: mestopisaniyaToday,
   }
 
-  const locationsComplete = locComplete === true
   const quiz = Boolean(sbp?.quiz_passed_at)
   const friday = (fridayRow?.length ?? 0) > 0
 
@@ -148,7 +170,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     closedDays,
     target: 7,
     today: todayStatus,
-    locationsComplete,
     quiz,
     friday,
   })
