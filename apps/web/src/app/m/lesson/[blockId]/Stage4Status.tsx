@@ -16,15 +16,14 @@ import { useEffect, useReducer } from 'react'
 interface TodayStatus {
   cross: boolean
   prayer: boolean
-  recitationAudio: boolean
-  recitationVideo: boolean
-  trainer: boolean
+  pereskaz: boolean
 }
 
 interface BlockStatus {
   closedDays: number
   target: number
   today: TodayStatus
+  locationsComplete: boolean
   quiz: boolean
   friday: boolean
 }
@@ -180,15 +179,15 @@ function Stage4StatusInserter({ status }: { status: BlockStatus }) {
           }
           break
         case 'recitation':
-          // «Пересказ блока» = аудио-пересказ → отметка по recitationAudio
-          if (status.today.recitationAudio) {
+          // «Пересказ блока» = аудио-пересказ (ежедневно)
+          if (status.today.pereskaz) {
             el = makeBadge('s4-status-badge--done', 'сегодня ✓')
           }
           break
         case 'locations':
-          // «Местописания» = видеокружки → отметка по recitationVideo
-          if (status.today.recitationVideo) {
-            el = makeBadge('s4-status-badge--done', 'сегодня ✓')
+          // «Местописания» = разовое (все стихи закрыты видеокружком)
+          if (status.locationsComplete) {
+            el = makeBadge('s4-status-badge--done', 'завершено ✓')
           }
           break
         case 'emotions':

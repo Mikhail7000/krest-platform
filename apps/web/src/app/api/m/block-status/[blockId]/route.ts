@@ -64,8 +64,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     { data: crossToday },
     { data: prayerToday },
     { data: recitAudioToday },
-    { data: recitVideoToday },
-    { data: trainerToday },
+    { data: locComplete },
     { data: sbp },
     { data: fridayRow },
   ] = await Promise.all([
@@ -104,26 +103,10 @@ export async function POST(req: NextRequest, { params }: Params) {
       .lt('created_at', `${today}T23:59:59.999Z`)
       .limit(1) as Promise<{ data: Array<{ id: string }> | null }>,
 
-    // Местописания видео (video_note) сегодня
-    supabase
-      .from('student_block_recitations')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('block_id', blockId)
-      .eq('medium', 'video_note')
-      .eq('passed', true)
-      .gte('created_at', `${today}T00:00:00.000Z`)
-      .lt('created_at', `${today}T23:59:59.999Z`)
-      .limit(1) as Promise<{ data: Array<{ id: string }> | null }>,
-
-    // Тренажёр за сегодня
-    supabase
-      .from('student_block_daily_trainer')
-      .select('trained_date')
-      .eq('user_id', userId)
-      .eq('block_id', blockId)
-      .eq('trained_date', today)
-      .limit(1) as Promise<{ data: Array<{ trained_date: string }> | null }>,
+    // Местописания завершены (все обязательные стихи закрыты видеокружком) — разовое
+    supabase.rpc('locations_complete', { p_user_id: userId, p_block_id: blockId }) as Promise<{
+      data: boolean | null
+    }>,
 
     // Квиз
     supabase
@@ -149,14 +132,14 @@ export async function POST(req: NextRequest, { params }: Params) {
   const closedDays = closedDaysRow ? Number(closedDaysRow.days) : 0
 
   // 5. Статусы «сделано сегодня»
+  // «Пересказ» (аудио, ежедневно) — student_block_recitations medium='audio'
   const todayStatus = {
     cross: (crossToday?.length ?? 0) > 0,
     prayer: (prayerToday?.length ?? 0) > 0,
-    recitationAudio: (recitAudioToday?.length ?? 0) > 0,
-    recitationVideo: (recitVideoToday?.length ?? 0) > 0,
-    trainer: (trainerToday?.length ?? 0) > 0,
+    pereskaz: (recitAudioToday?.length ?? 0) > 0,
   }
 
+  const locationsComplete = locComplete === true
   const quiz = Boolean(sbp?.quiz_passed_at)
   const friday = (fridayRow?.length ?? 0) > 0
 
@@ -165,6 +148,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     closedDays,
     target: 7,
     today: todayStatus,
+    locationsComplete,
     quiz,
     friday,
   })
