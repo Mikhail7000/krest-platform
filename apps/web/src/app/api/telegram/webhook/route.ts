@@ -548,7 +548,15 @@ async function handleCurators(
     return
   }
 
-  if (!curators || curators.length === 0) {
+  // Ожидающие входа кураторы (в белом списке как curator, но ещё не зашли)
+  const { data: pendingRaw } = (await supabase
+    .from('testing_whitelist')
+    .select('telegram_username')
+    .eq('assign_role', 'curator')
+    .is('claimed_chat_id', null)) as { data: { telegram_username: string }[] | null }
+  const pendingCurators = (pendingRaw ?? []).map((p) => p.telegram_username)
+
+  if ((!curators || curators.length === 0) && pendingCurators.length === 0) {
     await sendTelegramMessage(chatId, 'Кураторов на платформе пока нет.')
     return
   }
@@ -575,7 +583,7 @@ async function handleCurators(
   const cityName = new Map<number, string>((citiesRows ?? []).map((c) => [c.id, c.name_ru]))
 
   // Сортируем кураторов по числу учеников (убыв.)
-  const sorted = [...curators].sort(
+  const sorted = [...(curators ?? [])].sort(
     (a, b) => (studentsByC[b.id]?.length ?? 0) - (studentsByC[a.id]?.length ?? 0),
   )
 
@@ -602,6 +610,14 @@ async function handleCurators(
     }
     lines.push(block)
     totalLen += block.length
+  }
+
+  if (pendingCurators.length > 0) {
+    lines.push(
+      `\n<b>⏳ Ожидают входа (${pendingCurators.length}):</b>\n` +
+        `  ${pendingCurators.map((h) => escapeHtmlTg(h)).join(', ')}\n` +
+        `  <i>станут кураторами, когда откроют бота</i>\n`,
+    )
   }
 
   await sendTelegramMessage(chatId, lines.join(''))
