@@ -20,6 +20,7 @@ export async function GET() {
     { command: 'students', description: 'Ученики и прогресс (для наставников)' },
     { command: 'student', description: 'Прогресс ученика: /student @ник' },
     { command: 'curators', description: 'Кураторы и ученики' },
+    { command: 'addcurator', description: 'Добавить куратора: /addcurator @ник' },
     { command: 'stats', description: 'Статистика потока' },
     { command: 'panel', description: 'Веб-дашборд администратора' },
     { command: 'transfer', description: 'Перевод: /transfer @ученик @куратор' },

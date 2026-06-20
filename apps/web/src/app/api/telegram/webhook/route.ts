@@ -979,6 +979,80 @@ export async function POST(request: NextRequest) {
   const chatId = message.chat.id
   const text = message.text.trim()
 
+  // /addcurator @nick — добавить кураторов по нику (assign_role=curator). Только admin/super_admin.
+  // ВАЖНО: проверяется ДО /add (иначе /add перехватит).
+  if (text.startsWith('/addcurator') || text.startsWith('/add_curator')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const { data: adminProfile } = (await supabase
+      .from('profiles')
+      .select('id, role, full_name, contact_info')
+      .eq('telegram_chat_id', chatId)
+      .maybeSingle()) as {
+      data: { id: string; role: string; full_name: string | null; contact_info: string | null } | null
+    }
+    if (!adminProfile || !['admin', 'super_admin'].includes(adminProfile.role)) {
+      await sendTelegramMessage(chatId, 'Команда доступна только администраторам.')
+      return NextResponse.json({ ok: true })
+    }
+
+    const handles = Array.from(
+      new Set(
+        text
+          .replace(/^\/\S+\s*/, '') // убираем саму команду
+          .split(/[\s,]+/)
+          .map((t) => t.trim().replace(/^@+/, '').toLowerCase())
+          .filter((t) => /^[a-z0-9_]{4,32}$/.test(t))
+          .map((t) => `@${t}`),
+      ),
+    )
+    if (handles.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        'Укажи ники куратора (через пробел/запятую):\n<code>/addcurator @ivan @maria</code>',
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    const added: string[] = []
+    for (const handle of handles) {
+      const { data: existing } = await supabase
+        .from('testing_whitelist')
+        .select('id')
+        .ilike('telegram_username', handle)
+        .maybeSingle()
+      if (existing) {
+        await supabase
+          .from('testing_whitelist')
+          .update({ assign_role: 'curator', claimed_chat_id: null })
+          .eq('id', (existing as { id: number }).id)
+      } else {
+        await supabase
+          .from('testing_whitelist')
+          .insert({ telegram_username: handle, assign_role: 'curator', added_by: adminProfile.id })
+      }
+      // если профиль уже есть и он ученик — сразу повышаем до куратора
+      await supabase.from('profiles').update({ role: 'curator' }).ilike('contact_info', handle).eq('role', 'student')
+      added.push(handle)
+    }
+
+    await sendTelegramMessage(
+      chatId,
+      `✅ Добавлены как кураторы (${added.length}):\n${added.join(', ')}\n\nКогда войдут — получат роль куратора.`,
+    )
+    const addedListC = added.map((h) => escapeHtmlTg(h)).join(', ')
+    const adminNameC = escapeHtmlTg(adminProfile.full_name || adminProfile.contact_info || 'Админ')
+    const notifyTextC =
+      added.length === 1
+        ? `🧭 ${adminNameC} добавил куратора ${addedListC}`
+        : `🧭 ${adminNameC} добавил кураторов (${added.length}): ${addedListC}`
+    const adminChatIdsC = await getAdminChatIds(supabase)
+    await Promise.all(
+      adminChatIdsC.filter((cid) => cid !== chatId).map((cid) => sendTelegramMessage(cid, notifyTextC)),
+    )
+    return NextResponse.json({ ok: true })
+  }
+
   // /add @nick1 @nick2 — добавить учеников по нику. Только admin/super_admin.
   if (text.startsWith('/add')) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

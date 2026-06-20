@@ -5,9 +5,11 @@ import { createServiceSupabase } from '@/lib/supabase-service'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/panel/actions/add  { username }
- * Заносит @ник в testing_whitelist как ученика (assign_role=null) — как бот-команда /add.
- * Если уже есть — освобождаем слот (claimed_chat_id=null), чтобы вошёл как впервые.
+ * POST /api/panel/actions/add  { username, role? }
+ * Заносит @ник в testing_whitelist — как ученика (role='student'/по умолчанию,
+ * assign_role=null) или как куратора (role='curator', assign_role='curator').
+ * Если уже есть — обновляем assign_role и освобождаем слот.
+ * Для куратора: если профиль с этим ником уже есть и он ученик — сразу повышаем.
  * Гард: только admin/super_admin, иначе 401.
  */
 export async function POST(req: NextRequest) {
@@ -16,8 +18,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }
 
-  const body = (await req.json().catch(() => ({}))) as { username?: string }
+  const body = (await req.json().catch(() => ({}))) as { username?: string; role?: string }
   const raw = (body.username ?? '').trim().replace(/^@+/, '').toLowerCase()
+  const assignRole = body.role === 'curator' ? 'curator' : null
 
   if (!/^[a-z0-9_]{4,32}$/.test(raw)) {
     return NextResponse.json(
@@ -36,10 +39,15 @@ export async function POST(req: NextRequest) {
     .ilike('telegram_username', handle)
     .maybeSingle()
 
+  // Для куратора: если профиль уже есть и он ученик — сразу повышаем до куратора
+  if (assignRole === 'curator') {
+    await supabase.from('profiles').update({ role: 'curator' }).ilike('contact_info', handle).eq('role', 'student')
+  }
+
   if (existing) {
     const { error } = await supabase
       .from('testing_whitelist')
-      .update({ claimed_chat_id: null })
+      .update({ claimed_chat_id: null, assign_role: assignRole })
       .eq('id', (existing as { id: number }).id)
     if (error) {
       console.error('[panel/actions/add] update', error)
@@ -50,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabase
     .from('testing_whitelist')
-    .insert({ telegram_username: handle, assign_role: null, added_by: session.uid })
+    .insert({ telegram_username: handle, assign_role: assignRole, added_by: session.uid })
   if (error) {
     console.error('[panel/actions/add] insert', error)
     return NextResponse.json({ ok: false, error: 'Не удалось добавить' }, { status: 500 })

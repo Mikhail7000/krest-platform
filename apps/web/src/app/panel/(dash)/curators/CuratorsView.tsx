@@ -1,45 +1,116 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { CuratorRow } from './types'
 
 /**
- * Таблица кураторов с разворотом списка учеников.
+ * Таблица кураторов с разворотом списка учеников + добавление куратора.
  * Имена/города выводятся как React-текст (auto-escape, без innerHTML).
  */
 export function CuratorsView({ curators }: { curators: CuratorRow[] }) {
   const [openId, setOpenId] = useState<string | null>(null)
 
-  if (curators.length === 0) {
-    return <div className="panel-empty">Кураторов пока нет</div>
+  return (
+    <>
+      <AddCuratorBar />
+      {curators.length === 0 ? (
+        <div className="panel-empty">Кураторов пока нет</div>
+      ) : (
+        <div className="panel-table-wrap">
+          <table className="panel-table">
+            <thead>
+              <tr>
+                <th>Куратор</th>
+                <th>Город</th>
+                <th>Ученики</th>
+              </tr>
+            </thead>
+            <tbody>
+              {curators.map((cu) => {
+                const isOpen = openId === cu.id
+                const hasStudents = cu.studentsCount > 0
+                return (
+                  <CuratorRowGroup
+                    key={cu.id}
+                    curator={cu}
+                    isOpen={isOpen}
+                    hasStudents={hasStudents}
+                    onToggle={() => setOpenId(isOpen ? null : cu.id)}
+                  />
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  )
+}
+
+/** Добавление куратора по нику (зеркало «Добавить ученика»). */
+function AddCuratorBar() {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [nick, setNick] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  const submit = async () => {
+    const v = nick.trim().replace(/^@+/, '')
+    if (!/^[a-z0-9_]{4,32}$/i.test(v)) {
+      setNotice('Ник: 4–32 символа, латиница, цифры, _')
+      return
+    }
+    setBusy(true)
+    setNotice(null)
+    try {
+      const res = await fetch('/api/panel/actions/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: v, role: 'curator' }),
+      })
+      const b = await res.json().catch(() => ({}))
+      if (res.ok && b.ok) {
+        setNotice(`✓ @${v} добавлен как куратор`)
+        setNick('')
+        setOpen(false)
+        router.refresh()
+      } else {
+        setNotice(b.error || 'Не удалось добавить')
+      }
+    } catch {
+      setNotice('Сеть недоступна')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
-    <div className="panel-table-wrap">
-      <table className="panel-table">
-        <thead>
-          <tr>
-            <th>Куратор</th>
-            <th>Город</th>
-            <th>Ученики</th>
-          </tr>
-        </thead>
-        <tbody>
-          {curators.map((cu) => {
-            const isOpen = openId === cu.id
-            const hasStudents = cu.studentsCount > 0
-            return (
-              <CuratorRowGroup
-                key={cu.id}
-                curator={cu}
-                isOpen={isOpen}
-                hasStudents={hasStudents}
-                onToggle={() => setOpenId(isOpen ? null : cu.id)}
-              />
-            )
-          })}
-        </tbody>
-      </table>
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button type="button" className="panel-btn panel-btn--primary" onClick={() => setOpen((o) => !o)}>
+          + Добавить куратора
+        </button>
+        {notice ? <span className="panel-muted">{notice}</span> : null}
+      </div>
+      {open ? (
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', maxWidth: 440 }}>
+          <input
+            className="panel-input"
+            placeholder="@ник куратора в Telegram"
+            value={nick}
+            onChange={(e) => setNick(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') submit()
+            }}
+            style={{ flex: 1, minWidth: 200 }}
+          />
+          <button type="button" className="panel-btn panel-btn--primary" onClick={submit} disabled={busy}>
+            {busy ? '…' : 'Добавить'}
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }
