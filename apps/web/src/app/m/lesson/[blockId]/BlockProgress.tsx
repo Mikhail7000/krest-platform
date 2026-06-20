@@ -66,12 +66,12 @@ export function BlockProgress({ blockId }: { blockId: number }) {
 
   if (!data) return null
 
-  const { closedDays, target, today, quiz } = data
+  const { closedDays, target, today } = data
   const pct = Math.round((Math.min(closedDays, target) / target) * 100)
 
   const todayAllDone = DAY_TASKS.every((t) => today[t.key])
   const pendingTasks = DAY_TASKS.filter((t) => !today[t.key])
-  const blockComplete = closedDays >= target && quiz
+  const blockComplete = closedDays >= target
 
   if (blockComplete) {
     return (
@@ -122,15 +122,6 @@ export function BlockProgress({ blockId }: { blockId: number }) {
           )}
         </div>
       )}
-
-      {/* Разовое условие: квиз (эпоха пятницы больше не обязательна) */}
-      <div className="lesson-progress-once-label">Разовое задание</div>
-      <ul className="lesson-progress-checklist lesson-progress-checklist--once">
-        <li className={`lesson-progress-check${quiz ? ' lesson-progress-check--done' : ''}`}>
-          <span className="lesson-progress-check__marker">{quiz ? '✓' : '○'}</span>
-          <span className="lesson-progress-check__label">Квиз</span>
-        </li>
-      </ul>
     </div>
   )
 }

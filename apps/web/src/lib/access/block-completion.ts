@@ -26,8 +26,8 @@ export interface BlockCompletionData {
  * Блок «выполнен» — все три условия выполнены.
  */
 export function isBlockComplete(data: BlockCompletionData): boolean {
-  // Эпоха пятницы больше НЕ обязательна (объединена с эмоциями, по желанию).
-  return data.closedDays >= CLOSED_DAYS_REQUIRED && data.quiz
+  // Блок = >=7 закрытых дней. Квиз и эпоха пятницы больше НЕ обязательны.
+  return data.closedDays >= CLOSED_DAYS_REQUIRED
 }
 
 /**
@@ -38,7 +38,6 @@ export function blockIncompleteReasons(data: BlockCompletionData): string[] {
   if (data.closedDays < CLOSED_DAYS_REQUIRED) {
     reasons.push(`закрытых дней ${data.closedDays}/${CLOSED_DAYS_REQUIRED}`)
   }
-  if (!data.quiz) reasons.push('квиз не сдан')
   return reasons
 }
 
@@ -98,7 +97,6 @@ export function lockedBlockHint(
   if (!data) return `Сначала выполни Блок ${orderNum - 1}`
 
   const daysPart = `закрыто дней ${data.closedDays}/${CLOSED_DAYS_REQUIRED}`
-  const quizMark = data.quiz ? '✓' : '✗'
 
-  return `Сначала заверши Блок ${orderNum - 1}: ${daysPart}, квиз ${quizMark}`
+  return `Сначала заверши Блок ${orderNum - 1}: ${daysPart}`
 }
