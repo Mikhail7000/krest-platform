@@ -1,0 +1,78 @@
+'use client'
+
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
+
+const LINKS = [
+  { href: '/panel', label: 'Обзор', icon: '📊' },
+  { href: '/panel/students', label: 'Ученики', icon: '🎓' },
+  { href: '/panel/curators', label: 'Кураторы', icon: '🧭' },
+  { href: '/panel/cities', label: 'Города', icon: '🌍' },
+]
+
+export function PanelNav({ name, role }: { name: string | null; role: string }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+
+  const isActive = (href: string) =>
+    href === '/panel' ? pathname === '/panel' : pathname.startsWith(href)
+
+  const logout = async () => {
+    await fetch('/api/panel/auth/logout', { method: 'POST' })
+    router.replace('/panel/login')
+    router.refresh()
+  }
+
+  return (
+    <>
+      {/* Мобильная шапка */}
+      <header className="panel-topbar">
+        <span className="panel-topbar__brand">КРЕСТ</span>
+        <button
+          type="button"
+          className="panel-topbar__burger"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Меню"
+        >
+          {open ? '✕' : '☰'}
+        </button>
+      </header>
+
+      {/* Sidebar (desktop) / выезжающее меню (mobile) */}
+      <aside className={`panel-sidebar${open ? ' panel-sidebar--open' : ''}`}>
+        <div className="panel-sidebar__brand">КРЕСТ</div>
+        <p className="panel-sidebar__sub">Панель администратора</p>
+
+        <nav className="panel-nav">
+          {LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`panel-nav__item${isActive(l.href) ? ' panel-nav__item--active' : ''}`}
+              onClick={() => setOpen(false)}
+            >
+              <span className="panel-nav__icon">{l.icon}</span>
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="panel-sidebar__foot">
+          <div className="panel-sidebar__user">
+            <span className="panel-sidebar__name">{name ?? 'Админ'}</span>
+            <span className="panel-sidebar__role">
+              {role === 'super_admin' ? 'Супер-админ' : 'Админ'}
+            </span>
+          </div>
+          <button type="button" className="panel-sidebar__logout" onClick={logout}>
+            Выйти
+          </button>
+        </div>
+      </aside>
+
+      {open && <div className="panel-overlay" onClick={() => setOpen(false)} />}
+    </>
+  )
+}

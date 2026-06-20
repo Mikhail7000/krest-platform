@@ -1,0 +1,441 @@
+/* ============================================================
+   КРЕСТ — Панель администратора (/panel). Адаптив: desktop + mobile.
+   Светлая тема, акцент #7c5cf0. Общие классы для страниц дашборда.
+   ============================================================ */
+
+.panel-root {
+  --pl-bg: #f6f7fb;
+  --pl-card: #ffffff;
+  --pl-line: #e8eaf0;
+  --pl-txt: #14161c;
+  --pl-mut: #6b7280;
+  --pl-acc: #7c5cf0;
+  --pl-acc-soft: #efeaff;
+  --pl-ok: #16a34a;
+  --pl-warn: #d97706;
+  --pl-err: #dc2626;
+  color: var(--pl-txt);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── ВХОД ─────────────────────────────────────────────────── */
+.panel-login {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(120% 100% at 50% 0%, #efeaff 0%, #f6f7fb 55%);
+  padding: 24px;
+}
+.panel-login__card {
+  background: #fff;
+  border: 1px solid var(--pl-line);
+  border-radius: 24px;
+  padding: 40px 32px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(80, 60, 200, 0.12);
+}
+.panel-login__logo {
+  font-weight: 900;
+  font-size: 2.6rem;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.panel-login__eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--pl-mut);
+  margin-top: 4px;
+}
+.panel-login__hint {
+  color: var(--pl-mut);
+  font-size: 0.95rem;
+  margin: 18px 0 24px;
+  line-height: 1.6;
+}
+.panel-login__widget {
+  display: flex;
+  justify-content: center;
+  min-height: 48px;
+}
+.panel-login__busy {
+  margin-top: 16px;
+  color: var(--pl-acc);
+  font-weight: 600;
+}
+.panel-login__error {
+  margin-top: 16px;
+  color: var(--pl-err);
+  font-size: 0.9rem;
+}
+
+/* ── КАРКАС ───────────────────────────────────────────────── */
+.panel-shell {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--pl-bg);
+}
+.panel-topbar {
+  display: none;
+}
+.panel-sidebar {
+  width: 248px;
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid var(--pl-line);
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+}
+.panel-sidebar__brand {
+  font-weight: 900;
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.panel-sidebar__sub {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--pl-mut);
+  margin: 2px 0 24px;
+}
+.panel-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.panel-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  color: var(--pl-txt);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background 0.15s;
+}
+.panel-nav__item:hover {
+  background: #f3f4f8;
+}
+.panel-nav__item--active {
+  background: var(--pl-acc-soft);
+  color: var(--pl-acc);
+}
+.panel-nav__icon {
+  font-size: 1.05rem;
+}
+.panel-sidebar__foot {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--pl-line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel-sidebar__user {
+  display: flex;
+  flex-direction: column;
+}
+.panel-sidebar__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.panel-sidebar__role {
+  font-size: 0.8rem;
+  color: var(--pl-mut);
+}
+.panel-sidebar__logout {
+  border: 1px solid var(--pl-line);
+  background: #fff;
+  border-radius: 10px;
+  padding: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--pl-txt);
+  transition: background 0.15s;
+}
+.panel-sidebar__logout:hover {
+  background: #f3f4f8;
+}
+.panel-overlay {
+  display: none;
+}
+.panel-main {
+  flex: 1;
+  min-width: 0;
+  padding: 32px;
+}
+
+/* ── ОБЩИЕ КОМПОНЕНТЫ СТРАНИЦ ─────────────────────────────── */
+.panel-page__title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+.panel-page__subtitle {
+  color: var(--pl-mut);
+  margin-bottom: 24px;
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.panel-card {
+  background: var(--pl-card);
+  border: 1px solid var(--pl-line);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+/* Плитка статистики */
+.panel-stat {
+  background: var(--pl-card);
+  border: 1px solid var(--pl-line);
+  border-radius: 18px;
+  padding: 20px;
+}
+.panel-stat__label {
+  font-size: 0.82rem;
+  color: var(--pl-mut);
+  font-weight: 600;
+}
+.panel-stat__value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+}
+.panel-stat__hint {
+  font-size: 0.8rem;
+  color: var(--pl-mut);
+  margin-top: 4px;
+}
+
+/* Таблица */
+.panel-table-wrap {
+  background: var(--pl-card);
+  border: 1px solid var(--pl-line);
+  border-radius: 18px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+.panel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  min-width: 520px;
+}
+.panel-table th {
+  text-align: left;
+  padding: 13px 16px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pl-mut);
+  border-bottom: 1px solid var(--pl-line);
+  background: #fafbfd;
+}
+.panel-table td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--pl-line);
+}
+.panel-table tr:last-child td {
+  border-bottom: none;
+}
+.panel-table tr:hover td {
+  background: #fafbfd;
+}
+
+/* Бейджи */
+.panel-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  background: #f1f2f6;
+  color: var(--pl-mut);
+}
+.panel-badge--ok { background: #e7f6ec; color: var(--pl-ok); }
+.panel-badge--warn { background: #fef1e1; color: var(--pl-warn); }
+.panel-badge--err { background: #fde8e8; color: var(--pl-err); }
+.panel-badge--acc { background: var(--pl-acc-soft); color: var(--pl-acc); }
+
+/* Кнопки */
+.panel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--pl-line);
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--pl-txt);
+  transition: background 0.15s;
+}
+.panel-btn:hover { background: #f3f4f8; }
+.panel-btn--primary {
+  background: var(--pl-acc);
+  color: #fff;
+  border-color: var(--pl-acc);
+}
+.panel-btn--primary:hover { background: #6a4be0; }
+.panel-btn--danger { color: var(--pl-err); border-color: #f3c9c9; }
+.panel-btn--danger:hover { background: #fdeaea; }
+
+.panel-input,
+.panel-select {
+  border: 1px solid var(--pl-line);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.92rem;
+  background: #fff;
+  color: var(--pl-txt);
+  width: 100%;
+}
+
+/* Мини-бар прогресса */
+.panel-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: #eceef4;
+  overflow: hidden;
+}
+.panel-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b5cf6, #6366f1);
+  border-radius: 999px;
+}
+
+.panel-section-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin: 8px 0 14px;
+}
+.panel-muted { color: var(--pl-mut); }
+.panel-empty {
+  text-align: center;
+  color: var(--pl-mut);
+  padding: 40px;
+}
+
+/* Простой столбчатый график (для статистики) */
+.panel-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 160px;
+  padding-top: 10px;
+}
+.panel-chart__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.panel-chart__bar {
+  width: 100%;
+  max-width: 46px;
+  background: linear-gradient(180deg, #8b5cf6, #6366f1);
+  border-radius: 8px 8px 0 0;
+  min-height: 4px;
+}
+.panel-chart__label {
+  font-size: 0.72rem;
+  color: var(--pl-mut);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.panel-chart__val {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ── АДАПТИВ ──────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .panel-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: 56px;
+    padding: 0 16px;
+    background: #fff;
+    border-bottom: 1px solid var(--pl-line);
+  }
+  .panel-topbar__brand {
+    font-weight: 900;
+    font-size: 1.2rem;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .panel-topbar__burger {
+    border: none;
+    background: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    color: var(--pl-txt);
+  }
+  .panel-shell {
+    flex-direction: column;
+  }
+  .panel-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.18);
+  }
+  .panel-sidebar--open {
+    transform: translateX(0);
+  }
+  .panel-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(0, 0, 0, 0.35);
+  }
+  .panel-main {
+    padding: 18px 14px 40px;
+  }
+  .panel-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+}

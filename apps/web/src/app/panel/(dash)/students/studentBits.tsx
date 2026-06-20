@@ -1,0 +1,109 @@
+'use client'
+
+import Link from 'next/link'
+import type { PanelStudentRow } from '@/app/api/panel/students/route'
+import { StudentRowActions, type Curator } from './StudentRowActions'
+
+/** Мелкие презентационные хелперы списка/детали ученика (без бизнес-логики). */
+
+const BLOCK_TITLES: Record<number, string> = {
+  1: 'Малый Крест',
+  2: 'Принцип Сотворения',
+  3: 'Коренная Проблема',
+  4: 'Состояние Мира',
+  5: 'Состояние Неверующего',
+  6: 'Усилие Человека',
+  7: 'Обетования и Исполнение',
+  8: 'Иисус Христос',
+  9: 'Благословения Верующего',
+  10: '5 Уверенностей',
+}
+
+/** Строка таблицы списка учеников. */
+export function StudentRow({
+  s,
+  curators,
+  onDone,
+  onError,
+}: {
+  s: PanelStudentRow
+  curators: Curator[]
+  onDone: (msg: string) => void
+  onError: (msg: string) => void
+}) {
+  return (
+    <tr>
+      <td>
+        <Link href={`/panel/students/${s.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
+          <Avatar url={s.avatarUrl} name={s.fullName} />
+          <span>
+            {s.fullName || 'Без имени'}
+            {s.contact && <span className="panel-muted" style={{ display: 'block', fontWeight: 400, fontSize: '0.8rem' }}>{s.contact}</span>}
+          </span>
+        </Link>
+      </td>
+      <td>{s.cityName || <span className="panel-muted">—</span>}</td>
+      <td>{s.curatorName || <span className="panel-badge panel-badge--warn">нет</span>}</td>
+      <td><span className="panel-badge panel-badge--acc">{s.passedBlocks} / 10</span></td>
+      <td>
+        <span style={{ fontWeight: 600 }}>Блок {s.currentBlock}</span>
+        <span className="panel-muted" style={{ display: 'block', fontSize: '0.78rem' }}>{BLOCK_TITLES[s.currentBlock] ?? ''}</span>
+      </td>
+      <td>{s.closedDays}</td>
+      <td className="panel-muted" style={{ whiteSpace: 'nowrap' }}>{fmtDate(s.createdAt)}</td>
+      <td style={{ textAlign: 'right' }}>
+        <StudentRowActions student={s} curators={curators} onDone={onDone} onError={onError} />
+      </td>
+    </tr>
+  )
+}
+
+export function Avatar({ url, name, size = 34 }: { url: string | null; name: string | null; size?: number }) {
+  const letter = (name?.trim()?.[0] ?? '?').toUpperCase()
+  if (url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={url} alt="" width={size} height={size} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+  }
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: '#efeaff',
+        color: '#7c5cf0',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 700,
+        fontSize: size > 50 ? '1.8rem' : '1rem',
+        flexShrink: 0,
+      }}
+    >
+      {letter}
+    </span>
+  )
+}
+
+export function fmtDate(iso: string | null): string {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' })
+  } catch {
+    return '—'
+  }
+}
+
+export function fmtDateTime(iso: string | null): string {
+  if (!iso) return 'нет данных'
+  try {
+    const d = new Date(iso)
+    return (
+      d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' }) +
+      ', ' +
+      d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    )
+  } catch {
+    return 'нет данных'
+  }
+}

@@ -38,6 +38,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Веб-дашборд админов (/panel) — свой Telegram-вход + cookie-сессия,
+  // обходит maintenance (как /m/*). Гард внутри layout/роутов.
+  if (pathname.startsWith('/panel')) {
+    return NextResponse.next()
+  }
+
   // Maintenance gate — блокирует весь Next.js фронтенд кроме /maintenance
   // Bypass: query ?bypass=<MAINTENANCE_BYPASS_TOKEN> ставит cookie crest_bypass
   const MAINTENANCE_ON = process.env.MAINTENANCE_MODE === 'true'
