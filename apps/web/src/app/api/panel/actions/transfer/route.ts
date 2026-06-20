@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { notifyAdmins } from '@/lib/telegram/admin-recipients'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   const { data: target } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, full_name, contact_info')
     .eq('id', userId)
     .maybeSingle()
   if (!target) {
@@ -45,10 +46,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Проверяем, что новый куратор существует и имеет подходящую роль.
+  let curatorLabel = 'без куратора'
   if (curatorId) {
     const { data: cur } = await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, role, full_name, contact_info')
       .eq('id', curatorId)
       .maybeSingle()
     if (!cur) {
@@ -60,6 +62,7 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       )
     }
+    curatorLabel = cur.full_name || cur.contact_info || 'куратор'
   }
 
   const { error } = await supabase
@@ -70,6 +73,9 @@ export async function POST(req: NextRequest) {
     console.error('[panel/actions/transfer]', error)
     return NextResponse.json({ ok: false, error: 'Не удалось назначить куратора' }, { status: 500 })
   }
+
+  const who = target.full_name || target.contact_info || 'ученик'
+  await notifyAdmins(supabase, `🔁 ${session.name ?? 'Админ'}: ${who} → куратор ${curatorLabel}`)
 
   return NextResponse.json({ ok: true })
 }

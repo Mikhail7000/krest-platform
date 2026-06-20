@@ -941,6 +941,92 @@ async function handleDelete(
   })
 }
 
+// ─── Хелпер: парсинг @ников из произвольного текста ─────────────────────
+
+function parseHandles(rawText: string): string[] {
+  return Array.from(
+    new Set(
+      rawText
+        .split(/[\s,\n]+/)
+        .map((t) => t.trim().replace(/^@+/, '').toLowerCase())
+        .filter((t) => /^[a-z0-9_]{4,32}$/.test(t))
+        .map((t) => `@${t}`),
+    ),
+  )
+}
+
+// ─── Общий хелпер добавления ников (ученики / кураторы) ──────────────────
+
+async function processAddNicks(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  chatId: number,
+  adminProfile: { id: string; role: string; full_name: string | null; contact_info: string | null },
+  rawText: string,
+  role: 'student' | 'curator',
+): Promise<number> {
+  const handles = parseHandles(rawText)
+  if (handles.length === 0) return 0
+
+  const added: string[] = []
+  for (const handle of handles) {
+    const { data: existing } = await supabase
+      .from('testing_whitelist')
+      .select('id')
+      .ilike('telegram_username', handle)
+      .maybeSingle()
+
+    if (existing) {
+      await supabase
+        .from('testing_whitelist')
+        .update({ claimed_chat_id: null, assign_role: role === 'curator' ? 'curator' : null })
+        .eq('id', (existing as { id: number }).id)
+    } else {
+      await supabase
+        .from('testing_whitelist')
+        .insert({
+          telegram_username: handle,
+          assign_role: role === 'curator' ? 'curator' : null,
+          added_by: adminProfile.id,
+        })
+    }
+
+    if (role === 'curator') {
+      await supabase
+        .from('profiles')
+        .update({ role: 'curator' })
+        .ilike('contact_info', handle)
+        .eq('role', 'student')
+    }
+
+    added.push(handle)
+  }
+
+  const roleLabel = role === 'curator' ? 'кураторы' : 'ученики'
+  const addedList = added.map((h) => escapeHtmlTg(h)).join(', ')
+  await sendTelegramMessage(
+    chatId,
+    `✅ Добавлены как ${roleLabel} (${added.length}):\n${addedList}`,
+  )
+
+  const adminName = escapeHtmlTg(adminProfile.full_name || adminProfile.contact_info || 'Админ')
+  const notifyText =
+    role === 'curator'
+      ? added.length === 1
+        ? `🧭 ${adminName} добавил куратора ${addedList}`
+        : `🧭 ${adminName} добавил кураторов (${added.length}): ${addedList}`
+      : added.length === 1
+        ? `👤 ${adminName} добавил ученика ${addedList}`
+        : `👤 ${adminName} добавил учеников (${added.length}): ${addedList}`
+
+  const adminChatIds = await getAdminChatIds(supabase)
+  await Promise.all(
+    adminChatIds.filter((cid) => cid !== chatId).map((cid) => sendTelegramMessage(cid, notifyText)),
+  )
+
+  return added.length
+}
+
 // ─── HTTP handlers ────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -996,60 +1082,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    const handles = Array.from(
-      new Set(
-        text
-          .replace(/^\/\S+\s*/, '') // убираем саму команду
-          .split(/[\s,]+/)
-          .map((t) => t.trim().replace(/^@+/, '').toLowerCase())
-          .filter((t) => /^[a-z0-9_]{4,32}$/.test(t))
-          .map((t) => `@${t}`),
-      ),
-    )
+    const afterCmd = text.replace(/^\/\S+\s*/, '')
+    const handles = parseHandles(afterCmd)
+
     if (handles.length === 0) {
+      // Ников нет — сохраняем pending и просим прислать следующим сообщением
+      await (supabase as any)
+        .from('bot_pending_action')
+        .upsert({ telegram_chat_id: chatId, action: 'addcurator', created_at: new Date().toISOString() })
       await sendTelegramMessage(
         chatId,
-        'Укажи ники куратора (через пробел/запятую):\n<code>/addcurator @ivan @maria</code>',
+        'Ок! Пришли список ников следующим сообщением (через пробел/запятую/с новой строки).',
       )
       return NextResponse.json({ ok: true })
     }
 
-    const added: string[] = []
-    for (const handle of handles) {
-      const { data: existing } = await supabase
-        .from('testing_whitelist')
-        .select('id')
-        .ilike('telegram_username', handle)
-        .maybeSingle()
-      if (existing) {
-        await supabase
-          .from('testing_whitelist')
-          .update({ assign_role: 'curator', claimed_chat_id: null })
-          .eq('id', (existing as { id: number }).id)
-      } else {
-        await supabase
-          .from('testing_whitelist')
-          .insert({ telegram_username: handle, assign_role: 'curator', added_by: adminProfile.id })
-      }
-      // если профиль уже есть и он ученик — сразу повышаем до куратора
-      await supabase.from('profiles').update({ role: 'curator' }).ilike('contact_info', handle).eq('role', 'student')
-      added.push(handle)
-    }
-
-    await sendTelegramMessage(
-      chatId,
-      `✅ Добавлены как кураторы (${added.length}):\n${added.join(', ')}\n\nКогда войдут — получат роль куратора.`,
-    )
-    const addedListC = added.map((h) => escapeHtmlTg(h)).join(', ')
-    const adminNameC = escapeHtmlTg(adminProfile.full_name || adminProfile.contact_info || 'Админ')
-    const notifyTextC =
-      added.length === 1
-        ? `🧭 ${adminNameC} добавил куратора ${addedListC}`
-        : `🧭 ${adminNameC} добавил кураторов (${added.length}): ${addedListC}`
-    const adminChatIdsC = await getAdminChatIds(supabase)
-    await Promise.all(
-      adminChatIdsC.filter((cid) => cid !== chatId).map((cid) => sendTelegramMessage(cid, notifyTextC)),
-    )
+    // Ники есть — обрабатываем сразу, сбрасываем возможный pending
+    await (supabase as any).from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
+    await processAddNicks(supabase, chatId, adminProfile, afterCmd, 'curator')
     return NextResponse.json({ ok: true })
   }
 
@@ -1069,68 +1119,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
-    // Ники через пробел / запятую / новую строку, с @ или без → @lowercase
-    const handles = Array.from(
-      new Set(
-        text
-          .slice(4)
-          .split(/[\s,]+/)
-          .map((t) => t.trim().replace(/^@+/, '').toLowerCase())
-          .filter((t) => /^[a-z0-9_]{4,32}$/.test(t))
-          .map((t) => `@${t}`),
-      ),
-    )
+    const afterCmd = text.slice(4) // убираем '/add'
+    const handles = parseHandles(afterCmd)
+
     if (handles.length === 0) {
+      // Ников нет — сохраняем pending и просим прислать следующим сообщением
+      await (supabase as any)
+        .from('bot_pending_action')
+        .upsert({ telegram_chat_id: chatId, action: 'add', created_at: new Date().toISOString() })
       await sendTelegramMessage(
         chatId,
-        'Укажи ники (через пробел, запятую или с новой строки):\n<code>/add @ivan @maria</code>',
+        'Ок! Пришли список ников следующим сообщением (через пробел/запятую/с новой строки).',
       )
       return NextResponse.json({ ok: true })
     }
 
-    const added: string[] = []
-    for (const handle of handles) {
-      const { data: existing } = await supabase
-        .from('testing_whitelist')
-        .select('id')
-        .ilike('telegram_username', handle)
-        .maybeSingle()
-      if (existing) {
-        // уже в списке — освобождаем слот, чтобы вошёл как впервые
-        await supabase
-          .from('testing_whitelist')
-          .update({ claimed_chat_id: null })
-          .eq('id', (existing as { id: number }).id)
-      } else {
-        await supabase
-          .from('testing_whitelist')
-          .insert({ telegram_username: handle, assign_role: null, added_by: adminProfile.id })
-      }
-      added.push(handle)
-    }
-
-    await sendTelegramMessage(
-      chatId,
-      `✅ Добавлены как ученики (${added.length}):\n${added.join(', ')}\n\nТеперь они могут открыть бота и войти в приложение.`,
-    )
-
-    // Информируем ОСТАЛЬНЫХ админов/владельца (без inline-кнопок — у админа полные права).
-    // Не дублируем самому добавившему. Ученики НИКОГДА не входят в этот список.
-    const adminName = escapeHtmlTg(
-      adminProfile.full_name || adminProfile.contact_info || `id ${chatId}`,
-    )
-    const addedList = added.map((h) => escapeHtmlTg(h)).join(', ')
-    const notifyText =
-      added.length === 1
-        ? `👤 ${adminName} добавил ученика ${addedList}`
-        : `👤 ${adminName} добавил учеников (${added.length}): ${addedList}`
-    const adminChatIds = await getAdminChatIds(supabase)
-    await Promise.all(
-      adminChatIds
-        .filter((cid) => cid !== chatId)
-        .map((cid) => sendTelegramMessage(cid, notifyText)),
-    )
-
+    // Ники есть — обрабатываем сразу, сбрасываем возможный pending
+    await (supabase as any).from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
+    await processAddNicks(supabase, chatId, adminProfile, afterCmd, 'student')
     return NextResponse.json({ ok: true })
   }
 
@@ -1413,8 +1419,66 @@ export async function POST(request: NextRequest) {
 
   // Handle other messages
   try {
-    const supabase = createServiceSupabase()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
 
+    // ── Проверяем pending_action (команда без ников, ники обещали прислать) ──
+    const PENDING_TTL_MS = 15 * 60 * 1000 // 15 минут
+    const { data: pending } = (await supabase
+      .from('bot_pending_action')
+      .select('action, created_at')
+      .eq('telegram_chat_id', chatId)
+      .maybeSingle()) as {
+      data: { action: string; created_at: string } | null
+    }
+
+    if (pending) {
+      const age = Date.now() - new Date(pending.created_at).getTime()
+      if (age > PENDING_TTL_MS) {
+        // Устарело — удаляем, идём дальше
+        await supabase.from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
+      } else {
+        // Проверяем, есть ли в тексте хоть один допустимый ник
+        const hasNick = parseHandles(text).length > 0
+        if (hasNick) {
+          // Проверяем права отправителя
+          const adminProfile = (await getAdminProfile(supabase, chatId)) as {
+            id: string
+            role: string
+          } | null
+
+          if (adminProfile) {
+            // Догружаем full_name и contact_info для уведомления
+            const { data: fullAdminData } = (await supabase
+              .from('profiles')
+              .select('id, role, full_name, contact_info')
+              .eq('telegram_chat_id', chatId)
+              .maybeSingle()) as {
+              data: {
+                id: string
+                role: string
+                full_name: string | null
+                contact_info: string | null
+              } | null
+            }
+
+            const role: 'student' | 'curator' =
+              pending.action === 'addcurator' ? 'curator' : 'student'
+
+            await supabase.from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
+
+            if (fullAdminData) {
+              await processAddNicks(supabase, chatId, fullAdminData, text, role)
+            }
+            return NextResponse.json({ ok: true })
+          }
+        }
+        // Ников нет (или нет прав) — удаляем pending, продолжаем обычным ответом
+        await supabase.from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
+      }
+    }
+
+    // ── Обычный ответ на произвольное сообщение ───────────────────────────
     const { data: profile } = await supabase
       .from('profiles')
       .select('id, full_name')
@@ -1424,7 +1488,7 @@ export async function POST(request: NextRequest) {
     if (profile) {
       await sendTelegramMessage(
         chatId,
-        `<b>Привет, ${profile.full_name || 'ученик'}!</b>\n\nВаш аккаунт подключен. Вы получите уведомление, когда лидер одобрит ваш блок.`,
+        `<b>Привет, ${(profile as { full_name: string | null }).full_name || 'ученик'}!</b>\n\nВаш аккаунт подключен. Вы получите уведомление, когда лидер одобрит ваш блок.`,
       )
     } else {
       await sendTelegramMessage(

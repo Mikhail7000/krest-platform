@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { notifyAdmins } from '@/lib/telegram/admin-recipients'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const { data: target } = await supabase
     .from('profiles')
-    .select('id, is_protected, role')
+    .select('id, is_protected, role, full_name, contact_info')
     .eq('id', userId)
     .maybeSingle()
 
@@ -57,6 +58,10 @@ export async function POST(req: NextRequest) {
     console.error('[panel/actions/role]', error)
     return NextResponse.json({ ok: false, error: 'Не удалось сменить роль' }, { status: 500 })
   }
+
+  const roleLabel = role === 'curator' ? 'куратор' : role === 'admin' ? 'админ' : 'ученик'
+  const who = target.full_name || target.contact_info || 'пользователь'
+  await notifyAdmins(supabase, `🔧 ${session.name ?? 'Админ'} сменил роль: ${who} → ${roleLabel}`)
 
   return NextResponse.json({ ok: true })
 }

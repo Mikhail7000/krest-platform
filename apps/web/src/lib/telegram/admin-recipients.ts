@@ -1,6 +1,8 @@
 // Получатели уведомлений бота = ТОЛЬКО админы (super_admin + admin).
 // Ученики (role=student) НИКОГДА не должны получать административные уведомления.
 
+import { sendTelegramMessage } from './send'
+
 /** Fallback chat_id владельца, если в БД ещё нет привязанных админов. */
 function envFallbackChatIds(): number[] {
   return (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
@@ -45,4 +47,18 @@ export async function getAdminChatIds(
     console.error('[admin-recipients] unexpected error:', e)
     return envFallbackChatIds()
   }
+}
+
+/**
+ * Шлёт информационное уведомление ВСЕМ админам (super_admin + admin).
+ * Для действий в дашборде/боте: владелец узнаёт о действиях, ничего не
+ * подтверждая. Ошибки отправки глушатся (best-effort).
+ */
+export async function notifyAdmins(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  text: string,
+): Promise<void> {
+  const ids = await getAdminChatIds(supabase)
+  await Promise.all(ids.map((cid) => sendTelegramMessage(cid, text).catch(() => {})))
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { notifyAdmins } from '@/lib/telegram/admin-recipients'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,6 +45,10 @@ export async function POST(req: NextRequest) {
     await supabase.from('profiles').update({ role: 'curator' }).ilike('contact_info', handle).eq('role', 'student')
   }
 
+  const roleWord = assignRole === 'curator' ? 'куратора' : 'ученика'
+  const notify = () =>
+    notifyAdmins(supabase, `👤 ${session.name ?? 'Админ'} добавил ${roleWord} ${handle} (дашборд)`)
+
   if (existing) {
     const { error } = await supabase
       .from('testing_whitelist')
@@ -53,6 +58,7 @@ export async function POST(req: NextRequest) {
       console.error('[panel/actions/add] update', error)
       return NextResponse.json({ ok: false, error: 'Не удалось обновить' }, { status: 500 })
     }
+    await notify()
     return NextResponse.json({ ok: true, already: true, handle })
   }
 
@@ -64,5 +70,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Не удалось добавить' }, { status: 500 })
   }
 
+  await notify()
   return NextResponse.json({ ok: true, handle })
 }
