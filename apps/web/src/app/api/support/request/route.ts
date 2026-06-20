@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createHmac } from 'crypto'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { sendTelegramMessage } from '@/lib/telegram/send'
+import { getAdminChatIds } from '@/lib/telegram/admin-recipients'
 
 /**
  * POST /api/support/request
@@ -143,11 +144,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Уведомление владельцу/админам в Telegram (не блокирует ответ)
-    const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
-      .split(',')
-      .map((s) => parseInt(s.trim(), 10))
-      .filter((n) => !isNaN(n))
+    // Уведомление всем админам (super_admin + admin) в Telegram (не блокирует ответ)
+    const adminChatIds = await getAdminChatIds(supa)
     const from = tgUsername ?? `id ${tgId}`
     const notifyText = `🆘 <b>Запрос поддержки</b>\n\nОт: ${from}\n\n${message}`
     await Promise.all(adminChatIds.map((cid) => sendTelegramMessage(cid, notifyText)))

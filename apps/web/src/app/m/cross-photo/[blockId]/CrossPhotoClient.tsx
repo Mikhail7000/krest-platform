@@ -113,13 +113,13 @@ function DayCard({ day, isToday, blockId, feedback, onUploaded }: DayCardProps) 
             className={`cp-upload-label${uploading ? ' cp-upload-label--disabled' : ''}`}
             onClick={() => !uploading && fileRef.current?.click()}
           >
-            {uploading ? 'Загружаем…' : 'Загрузить фото на сегодня'}
+            {uploading ? 'Загружаем…' : 'Загрузить фото (камера или галерея)'}
           </label>
+          {/* Без capture — пользователь сам выбирает камеру или существующее фото из галереи */}
           <input
             ref={fileRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="cp-file-input"
             onChange={handleFile}
             disabled={uploading}

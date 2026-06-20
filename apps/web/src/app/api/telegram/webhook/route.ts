@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { computeActivity } from '@/lib/activity/streak'
 import { createTelegramProfile } from '@/lib/telegram/ensure-profile'
+import { getAdminChatIds } from '@/lib/telegram/admin-recipients'
 import {
   sendTelegramMessage,
   answerCallbackQuery,
@@ -532,9 +533,9 @@ async function handleCurators(
 ): Promise<void> {
   const { data: curators, error } = (await supabase
     .from('profiles')
-    .select('id, full_name, contact_info')
+    .select('id, full_name, contact_info, city_id')
     .eq('role', 'curator')) as {
-    data: { id: string; full_name: string | null; contact_info: string | null }[] | null
+    data: { id: string; full_name: string | null; contact_info: string | null; city_id: number | null }[] | null
     error: unknown
   }
 
@@ -564,6 +565,12 @@ async function handleCurators(
     ;(studentsByC[s.curator_id] ??= []).push(s.contact_info ?? 'без ника')
   }
 
+  // Города (id → name_ru) — показываем город каждого куратора
+  const { data: citiesRows } = (await supabase
+    .from('cities')
+    .select('id, name_ru')) as { data: { id: number; name_ru: string }[] | null }
+  const cityName = new Map<number, string>((citiesRows ?? []).map((c) => [c.id, c.name_ru]))
+
   // Сортируем кураторов по числу учеников (убыв.)
   const sorted = [...curators].sort(
     (a, b) => (studentsByC[b.id]?.length ?? 0) - (studentsByC[a.id]?.length ?? 0),
@@ -580,8 +587,10 @@ async function handleCurators(
       list.length > 0
         ? list.map((h) => escapeHtmlTg(h)).join(', ')
         : '<i>нет учеников</i>'
+    const cityStr = c.city_id ? escapeHtmlTg(cityName.get(c.city_id) ?? '') : ''
+    const cityPart = cityStr ? ` · 📍 ${cityStr}` : ''
     const block =
-      `\n<b>${escapeHtmlTg(c.full_name ?? 'Куратор')}${nick}</b> · ${list.length} уч.\n` +
+      `\n<b>${escapeHtmlTg(c.full_name ?? 'Куратор')}${nick}</b> · ${list.length} уч.${cityPart}\n` +
       `  ${studentsLine}\n`
 
     if (totalLen + block.length > LIMIT) {
@@ -973,9 +982,11 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceSupabase() as any
     const { data: adminProfile } = (await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, role, full_name, contact_info')
       .eq('telegram_chat_id', chatId)
-      .maybeSingle()) as { data: { id: string; role: string } | null }
+      .maybeSingle()) as {
+      data: { id: string; role: string; full_name: string | null; contact_info: string | null } | null
+    }
     if (!adminProfile || !['admin', 'super_admin'].includes(adminProfile.role)) {
       await sendTelegramMessage(chatId, 'Команда доступна только администраторам.')
       return NextResponse.json({ ok: true })
@@ -1025,6 +1036,24 @@ export async function POST(request: NextRequest) {
       chatId,
       `✅ Добавлены как ученики (${added.length}):\n${added.join(', ')}\n\nТеперь они могут открыть бота и войти в приложение.`,
     )
+
+    // Информируем ОСТАЛЬНЫХ админов/владельца (без inline-кнопок — у админа полные права).
+    // Не дублируем самому добавившему. Ученики НИКОГДА не входят в этот список.
+    const adminName = escapeHtmlTg(
+      adminProfile.full_name || adminProfile.contact_info || `id ${chatId}`,
+    )
+    const addedList = added.map((h) => escapeHtmlTg(h)).join(', ')
+    const notifyText =
+      added.length === 1
+        ? `👤 ${adminName} добавил ученика ${addedList}`
+        : `👤 ${adminName} добавил учеников (${added.length}): ${addedList}`
+    const adminChatIds = await getAdminChatIds(supabase)
+    await Promise.all(
+      adminChatIds
+        .filter((cid) => cid !== chatId)
+        .map((cid) => sendTelegramMessage(cid, notifyText)),
+    )
+
     return NextResponse.json({ ok: true })
   }
 

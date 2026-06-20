@@ -6,6 +6,7 @@ import { BottomNav } from '../_components/BottomNav'
 import { ProfileActivity } from './ProfileActivity'
 import { AddToHomeScreenButton } from './AddToHomeScreenButton'
 import { AvatarUpload } from './AvatarUpload'
+import { LocationSettings } from './LocationSettings'
 import '../dashboard/dashboard.css'
 import './profile.css'
 
@@ -28,6 +29,8 @@ export default function ProfilePage() {
 
         <p className="pf-section">Активность</p>
         <ProfileActivity />
+
+        <LocationSettings />
 
         <p className="pf-section">О курсе</p>
         <div className="pf-card">

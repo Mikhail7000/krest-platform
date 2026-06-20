@@ -28,14 +28,6 @@ interface BlockStatusResponse {
   friday: boolean
 }
 
-const TODAY_KEYS: (keyof TodayStatus)[] = [
-  'cross',
-  'prayer',
-  'recitationAudio',
-  'recitationVideo',
-  'trainer',
-]
-
 interface Props {
   /** % завершения курса (0–100), вычислен в BlockList */
   coursePct: number
@@ -47,17 +39,19 @@ interface Props {
 
 /**
  * Компактный виджет в правом верхнем углу шапки:
- * – «N%» прогресс курса (мини-кольцо через stroke-dasharray)
- * – «Сегодня: K осталось» из block-status текущего блока
+ * – мини-кольцо «N%» — общий прогресс по курсу (подпись «курс»)
+ * – «Дней X/7» — закрытых дней в текущем блоке из block-status (подпись «блок»)
  * – стрик (дней подряд) если > 0
  * Кликабелен — ведёт на /m/lesson/[currentBlockId]
  */
 export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
-  const [todayLeft, setTodayLeft] = useState<number | null>(null)
+  // Закрыто дней в текущем блоке (closedDays) и цель (target=7) из block-status
+  const [closedDays, setClosedDays] = useState<number | null>(null)
+  const [target, setTarget] = useState(7)
 
   useEffect(() => {
     if (!currentBlockId) {
-      setTodayLeft(0)
+      setClosedDays(0)
       return
     }
     let cancelled = false
@@ -69,8 +63,8 @@ export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
       .then((r) => (r.ok ? r.json() : null))
       .then((d: BlockStatusResponse | null) => {
         if (cancelled || !d?.ok) return
-        const left = TODAY_KEYS.filter((k) => !d.today[k]).length
-        setTodayLeft(left)
+        setClosedDays(d.closedDays)
+        setTarget(d.target || 7)
       })
       .catch(() => {})
     return () => {
@@ -83,11 +77,15 @@ export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
   const filled = CIRC * (coursePct / 100)
 
   const href = currentBlockId ? `/m/lesson/${currentBlockId}` : '/m/dashboard'
-  const todayDisplay = todayLeft === null ? '…' : String(todayLeft)
+  const daysDisplay = closedDays === null ? '…' : `${closedDays}/${target}`
 
   return (
-    <Link href={href} className="hp-widget" aria-label={`Прогресс курса ${coursePct}%, сегодня осталось ${todayDisplay}`}>
-      {/* Мини-кольцо прогресса */}
+    <Link
+      href={href}
+      className="hp-widget"
+      aria-label={`Прогресс курса ${coursePct}%, в текущем блоке закрыто ${daysDisplay} дней`}
+    >
+      {/* Мини-кольцо прогресса по курсу */}
       <svg
         className="hp-widget__ring"
         viewBox="0 0 24 24"
@@ -116,9 +114,13 @@ export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
 
       {/* Текстовый блок */}
       <span className="hp-widget__text">
-        <span className="hp-widget__pct">{coursePct}%</span>
+        <span className="hp-widget__pct">
+          {coursePct}%
+          <span className="hp-widget__label">курс</span>
+        </span>
         <span className="hp-widget__today">
-          {todayLeft === 0 ? 'День закрыт' : `Сегодня: ${todayDisplay}`}
+          <span className="hp-widget__days">Дней {daysDisplay}</span>
+          <span className="hp-widget__label">блок</span>
         </span>
         {streak !== null && streak > 0 && (
           <span className="hp-widget__streak">{streak} дн. подряд</span>

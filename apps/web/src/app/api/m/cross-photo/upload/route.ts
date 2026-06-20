@@ -50,6 +50,14 @@ function todayDateStr(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+// Виртуальная дата для ускоренного тест-режима: якорь 2000-01-01 + offset дней.
+// Якорь намеренно вне реальных дат, чтобы «закрытые дни» не пересекались с боевыми.
+function accelDate(offset: number): string {
+  const d = new Date(Date.UTC(2000, 0, 1))
+  d.setUTCDate(d.getUTCDate() + offset)
+  return d.toISOString().slice(0, 10)
+}
+
 // local interface — table not yet in generated types
 interface DailyCrossInsert {
   user_id: string
@@ -99,22 +107,18 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceSupabase()
 
-  // Тестовый байпас: тестировщику (can_skip_block_lock) засчитываем дни подряд —
-  // каждая загрузка = следующий «день» (виртуальная дата = старт + N), без ожидания суток.
+  // Ускоренный тест-режим (profiles.test_daily_accel): дневные задания штампуются
+  // ВИРТУАЛЬНЫМИ датами от якоря 2000-01-01, чтобы тестировщик закрыл много «дней»
+  // за один календарный день. Вирт.дата = 2000-01-01 + (кол-во уже существующих
+  // записей этой задачи для user+block). Обычным юзерам — реальная сегодняшняя дата (UTC).
   let dateStr = todayDateStr()
-  const { data: bypassProfile } = await supabase
+  const { data: accelProfile } = await supabase
     .from('profiles')
-    .select('can_skip_block_lock')
+    .select('test_daily_accel')
     .eq('id', userId)
     .maybeSingle()
-  const canSkip = Boolean((bypassProfile as { can_skip_block_lock?: boolean } | null)?.can_skip_block_lock)
-  if (canSkip) {
-    const { data: prog } = await supabase
-      .from('student_block_progress')
-      .select('block_unlocked_at')
-      .eq('user_id', userId)
-      .eq('block_id', blockId)
-      .maybeSingle()
+  const testAccel = Boolean((accelProfile as { test_daily_accel?: boolean } | null)?.test_daily_accel)
+  if (testAccel) {
     const { count: existing } = await (supabase as unknown as {
       from: (t: string) => {
         select: (cols: string, opts: { count: 'exact'; head: boolean }) => {
@@ -128,11 +132,7 @@ export async function POST(req: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('block_id', blockId)
-    const unlockedAt = (prog as { block_unlocked_at?: string | null } | null)?.block_unlocked_at
-    const start = unlockedAt ? new Date(unlockedAt) : new Date()
-    start.setUTCHours(0, 0, 0, 0)
-    start.setUTCDate(start.getUTCDate() + (existing ?? 0))
-    dateStr = start.toISOString().slice(0, 10)
+    dateStr = accelDate(existing ?? 0)
   }
 
   // 4. Upload to Storage

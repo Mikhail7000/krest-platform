@@ -35,6 +35,110 @@ export function pickStrictness(attemptNumber: number): StrictnessLevel {
   return 'strict'
 }
 
+/**
+ * Нормализация для строкового сравнения:
+ *  • нижний регистр;
+ *  • ё → е;
+ *  • убираем всё кроме русских/латинских букв и пробелов (знаки препинания, цифры);
+ *  • схлопываем пробелы.
+ * ASR расставляет пунктуацию случайно, регистр неважен — поэтому чистим агрессивно.
+ */
+export function normalizeForCompare(text: string): string {
+  return (text || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^a-zа-я\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * «Корень» слова для сравнения близких словоформ.
+ * Отрезаем типичные русские окончания (царство/царствие, славу/слава → корень совпадает).
+ * Грубая, но достаточная эвристика — нам нужно лишь засчитывать падежные/орфографические отличия.
+ */
+function stem(word: string): string {
+  if (word.length <= 4) return word
+  // частые окончания/суффиксы (по убыванию длины)
+  const endings = [
+    'иями', 'ями', 'ами', 'ием', 'ия', 'ие', 'ий', 'ью', 'ом', 'ем', 'ах', 'ях',
+    'ов', 'ев', 'ой', 'ей', 'ую', 'юю', 'ого', 'его', 'ому', 'ему', 'ыми', 'ими',
+    'а', 'я', 'о', 'е', 'у', 'ю', 'ы', 'и', 'й', 'ь',
+  ]
+  for (const e of endings) {
+    if (word.length - e.length >= 3 && word.endsWith(e)) {
+      return word.slice(0, word.length - e.length)
+    }
+  }
+  return word
+}
+
+/** Расстояние Левенштейна (для оценки похожести двух слов). */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0
+  const m = a.length
+  const n = b.length
+  if (m === 0) return n
+  if (n === 0) return m
+  let prev = new Array(n + 1)
+  let curr = new Array(n + 1)
+  for (let j = 0; j <= n; j++) prev[j] = j
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
+    }
+    ;[prev, curr] = [curr, prev]
+  }
+  return prev[n]
+}
+
+/** Два слова «совпадают» если равны корни ИЛИ они близки по Левенштейну. */
+function wordsMatch(a: string, b: string): boolean {
+  if (a === b) return true
+  const sa = stem(a)
+  const sb = stem(b)
+  if (sa === sb) return true // царство/царствие, славу/слава
+  // короткие словоформы: одно слово — другое + хвост-окончание («дух»/«духа», «дне»/«день»)
+  const shorter = a.length <= b.length ? a : b
+  const longer = a.length <= b.length ? b : a
+  if (shorter.length >= 3 && longer.length - shorter.length <= 2 && longer.startsWith(shorter)) {
+    return true
+  }
+  // близкая опечатка/словоформа: расстояние ≤ 2 при длине ≥ 5
+  if (longer.length >= 5 && levenshtein(a, b) <= 2) return true
+  if (longer.length >= 8 && levenshtein(a, b) <= 3) return true
+  return false
+}
+
+/**
+ * Локальная fuzzy-оценка дословной сдачи (0..100).
+ * Идём по словам эталона и считаем, сколько из них «покрыто» транскриптом
+ * (с учётом близких словоформ). Порядок не строгий — для safety net этого достаточно,
+ * жёсткость порядка оставляем модели.
+ */
+export function fuzzyVerbatimScore(transcript: string, exactText: string): number {
+  const refWords = normalizeForCompare(exactText).split(' ').filter(Boolean)
+  const saidWords = normalizeForCompare(transcript).split(' ').filter(Boolean)
+  if (refWords.length === 0) return 0
+  if (saidWords.length === 0) return 0
+
+  const used = new Array(saidWords.length).fill(false)
+  let matched = 0
+  for (const rw of refWords) {
+    for (let i = 0; i < saidWords.length; i++) {
+      if (used[i]) continue
+      if (wordsMatch(rw, saidWords[i])) {
+        used[i] = true
+        matched++
+        break
+      }
+    }
+  }
+  return Math.round((matched / refWords.length) * 100)
+}
+
 export async function checkLocation(
   transcript: string,
   exactText: string,
@@ -42,6 +146,7 @@ export async function checkLocation(
   reference: string,
   userId: string,
   attemptNumber = 1,
+  dbThreshold?: number | null,
 ): Promise<LocationCheckResult> {
   const strictness = pickStrictness(attemptNumber)
   const systemPrompt = buildSystemPrompt(checkMode, reference, strictness)
@@ -60,24 +165,44 @@ export async function checkLocation(
 
     const parsed = result.parsed
     const aiPassed = parsed?.passed === true
-    const score = typeof parsed?.similarity_score === 'number'
+    const aiScore = typeof parsed?.similarity_score === 'number'
       ? Math.max(0, Math.min(100, Math.round(parsed.similarity_score)))
       : 0
     const comment = parsed?.comment ?? result.text.slice(0, 400)
 
+    // Локальная fuzzy-оценка (нормализация регистра/ё, сравнение по корням + Левенштейн).
+    // Засчитывает близкие словоформы: «царство»/«царствие», «славу»/«слава», «духа»/«дух».
+    // Для meaning-режима дословное покрытие не показатель, поэтому считаем только для verbatim.
+    const fuzzy = checkMode === 'verbatim' ? fuzzyVerbatimScore(transcript, exactText) : 0
+
+    // Итоговый score — максимум из оценки модели и локальной fuzzy-оценки.
+    const score = Math.max(aiScore, fuzzy)
+
     // Safety net: засчитываем по score, не на совести модели.
-    // Порог растёт с числом попыток: дальше — строже.
+    // Пороги СНИЖЕНЫ на ~10-12 пунктов против прежних (85/90/95 → 75/80/85),
+    // чтобы мелкие падежные/орфографические отличия и опечатки ASR проходили.
+    // Порог по-прежнему растёт с числом попыток: дальше — строже.
     let SCORE_AUTOPASS: number
     if (checkMode === 'meaning') {
-      SCORE_AUTOPASS = 70
+      SCORE_AUTOPASS = 62
     } else if (strictness === 'lenient') {
-      SCORE_AUTOPASS = 85
+      SCORE_AUTOPASS = 75
     } else if (strictness === 'medium') {
-      SCORE_AUTOPASS = 90
+      SCORE_AUTOPASS = 80
     } else {
-      SCORE_AUTOPASS = 95
+      SCORE_AUTOPASS = 85
     }
-    const passed = aiPassed || score >= SCORE_AUTOPASS
+
+    // Порог из БД (block_locations_to_recite.similarity_threshold, 0..1) может ТОЛЬКО
+    // понизить эффективную планку, но не поднять её выше нашего смягчённого дефолта.
+    // Дополнительно снимаем 8 пунктов с DB-порога, чтобы близкие ответы засчитывались.
+    let effectiveAutopass = SCORE_AUTOPASS
+    if (typeof dbThreshold === 'number' && dbThreshold > 0) {
+      const dbScore100 = Math.round((dbThreshold <= 1 ? dbThreshold * 100 : dbThreshold)) - 8
+      effectiveAutopass = Math.min(effectiveAutopass, Math.max(60, dbScore100))
+    }
+
+    const passed = aiPassed || score >= effectiveAutopass
 
     return { passed, similarity_score: score, ai_comment: comment, ai_call_id: result.aiCallId }
   } catch (err) {

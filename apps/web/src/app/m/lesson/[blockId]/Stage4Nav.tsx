@@ -10,7 +10,6 @@ import {
   IconCross,
   IconMessage,
   IconMic,
-  IconUsers,
 } from '@/app/m/_components/icons'
 
 interface Props {
@@ -73,24 +72,16 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
-      <Link href={`/m/friday/${blockId}`} className="lesson-stage4-card" data-s4-key="friday">
-        <span className="lesson-stage4-card__icon">
-          <IconUsers className={ICON_CLASS} />
-        </span>
-        <span className="lesson-stage4-card__body">
-          <span className="lesson-stage4-card__title">Эпоха пятницы</span>
-          <span className="lesson-stage4-card__desc">Выйди на места действия и передай «Малый крест» людям</span>
-          <span className="lesson-stage4-badge lesson-stage4-badge--required">обязательно</span>
-        </span>
-        <span className="lesson-stage4-card__arrow">›</span>
-      </Link>
       <Link href={`/m/emotions/${blockId}`} className="lesson-stage4-card" data-s4-key="emotions">
         <span className="lesson-stage4-card__icon">
           <IconMessage className={ICON_CLASS} />
         </span>
         <span className="lesson-stage4-card__body">
           <span className="lesson-stage4-card__title">Эмоции и свидетельства</span>
-          <span className="lesson-stage4-card__desc">Что ты пережил после — расскажи куратору (текст, аудио, кружок)</span>
+          <span className="lesson-stage4-card__desc">
+            Что ты пережил после — расскажи куратору. Выйди на места действия, передай «Малый крест»
+            людям. Текст, аудио или кружок.
+          </span>
           <span className="lesson-stage4-badge lesson-stage4-badge--optional">по желанию</span>
         </span>
         <span className="lesson-stage4-card__arrow">›</span>

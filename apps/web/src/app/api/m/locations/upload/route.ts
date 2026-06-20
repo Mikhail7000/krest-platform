@@ -169,6 +169,7 @@ export async function POST(req: NextRequest) {
     location.reference,
     userId,
     attemptNumber,
+    (location as unknown as { similarity_threshold?: number | null }).similarity_threshold ?? null,
   )
 
   // Нормализуем similarity_score в 0..1 для БД (поле NUMERIC(4,3))

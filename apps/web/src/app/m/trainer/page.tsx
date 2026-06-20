@@ -14,6 +14,8 @@ export default async function TrainerIndexPage() {
     .from('blocks')
     .select('id, title_ru, order_num')
     .eq('course_id', 1)
+    // Блок 0 «Подготовка» не показываем в тренажёре — у него нет местописаний
+    .gte('order_num', 1)
     .order('order_num', { ascending: true })
 
   type Row = { id: number; title_ru: string; order_num: number }

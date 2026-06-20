@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createHmac } from 'node:crypto'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { sendTelegramMessage } from './send'
+import { getAdminChatIds } from './admin-recipients'
 
 /**
  * Гарантирует, что у whitelisted Telegram-пользователя есть профиль.
@@ -114,10 +115,10 @@ export async function createTelegramProfile(
 async function notifyAdminsAboutRequest(
   request: AccessRequest,
 ): Promise<void> {
-  const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
-    .split(',')
-    .map((s) => parseInt(s.trim(), 10))
-    .filter((n) => !isNaN(n))
+  // Получатели = все админы (super_admin + admin) с привязанным Telegram.
+  // Fallback на ADMIN_TELEGRAM_CHAT_IDS внутри хелпера, если в БД пусто.
+  const service = createServiceSupabase()
+  const adminChatIds = await getAdminChatIds(service)
 
   const name = [request.first_name, request.last_name].filter(Boolean).join(' ') || 'Без имени'
   const usernameStr = request.username ? `@${request.username}` : 'нет username'

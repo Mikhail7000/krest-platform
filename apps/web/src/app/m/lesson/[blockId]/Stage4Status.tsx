@@ -182,24 +182,16 @@ function Stage4StatusInserter({ status }: { status: BlockStatus }) {
           }
           break
         case 'recitation':
-          // Дневной: аудио + видео пересказа сегодня
-          if (status.today.recitationAudio && status.today.recitationVideo) {
+          // «Пересказ блока» = аудио-пересказ → отметка по recitationAudio
+          if (status.today.recitationAudio) {
             el = makeBadge('s4-status-badge--done', 'сегодня ✓')
-          } else if (status.today.recitationAudio) {
-            el = makeBadge('s4-status-badge--partial', 'аудио сегодня ✓')
-          } else if (status.today.recitationVideo) {
-            el = makeBadge('s4-status-badge--partial', 'кружок сегодня ✓')
           }
           break
         case 'locations':
-          // Местописания — нет дневного статуса в новой модели, показываем нейтрально
-          break
-        case 'friday':
-          el = makeBadge(
-            status.friday ? 's4-status-badge--done' : '',
-            status.friday ? 'выполнено' : '',
-          )
-          if (!status.friday) el = null // не показываем бейдж если не выполнено
+          // «Местописания» = видеокружки → отметка по recitationVideo
+          if (status.today.recitationVideo) {
+            el = makeBadge('s4-status-badge--done', 'сегодня ✓')
+          }
           break
         case 'emotions':
           // Опциональный пункт — нет в новой модели block-status

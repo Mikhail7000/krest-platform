@@ -280,3 +280,212 @@ button.pf-card {
   border-color: rgba(255, 255, 255, 0.15);
   border-top-color: var(--accent-solid, #6d5dfc);
 }
+
+/* ── Страна и город (настройки в профиле) ───────────────────────────── */
+.loc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 0;
+}
+.loc-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.loc-row__current {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #16181d;
+}
+.loc-row__hint {
+  font-size: 0.75rem;
+  color: #9097a1;
+}
+.loc-row__edit {
+  flex-shrink: 0;
+  padding: 0.5rem 0.95rem;
+  background: #16181d;
+  color: #fff;
+  border: 0;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.loc-row__edit:active {
+  transform: scale(0.97);
+}
+.loc-status {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0 0 0.75rem;
+}
+.loc-status--success {
+  color: #16a34a;
+}
+.loc-status--error {
+  color: #dc2626;
+}
+
+/* Шторка выбора страны/города поверх профиля */
+.loc-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(16, 18, 24, 0.45);
+  backdrop-filter: blur(2px);
+}
+.loc-sheet__panel {
+  width: 100%;
+  max-width: 480px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+  padding: 1.25rem 1.125rem calc(1.25rem + env(safe-area-inset-bottom));
+}
+.loc-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.loc-sheet__title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #16181d;
+}
+.loc-sheet__close {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f2f5;
+  color: #6b7280;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.loc-sheet__back {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 0.25rem 0;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent-solid, #6d5dfc);
+  cursor: pointer;
+}
+.loc-sheet__list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.25rem 0;
+}
+.loc-sheet__loading {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}
+.loc-sheet__empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 1.5rem 0;
+  font-size: 0.9375rem;
+}
+.loc-spinner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 0, 0, 0.12);
+  border-top-color: var(--accent-solid, #6d5dfc);
+  animation: av-spin 0.7s linear infinite;
+}
+.loc-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  background: #fff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.loc-option:active:not(:disabled) {
+  transform: scale(0.99);
+}
+.loc-option:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.loc-option__flag {
+  font-size: 1.4rem;
+}
+.loc-option__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #16181d;
+}
+.loc-option__saving {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #9097a1;
+}
+
+/* Тёмные темы для блока локации */
+[data-theme="dark"] .loc-row__current,
+[data-theme="stars"] .loc-row__current { color: var(--d-text); }
+[data-theme="dark"] .loc-row__hint,
+[data-theme="stars"] .loc-row__hint { color: var(--d-muted-2); }
+[data-theme="dark"] .loc-row__edit,
+[data-theme="stars"] .loc-row__edit {
+  background: var(--accent-gradient, var(--accent-solid, #6d5dfc));
+}
+
+[data-theme="dark"] .loc-sheet__panel,
+[data-theme="stars"] .loc-sheet__panel {
+  background: var(--d-card, #15171c);
+  border: 1px solid var(--d-border, rgba(255, 255, 255, 0.08));
+  box-shadow: var(--d-shadow, 0 -10px 40px rgba(0, 0, 0, 0.5));
+}
+[data-theme="stars"] .loc-sheet__panel {
+  backdrop-filter: blur(18px);
+}
+[data-theme="dark"] .loc-sheet__title,
+[data-theme="stars"] .loc-sheet__title,
+[data-theme="dark"] .loc-option__name,
+[data-theme="stars"] .loc-option__name { color: var(--d-text); }
+[data-theme="dark"] .loc-sheet__empty,
+[data-theme="stars"] .loc-sheet__empty { color: var(--d-muted); }
+[data-theme="dark"] .loc-sheet__close,
+[data-theme="stars"] .loc-sheet__close {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--d-muted);
+}
+[data-theme="dark"] .loc-option,
+[data-theme="stars"] .loc-option {
+  background: var(--d-card, #15171c);
+  border-color: var(--d-border, rgba(255, 255, 255, 0.08));
+}
+[data-theme="dark"] .loc-spinner,
+[data-theme="stars"] .loc-spinner {
+  border-color: rgba(255, 255, 255, 0.15);
+  border-top-color: var(--accent-solid, #6d5dfc);
+}

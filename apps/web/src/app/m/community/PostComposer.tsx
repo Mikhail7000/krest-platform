@@ -23,8 +23,17 @@ export function PostComposer({ onPosted }: Props) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const photoRef = useRef<HTMLInputElement>(null)
   const liveRef = useRef<HTMLVideoElement | null>(null)
+
+  // Освобождаем objectURL превью фото при смене/размонтировании
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview)
+    }
+  }, [photoPreview])
 
   const isVideo = mode === 'video_note'
   const isAudio = mode === 'audio'
@@ -51,9 +60,18 @@ export function PostComposer({ onPosted }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
 
+  const clearPhoto = () => {
+    setPhotoFile(null)
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+  }
+
   const switchMode = (m: ComposerMode) => {
     setMode(m)
     setError(null)
+    if (m !== 'photo') clearPhoto()
   }
 
   const postText = async () => {
@@ -105,14 +123,15 @@ export function PostComposer({ onPosted }: Props) {
     }
   }
 
-  const postPhoto = async (file: File) => {
+  const postPhoto = async () => {
+    if (!photoFile) return
     setBusy(true)
     setError(null)
     try {
       const fd = new FormData()
       fd.append('initData', getInitData())
       fd.append('kind', 'photo')
-      fd.append('media', file, file.name)
+      fd.append('media', photoFile, photoFile.name)
       if (text.trim()) fd.append('content_text', text.trim())
       const res = await fetch('/api/m/community/post', { method: 'POST', body: fd })
       if (!res.ok) throw new Error('server')
@@ -120,6 +139,7 @@ export function PostComposer({ onPosted }: Props) {
       if (data.ok && data.post) {
         onPosted(data.post)
         setText('')
+        clearPhoto()
         switchMode('text')
       }
     } catch {
@@ -131,10 +151,15 @@ export function PostComposer({ onPosted }: Props) {
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
-    postPhoto(file)
-    // сброс input чтобы можно было выбрать снова
+    // сброс input чтобы можно было выбрать то же фото снова
     e.target.value = ''
+    if (!file) return
+    setError(null)
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
+    setPhotoFile(file)
   }
 
   const isRecMode = mode === 'audio' || mode === 'video_note'
@@ -265,18 +290,58 @@ export function PostComposer({ onPosted }: Props) {
         </div>
       )}
 
-      {/* Фото — скрытый input */}
+      {/* Фото — выбор + превью + подпись */}
       {mode === 'photo' && (
         <>
-          <p className="cm-hint">Открываем галерею…</p>
-          <button
-            type="button"
-            className="cm-ghost-btn"
-            onClick={() => photoRef.current?.click()}
-            disabled={busy}
-          >
-            {busy ? 'Загружаем…' : 'Выбрать фото'}
-          </button>
+          {!photoFile && (
+            <>
+              <p className="cm-hint">Открываем галерею…</p>
+              <button
+                type="button"
+                className="cm-ghost-btn"
+                onClick={() => photoRef.current?.click()}
+                disabled={busy}
+              >
+                {busy ? 'Загружаем…' : 'Выбрать фото'}
+              </button>
+            </>
+          )}
+
+          {photoFile && (
+            <div className="cm-photo">
+              {photoPreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoPreview} alt="Превью фото" className="cm-photo-preview" />
+              )}
+              <textarea
+                className="cm-textarea"
+                placeholder="Добавь описание (необязательно)…"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={2}
+                maxLength={2000}
+                disabled={busy}
+              />
+              <div className="cm-rec-actions">
+                <button
+                  type="button"
+                  className="cm-submit"
+                  onClick={postPhoto}
+                  disabled={busy}
+                >
+                  {busy ? 'Отправляем…' : 'Поделиться'}
+                </button>
+                <button
+                  type="button"
+                  className="cm-ghost-btn"
+                  onClick={() => photoRef.current?.click()}
+                  disabled={busy}
+                >
+                  Выбрать другое фото
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 

@@ -117,6 +117,9 @@
   min-width: 0;
 }
 .hp-widget__pct {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
   font-size: 0.875rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -124,6 +127,9 @@
   line-height: 1;
 }
 .hp-widget__today {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
   font-size: 0.625rem;
   font-weight: 600;
   line-height: 1.2;
@@ -132,9 +138,29 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.hp-widget__days {
+  font-weight: 700;
+  color: #4b525d;
+}
 [data-theme="dark"] .hp-widget__today,
 [data-theme="stars"] .hp-widget__today {
   color: rgba(255, 255, 255, 0.55);
+}
+[data-theme="dark"] .hp-widget__days,
+[data-theme="stars"] .hp-widget__days {
+  color: rgba(255, 255, 255, 0.8);
+}
+/* Крошечные подписи «курс» / «блок» */
+.hp-widget__label {
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #b0b6bf;
+}
+[data-theme="dark"] .hp-widget__label,
+[data-theme="stars"] .hp-widget__label {
+  color: rgba(255, 255, 255, 0.4);
 }
 .hp-widget__streak {
   font-size: 0.5625rem;

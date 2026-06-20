@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateTelegramInitData } from '@/lib/telegram/init-data'
 import { sendTelegramMessage } from '@/lib/telegram/send'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { getAdminChatIds } from '@/lib/telegram/admin-recipients'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,11 +88,8 @@ export async function POST(request: NextRequest) {
         ? `✅ Привязал автоматически к ${escapeHtml(curator.full_name || curatorHandle)}.`
         : `⚠️ Куратора с таким ником пока нет в системе — привяжи вручную или добавь его.`)
 
-    const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
-      .split(',')
-      .map((s) => parseInt(s.trim(), 10))
-      .filter((n) => !isNaN(n))
-
+    // Уведомление о выборе наставника — ВСЕМ админам (super_admin + admin)
+    const adminChatIds = await getAdminChatIds(supabase)
     await Promise.all(adminChatIds.map((cid) => sendTelegramMessage(cid, text)))
 
     return NextResponse.json({ ok: true, linked })

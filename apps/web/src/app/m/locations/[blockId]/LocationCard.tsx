@@ -88,6 +88,11 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: Sta
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null)
   const [recordedMime, setRecordedMime] = useState<string>('')
+  // «Перевзведение» — окно между нажатием «Перезаписать» и стартом новой
+  // записи (внутри await getUserMedia). Пока true — старый blob уже сброшен,
+  // но overlay видеокружка ОСТАЁТСЯ открытым, иначе текст местописания
+  // мелькает под ним (антиподсматривание ломалось при перезаписи).
+  const [rearming, setRearming] = useState(false)
   const mediaRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const livePreviewRef = useRef<HTMLVideoElement | null>(null)
@@ -117,6 +122,9 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: Sta
 
   async function startRecording() {
     setError(null)
+    // Держим overlay открытым на время сброса blob + ожидания getUserMedia,
+    // чтобы текст местописания не «вылез» в момент перезаписи.
+    setRearming(true)
     setBlob(null)
     if (blobUrl) {
       URL.revokeObjectURL(blobUrl)
@@ -149,8 +157,10 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: Sta
       mediaRef.current = recorder
       if (isVideo) setActiveStream(stream)
       setState('recording')
+      setRearming(false)
       setTimeout(() => { if (mediaRef.current?.state === 'recording') mediaRef.current.stop() }, maxRecordSecs * 1000)
     } catch {
+      setRearming(false)
       setError('Нет доступа к микрофону/камере. Используйте загрузку файла.')
     }
   }
@@ -205,14 +215,14 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: Sta
   // ── Видео-кружок: запись и просмотр идут в fullscreen overlay,
   //    чтобы текст местописания был скрыт (антипод-сматривание).
   if (isVideo) {
-    const showOverlay = isRecording || isSubmitting || (!!blob && state !== 'done')
+    const showOverlay = isRecording || isSubmitting || rearming || (!!blob && state !== 'done')
     return (
       <>
         {showOverlay && (
           <div className="location-circle-modal" role="dialog" aria-modal="true">
             <div className="location-circle-modal__inner">
               <p className="location-circle-modal__hint">
-                {isRecording ? 'Идёт запись' : blob ? 'Проверь запись' : ''}
+                {isRecording ? 'Идёт запись' : rearming ? 'Готовим камеру…' : blob ? 'Проверь запись' : ''}
               </p>
 
               <div className="location-circle">
@@ -260,6 +270,8 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: Sta
                   </button>
                 ) : isSubmitting ? (
                   <div className="location-circle-modal__status">Отправляем…</div>
+                ) : rearming ? (
+                  <div className="location-circle-modal__status">Готовим камеру…</div>
                 ) : blob ? (
                   <>
                     <button type="button" className="location-btn location-btn--ghost" onClick={startRecording}>

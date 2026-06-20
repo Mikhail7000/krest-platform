@@ -30,6 +30,14 @@ function formatDate(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
+// Виртуальная дата для ускоренного тест-режима: якорь 2000-01-01 + offset дней.
+// Якорь намеренно вне реальных дат, чтобы «закрытые дни» не пересекались с боевыми.
+function accelDate(offset: number): string {
+  const d = new Date(Date.UTC(2000, 0, 1))
+  d.setUTCDate(d.getUTCDate() + offset)
+  return d.toISOString().slice(0, 10)
+}
+
 interface PrayerRow {
   prayed_date: string
 }
@@ -52,7 +60,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   const supabase = createServiceSupabase()
 
   const [{ data: profile }, { data: progress }] = await Promise.all([
-    supabase.from('profiles').select('can_skip_block_lock').eq('id', userId).maybeSingle(),
+    supabase
+      .from('profiles')
+      .select('can_skip_block_lock, test_daily_accel')
+      .eq('id', userId)
+      .maybeSingle(),
     supabase
       .from('student_block_progress')
       .select('block_unlocked_at')
@@ -61,16 +73,36 @@ export async function POST(req: NextRequest, { params }: Params) {
       .maybeSingle(),
   ])
   const canSkip = Boolean((profile as { can_skip_block_lock?: boolean } | null)?.can_skip_block_lock)
+  const testAccel = Boolean((profile as { test_daily_accel?: boolean } | null)?.test_daily_accel)
 
   const todayStr = formatDate(new Date())
 
-  // Отметить сегодняшний день
+  // Отметить день. В ускоренном тест-режиме (test_daily_accel) штампуем ВИРТУАЛЬНОЙ
+  // датой (якорь 2000-01-01 + кол-во уже отмеченных дней), чтобы тестировщик закрыл
+  // неделю за один календарный день. Обычным юзерам — реальная сегодняшняя дата (UTC).
   if (body.mark) {
+    let markDate = todayStr
+    if (testAccel) {
+      const { count: existing } = await (supabase as unknown as {
+        from: (t: string) => {
+          select: (cols: string, opts: { count: 'exact'; head: boolean }) => {
+            eq: (col: string, val: unknown) => {
+              eq: (col: string, val: unknown) => Promise<{ count: number | null }>
+            }
+          }
+        }
+      })
+        .from('student_block_daily_prayer')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('block_id', blockId)
+      markDate = accelDate(existing ?? 0)
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
       .from('student_block_daily_prayer')
       .upsert(
-        { user_id: userId, block_id: blockId, prayed_date: todayStr },
+        { user_id: userId, block_id: blockId, prayed_date: markDate },
         { onConflict: 'user_id,block_id,prayed_date' },
       )
   }

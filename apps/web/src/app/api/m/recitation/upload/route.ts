@@ -35,6 +35,14 @@ function err(message: string, code: string, status: number) {
 
 const VALID_MEDIUM = new Set(['audio', 'video_note'])
 
+// Виртуальная дата для ускоренного тест-режима: якорь 2000-01-01 + offset дней.
+// Якорь намеренно вне реальных дат, чтобы «закрытые дни» не пересекались с боевыми.
+function accelDate(offset: number): string {
+  const d = new Date(Date.UTC(2000, 0, 1))
+  d.setUTCDate(d.getUTCDate() + offset)
+  return d.toISOString().slice(0, 10)
+}
+
 function mimeToExt(mimeType: string, medium: string): string {
   if (mimeType.includes('mp4') || mimeType.includes('video')) return 'mp4'
   if (mimeType.includes('ogg')) return 'ogg'
@@ -57,6 +65,7 @@ interface RecitationInsert {
   ai_comment: string | null
   passed: boolean
   ai_call_id: string | null
+  effective_date: string | null
 }
 
 export async function POST(req: NextRequest) {
@@ -157,6 +166,36 @@ export async function POST(req: NextRequest) {
   const checkResult = await checkRecitation(transcript, summaryMd, userId)
 
   // 8. INSERT student_block_recitations
+  // Ускоренный тест-режим (profiles.test_daily_accel): проставляем ВИРТУАЛЬНЫЙ
+  // effective_date (якорь 2000-01-01 + кол-во уже существующих записей этого medium
+  // для user+block), чтобы тестировщик закрыл много «дней» за один календарный день.
+  // Обычным юзерам — effective_date NULL (гейт берёт COALESCE(effective_date, created_at::date)).
+  let effectiveDate: string | null = null
+  const { data: accelProfile } = await supabase
+    .from('profiles')
+    .select('test_daily_accel')
+    .eq('id', userId)
+    .maybeSingle()
+  if ((accelProfile as { test_daily_accel?: boolean } | null)?.test_daily_accel) {
+    const { count: existing } = await (supabase as unknown as {
+      from: (t: string) => {
+        select: (cols: string, opts: { count: 'exact'; head: boolean }) => {
+          eq: (col: string, val: unknown) => {
+            eq: (col: string, val: unknown) => {
+              eq: (col: string, val: unknown) => Promise<{ count: number | null }>
+            }
+          }
+        }
+      }
+    })
+      .from('student_block_recitations')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+      .eq('medium', medium)
+    effectiveDate = accelDate(existing ?? 0)
+  }
+
   const insertRow: RecitationInsert = {
     user_id: userId,
     block_id: blockId,
@@ -168,6 +207,7 @@ export async function POST(req: NextRequest) {
     ai_comment: checkResult.ai_comment || null,
     passed: checkResult.passed,
     ai_call_id: checkResult.ai_call_id,
+    effective_date: effectiveDate,
   }
 
   // cast через unknown — таблица не в сгенерированных типах
