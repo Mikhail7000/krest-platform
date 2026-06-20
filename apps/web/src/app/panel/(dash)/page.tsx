@@ -1,5 +1,6 @@
 import { getPanelStats } from '@/app/api/panel/stats/stats-data'
 import { ProgressChart } from './StatsClient'
+import { GenerateReport } from './GenerateReport'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,8 +19,13 @@ export default async function PanelOverviewPage() {
 
   return (
     <div>
-      <h1 className="panel-page__title">Обзор</h1>
-      <p className="panel-page__subtitle">Сводная статистика платформы</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div>
+          <h1 className="panel-page__title">Обзор</h1>
+          <p className="panel-page__subtitle" style={{ marginBottom: 0 }}>Сводная статистика платформы</p>
+        </div>
+        <GenerateReport stats={stats} />
+      </div>
 
       {/* Плитки */}
       <div className="panel-grid">
