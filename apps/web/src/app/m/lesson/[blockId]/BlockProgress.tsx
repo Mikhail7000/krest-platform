@@ -37,7 +37,6 @@ const DAY_TASKS: DayTask[] = [
   { key: 'prayer', label: 'Молитва' },
   { key: 'recitationAudio', label: 'Местописания (аудио)' },
   { key: 'recitationVideo', label: 'Пересказ (кружок)' },
-  { key: 'trainer', label: 'Тренажёр' },
 ]
 
 /**

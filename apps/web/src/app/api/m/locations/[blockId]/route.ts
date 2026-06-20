@@ -82,13 +82,12 @@ export async function POST(req: NextRequest, { params }: Params) {
   ])
 
   const canSkip = Boolean(profile?.can_skip_block_lock)
-  let locationsUnlocked = canSkip || Boolean(progress?.quiz_passed_at)
+  // Местописания — ежедневное задание, больше НЕ гейтятся квизом (квиз убран).
+  let locationsUnlocked = true
   let lockedReason: 'previous_not_passed' | 'cooldown_7_days' | undefined
   let unlockAt: string | undefined
 
-  if (!locationsUnlocked) {
-    lockedReason = 'previous_not_passed'
-  } else if (!canSkip && progress?.locations_locked_until) {
+  if (!canSkip && progress?.locations_locked_until) {
     const lockedUntil = new Date(progress.locations_locked_until)
     if (lockedUntil > new Date()) {
       lockedReason = 'cooldown_7_days'

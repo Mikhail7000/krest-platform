@@ -164,10 +164,8 @@ function Stage4StatusInserter({ status }: { status: BlockStatus }) {
           )
           break
         case 'trainer':
-          // Дневной: «сегодня» отмечен?
-          if (status.today.trainer) {
-            el = makeBadge('s4-status-badge--done', 'сегодня ✓')
-          }
+          // Тренажёр — учебный режим, НЕ обязателен для сдачи блока
+          el = makeBadge('', 'по желанию')
           break
         case 'cross_photo':
           // Дневной: фото сегодня
