@@ -4,6 +4,7 @@
 type InlineKeyboardButton =
   | { text: string; callback_data: string }
   | { text: string; web_app: { url: string } }
+  | { text: string; url: string }
 
 interface SendOptions {
   /** Добавить кнопку «Открыть КРЕСТ» (Mini App). */

@@ -37,6 +37,21 @@ export function signSession(s: { uid: string; role: AdminRole; name: string | nu
   return `${body}.${sign(body)}`
 }
 
+/**
+ * Короткоживущий токен (10 мин) для входа по ссылке из Telegram-бота.
+ * Формат тот же, что у сессии → проверяется тем же verifySession.
+ */
+export function signLoginToken(s: { uid: string; role: AdminRole; name: string | null }): string {
+  const payload: AdminSession = {
+    uid: s.uid,
+    role: s.role,
+    name: s.name,
+    exp: Math.floor(Date.now() / 1000) + 600,
+  }
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  return `${body}.${sign(body)}`
+}
+
 export function verifySession(token: string | undefined | null): AdminSession | null {
   if (!token) return null
   const dot = token.indexOf('.')

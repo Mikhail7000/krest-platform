@@ -21,6 +21,7 @@ export async function GET() {
     { command: 'student', description: 'Прогресс ученика: /student @ник' },
     { command: 'curators', description: 'Кураторы и ученики' },
     { command: 'stats', description: 'Статистика потока' },
+    { command: 'panel', description: 'Веб-дашборд администратора' },
     { command: 'transfer', description: 'Перевод: /transfer @ученик @куратор' },
     { command: 'delete', description: 'Удалить ученика: /delete @ник' },
     { command: 'help', description: 'Помощь и поддержка' },

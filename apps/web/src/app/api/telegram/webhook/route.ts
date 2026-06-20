@@ -3,11 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 import { computeActivity } from '@/lib/activity/streak'
 import { createTelegramProfile } from '@/lib/telegram/ensure-profile'
 import { getAdminChatIds } from '@/lib/telegram/admin-recipients'
+import { signLoginToken } from '@/lib/admin/session'
 import {
   sendTelegramMessage,
   answerCallbackQuery,
   editMessageText,
 } from '@/lib/telegram/send'
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://krest-platform-web.vercel.app'
 
 // ─── Telegram Update types ────────────────────────────────────────────────
 
@@ -1054,6 +1057,35 @@ export async function POST(request: NextRequest) {
         .map((cid) => sendTelegramMessage(cid, notifyText)),
     )
 
+    return NextResponse.json({ ok: true })
+  }
+
+  // /panel (или /site, /dashboard) — ссылка-вход в веб-дашборд (только admin/super_admin)
+  if (text.startsWith('/panel') || text.startsWith('/site') || text.startsWith('/dashboard')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const { data: prof } = (await supabase
+      .from('profiles')
+      .select('id, role, full_name')
+      .eq('telegram_chat_id', chatId)
+      .maybeSingle()) as { data: { id: string; role: string; full_name: string | null } | null }
+
+    if (!prof || !['admin', 'super_admin'].includes(prof.role)) {
+      await sendTelegramMessage(chatId, 'Веб-дашборд доступен только администраторам.')
+      return NextResponse.json({ ok: true })
+    }
+
+    const token = signLoginToken({
+      uid: prof.id,
+      role: prof.role as 'admin' | 'super_admin',
+      name: prof.full_name,
+    })
+    const url = `${SITE_URL}/panel/enter?token=${encodeURIComponent(token)}`
+    await sendTelegramMessage(
+      chatId,
+      '🌐 <b>Веб-дашборд администратора</b>\n\nНажми кнопку — откроется уже залогиненным. Ссылка действует 10 минут.',
+      { inlineKeyboard: [[{ text: '🌐 Открыть веб-дашборд', url }]] },
+    )
     return NextResponse.json({ ok: true })
   }
 
