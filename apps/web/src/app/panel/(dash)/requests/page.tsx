@@ -27,6 +27,18 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
   rejected: { cls: 'panel-badge panel-badge--err', label: 'Отклонена' },
 }
 
+// Время решения в таймзоне Бали (старт платформы) — для аудита истории.
+function fmtWhen(iso: string | null): string {
+  if (!iso) return ''
+  return new Date(iso).toLocaleString('ru-RU', {
+    timeZone: 'Asia/Makassar',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export default async function RequestsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
@@ -84,6 +96,7 @@ export default async function RequestsPage() {
                   <th>Пользователь</th>
                   <th>Username</th>
                   <th>Решение</th>
+                  <th>Кем решено</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,6 +111,20 @@ export default async function RequestsPage() {
                         {r.approvedRole
                           ? ` · ${r.approvedRole === 'curator' ? 'куратор' : 'ученик'}`
                           : ''}
+                      </td>
+                      <td>
+                        {r.decidedByName ? (
+                          <div style={{ fontWeight: 600 }}>{r.decidedByName}</div>
+                        ) : r.decidedBy ? (
+                          <div className="panel-muted">id {r.decidedBy}</div>
+                        ) : (
+                          <span className="panel-muted">—</span>
+                        )}
+                        {r.decidedAt ? (
+                          <div className="panel-muted" style={{ fontSize: '0.8rem' }}>
+                            {fmtWhen(r.decidedAt)}
+                          </div>
+                        ) : null}
                       </td>
                     </tr>
                   )

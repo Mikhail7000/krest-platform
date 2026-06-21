@@ -2,12 +2,9 @@ import { createTelegramProfile } from '@/lib/telegram/ensure-profile'
 import { sendTelegramMessage } from '@/lib/telegram/send'
 
 /**
- * Заявки на доступ (access_requests) для веб-панели.
- *  - getAccessRequests / countPendingRequests — чтение для страницы и бейджа.
- *  - decideAccessRequest — решение (зеркало Telegram inline-кнопок в вебхуке).
- *
- * Таблица RLS-защищена (доступ только через service_role), поэтому supabase
- * принимается нетипизированным (as any), как и в остальных панель-роутах.
+ * Заявки на доступ (access_requests) для веб-панели: чтение (getAccessRequests /
+ * countPendingRequests) и решение (decideAccessRequest — зеркало inline-кнопок бота).
+ * Таблица RLS-защищена → supabase принимается нетипизированным (as any).
  */
 
 export interface AccessRequestRow {
@@ -19,6 +16,10 @@ export interface AccessRequestRow {
   status: 'pending' | 'approved' | 'rejected'
   approvedRole: 'student' | 'curator' | null
   decidedAt: string | null
+  /** Telegram chat_id решавшего админа (для аудита). */
+  decidedBy: number | null
+  /** Имя решавшего админа (резолвится из profiles по decidedBy). */
+  decidedByName: string | null
   createdAt: string
 }
 
@@ -33,11 +34,12 @@ interface RawRow {
   status: 'pending' | 'approved' | 'rejected'
   approved_role: 'student' | 'curator' | null
   decided_at: string | null
+  decided_by: number | string | null
   created_at: string
 }
 
 const SELECT =
-  'id, telegram_chat_id, username, first_name, last_name, status, approved_role, decided_at, created_at'
+  'id, telegram_chat_id, username, first_name, last_name, status, approved_role, decided_at, decided_by, created_at'
 
 function mapRow(r: RawRow): AccessRequestRow {
   return {
@@ -49,6 +51,8 @@ function mapRow(r: RawRow): AccessRequestRow {
     status: r.status,
     approvedRole: r.approved_role,
     decidedAt: r.decided_at,
+    decidedBy: r.decided_by != null ? Number(r.decided_by) : null,
+    decidedByName: null,
     createdAt: r.created_at,
   }
 }
@@ -75,10 +79,24 @@ export async function getAccessRequests(
   if (pendingErr) console.error('[access-requests] pending query error:', pendingErr)
   if (decidedErr) console.error('[access-requests] decided query error:', decidedErr)
 
-  return {
-    pending: ((pendingRaw ?? []) as RawRow[]).map(mapRow),
-    decided: ((decidedRaw ?? []) as RawRow[]).map(mapRow),
+  const pending = ((pendingRaw ?? []) as RawRow[]).map(mapRow)
+  const decided = ((decidedRaw ?? []) as RawRow[]).map(mapRow)
+  // Имя решавшего админа по decided_by (telegram chat_id) — одним запросом.
+  const ids = [...new Set(decided.map((d) => d.decidedBy).filter((v): v is number => v != null))]
+  if (ids.length > 0) {
+    const { data: admins } = await supabase
+      .from('profiles')
+      .select('telegram_chat_id, full_name')
+      .in('telegram_chat_id', ids)
+    const byChat = new Map<number, string | null>(
+      ((admins ?? []) as { telegram_chat_id: number | string; full_name: string | null }[]).map(
+        (a) => [Number(a.telegram_chat_id), a.full_name],
+      ),
+    )
+    for (const d of decided) if (d.decidedBy != null) d.decidedByName = byChat.get(d.decidedBy) ?? null
   }
+
+  return { pending, decided }
 }
 
 /** Число ожидающих заявок — для бейджа навигации и баннера обзора. */
@@ -99,11 +117,9 @@ export type DecideResult =
   | { ok: false; error: string }
 
 /**
- * Решение по заявке из веб-панели — точное зеркало логики Telegram-вебхука:
- *  approve_* → createTelegramProfile + пометка заявки + уведомление заявителя;
- *  reject    → пометка заявки rejected.
- * Идемпотентно по отношению к параллельному решению из бота: если заявка уже
- * не pending — вернёт ошибку «уже обработана».
+ * Решение по заявке из веб-панели — зеркало логики вебхука. approve_* →
+ * createTelegramProfile + пометка + уведомление заявителя; reject → пометка.
+ * Идемпотентно к гонке с ботом: если заявка уже не pending → «уже обработана».
  */
 export async function decideAccessRequest(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
