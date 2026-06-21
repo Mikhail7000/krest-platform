@@ -1,170 +1,119 @@
-# HANDOVER — КРЕСТ
+# HANDOVER — КРЕСТ (2026-06-22)
 
-> Дата: **2026-05-28** | Сессия: 🟡 **Русский онбординг работает в testing-phase (язык → страна → город → save). Компоненты `CuratorSelect` и `NameInput` готовы, но НЕ подключены — нужна тёмная тема и активация полного флоу.**
-
----
-
-## 🎯 Главное (читать первым)
-
-### Текущее состояние онбординга (2026-05-28)
-
-**Что работает в production:**
-- `/m/onboarding/page.tsx` — state-машина: `language → country → city → saving → /m/dashboard`
-- `LanguageSelect.tsx` — выбор Русский/English (тёмная тема + звёзды)
-- `CountrySelect.tsx` — простой список стран с эмодзи-флагами (тёмная тема)
-- `CitySelect.tsx` — список городов выбранной страны (тёмная тема)
-- `EnglishPlaceholder.tsx` — "Still Cooking" + рандомный NIV стих (для EN ветки)
-- `MiniAppGate.tsx` — после `status === 'ready'` делает `POST /api/miniapp/profile`. Если `onboarding_done === false` → редирект на `/m/onboarding`
-- `POST /api/miniapp/onboarding` — сохраняет `country_id, city_id, curator_id, onboarding_done=true` через `resolveUserId(initData)`
-- `POST /api/miniapp/profile` — возвращает `{ onboarding_done, country_id, city_id, curator_id, full_name }`
-- `telegram-auth/route.ts` — НЕ ставит `onboarding_done=true` для новых юзеров (дефолт `false` в БД) ✅
-
-**Что готово, но НЕ подключено:**
-- `steps/CuratorSelect.tsx` — **СВЕТЛАЯ ТЕМА** (`bg-white`, `text-gray-900`), не соответствует дизайну. Загружает `profiles WHERE role='curator' AND city_id=Y`, есть fallback "Написать в поддержку" если кураторов нет.
-- `steps/NameInput.tsx` — **СВЕТЛАЯ ТЕМА**, предзаполняет именем из Telegram, есть fallback на "Ученик" если пусто.
-- `steps/GlobeSelect.tsx` — 3D-глобус `react-globe.gl` (тёмная тема ✅), альтернатива простому `CountrySelect`. Подсвечивает 9 активных стран, автовращение, клик → выбор.
-
-**Почему отключены:** в `page.tsx:11-12` написано «Шаги 'curator' и 'name' убраны на период теста: куратора ещё нет, имя берём из Telegram автоматически».
+Передача контекста между сессиями. Цель: ничего не теряется, следующая сессия продолжает без раскопок.
+Полные спеки фич (с критикой агентов) — в [docs/feature-specs/2026-06-backlog-specs.json](docs/feature-specs/2026-06-backlog-specs.json).
+Прошлый онбординг-handover (2026-05-28) — в истории git, неактуален.
 
 ---
 
-## 📁 Файлы онбординга
+## 1. Что задеплоено в этой сессии (прод, push → Vercel auto-deploy на `main`)
 
-```
-apps/web/src/app/m/onboarding/
-├── page.tsx                  ← state-машина (текущий флоу language→country→city)
-├── LanguageSelect.tsx        ← ✅ тёмная тема
-├── EnglishPlaceholder.tsx    ← ✅ тёмная тема + NIV стихи
-└── steps/
-    ├── CountrySelect.tsx     ← ✅ тёмная тема (простой список)
-    ├── CitySelect.tsx        ← ✅ тёмная тема
-    ├── CuratorSelect.tsx     ← ❌ светлая тема, не подключён
-    ├── NameInput.tsx         ← ❌ светлая тема, не подключён
-    └── GlobeSelect.tsx       ← ✅ тёмная тема (альтернатива списку)
+Прод = `https://krest-platform-web.vercel.app`. Деплой = **push в `main`** (Vercel CLI не установлен; `.vercel` нет). Сигнал «выехало» — менялся статус нового/удалённого роута.
 
-apps/web/src/app/api/miniapp/
-├── onboarding/route.ts       ← POST: сохраняет онбординг
-├── profile/route.ts          ← POST: возвращает onboarding_done
-└── telegram-auth/route.ts    ← ✅ НЕ ставит onboarding_done
-
-apps/web/src/app/m/_components/
-└── MiniAppGate.tsx           ← ✅ проверяет онбординг
-```
-
----
-
-## ✅ ЧТО РАБОТАЕТ В PRODUCTION (общее)
-
-### Ученик (MiniApp)
-- Menu Button бота `@cross_notify_bot` → `/m/dashboard`
-- Выбор языка → English "Still Cooking" с NIV стихом (рандом из БД)
-- Все 10 блоков КРЕСТ доступны для прохождения
-- 12-пунктовая модель ДЗ: видео, конспект, квиз, местописания, пересказ, фото креста
-- Экзамены: 10 block-gates + mid-exam + final-exam
-- Ачивка «Мастер Креста» при завершении курса
-
-### Куратор (MiniApp)
-- Список своих студентов с прогрессом по блокам
-- Статусы: not_started → video_watching → quiz_passed → locations_passed → block_completed
-- Фильтры: All / Pending Submissions / Silent Days
-- Просмотр сабмишенов (текст + медиа: фото, видео, аудио)
-- Одобрение (approve) → автоматически проверяет block_completed
-- Отклонение (reject) с обязательным комментарием (≥10 символов)
-- Визуальные индикаторы: красные бэджи pending, дни молчания
-
-### API (Backend)
-- 7 endpoints в `/api/curator/*` (students, submissions, notifications)
-- `requireCuratorAuth` guard: проверяет curator/admin/super_admin роль
-- RLS filtering: куратор видит своих студентов, admin/super_admin видят всех
-
-### Telegram Auth
-- HMAC-SHA256 валидация `initData` на `/api/miniapp/telegram-auth`
-- Whitelist проверка: username не в `testing_whitelist` → 403 "Доступ запрещен"
-
----
-
-## 🔄 ЧТО В ПРОЦЕССЕ (TODO на следующую сессию)
-
-### 1. Активация полного русского онбординга (приоритет)
-
-**Что сделать:**
-1. Переделать `CuratorSelect.tsx` и `NameInput.tsx` в **тёмную тему + звёздный фон** — стиль такой же, как в `CountrySelect.tsx` / `CitySelect.tsx`:
-   - `relative z-10 min-h-screen flex flex-col px-5 py-8`
-   - Кнопки: `border border-white/12 bg-white/5 backdrop-blur-sm`
-   - Заголовки: `text-white`, подписи: `text-white/55`
-   - Анимации входа: `motion.div` + `initial={{opacity:0, y:20}} animate={{opacity:1, y:0}}`
-2. Обновить `page.tsx`:
-   - Расширить тип `OnboardingStep`: `'language' | 'english' | 'country' | 'city' | 'curator' | 'name' | 'saving'`
-   - Добавить state `curatorId` и `fullName`
-   - Изменить переходы: `city → curator → name → saving`
-   - Передавать `curator_id` и `full_name` в POST `/api/miniapp/onboarding` (API уже их принимает)
-   - Расширить `handleBack` для новых шагов
-3. **Решить вопрос с globe-селектором:**
-   - Либо заменить `CountrySelect` на `GlobeSelect` (более красивый, но требует `react-globe.gl` + `topojson-client` + `world-atlas` — проверить, установлены ли)
-   - Либо оставить простой список (надёжнее на старте)
-   - Михаил оставил на потом выбор финального варианта
-
-### 2. Notifications UI
-- API есть (`/api/curator/notifications`), UI нет
-- Sidebar/badge с alert count
-- Список read/unread
-
-### 3. Удалить legacy
-- `@cross_bot` хардкод в `TelegramProvider.tsx` → `@cross_notify_bot`
-- `/api/cron/reset-streaks`, `/api/cron/archive-cohorts` (legacy v2.0)
-- Скрипт `lint` всё ещё `next lint` (Next 16 удалил его)
-
----
-
-## ❌ ЧТО СЛОМАНО / ДОЛГИ
-
-- **Полный русский онбординг** — компоненты есть, но не подключены (testing phase)
-- **CuratorSelect/NameInput** — светлая тема, не соответствует дизайну
-- **Notifications UI** — только API, нет UI
-- **@cross_bot хардкод** в TelegramProvider.tsx
-- **Legacy cron-endpoints** — не удалены
-
----
-
-## 📋 СТРУКТУРА КОДА (общая)
-
-```
-apps/web/src/app/
-├── /m/
-│   ├── onboarding/          ← language → country → city (testing)
-│   ├── curator/             ← список + детали + сабмишены
-│   ├── dashboard/
-│   ├── lesson/[blockId]/    ← 12-пунктовое ДЗ
-│   ├── locations/[blockId]/ ← местописания
-│   └── _components/         ← MiniAppGate, SupportRequestScreen
-│
-└── /api/
-    ├── /miniapp/            ← telegram-auth, profile, onboarding
-    └── /curator/            ← 7 endpoints для админки
-```
-
----
-
-## 🧠 КЛЮЧЕВЫЕ РЕШЕНИЯ
-
-| Решение | Почему |
+| Коммит | Что |
 |---|---|
-| Testing phase онбординга | Куратора ещё нет, имя берём из Telegram |
-| Тёмная тема всегда | Игнорируем светлую тему Telegram (см. memory `project_dark_theme_starfield`) |
-| Звёздный canvas-фон | Box-shadow ломался в Telegram WebView (см. memory) |
-| GlobeSelect готов | Подготовлен альтернативный 3D-вариант (memory `project_globe_country_picker`) |
-| API через `resolveUserId(initData)` | Не cookie-based, как в curator API. Совместимо с MiniApp |
+| `a6611a4` | Раздел **«Заявки»** `/panel/requests` + надёжная доставка (escapeHtml во всех admin-уведомлениях) |
+| `4df8d8d` | В истории заявок — **кем и когда** принято решение (`decided_by` → имя) |
+| `140fbe4` | Статус доставки Telegram-уведомления при одобрении заявки (`notified`) |
+| `b46b123` | **Управление ролями** на `/panel/curators` (curator↔admin↔student) + усиление role-эндпоинта: self-guard, super_admin-only для админ-уровня, отвязка учеников при понижении, `role_change_log` аудит; удалён мёртвый `GET /api/panel/curators` |
+| `56fe964` | Владелец (`is_protected`) видит скрытых тестировщиков (панель + бот) |
+| `f00d951` | Сортировка списка учеников по клику на любой заголовок |
+| `019e7d9` | Трекинг: поиск по имени/нику + фикс двойного `@@`; вечернее напоминание **20:00 Бали** (cron `stage=20`, миграция `reminded_20`) |
+
+**Корневая причина пропавших уведомлений о заявках (диагностика):** (1) уведомление шлётся один раз при создании заявки, при сбое не повторяется; (2) имя с `< > &` в `parse_mode=HTML` → Telegram 400 → молча терялось. Оба пофикшены; панель `/panel/requests` — надёжный канал, читает из БД.
 
 ---
 
-## 💡 ВАЖНЫЕ ЧИСЛА
+## 2. Бэклог из запроса Михаила (2026-06-22) — статус
 
-- **9 стран** в БД (RU, ID, TH, AE, GE, IL, BY, US, VN)
-- **21 город РФ + 9 за рубежом**, активен только Бали
-- **Telegram whitelist**: 1 юзер (@Rogue02 / Михаил)
-- **10 блоков КРЕСТ**: полный цикл
-- **7 API endpoints куратора**
+| # | Запрос | Статус |
+|---|---|---|
+| 1 | Двойное `@@` в трекинге убрать | ✅ DONE (`019e7d9`) |
+| 2 | Поиск в трекинге по имени/нику | ✅ DONE (`019e7d9`) |
+| 3 | Напоминание ученику 20:00 («я и сам учился по вечерам…») | ✅ DONE (`019e7d9`) — Бали-fixed; per-tz см. #12 |
+| 4 | Запросы новых учеников — всем админам | ✅ УЖЕ РАБОТАЕТ (`getAdminChatIds` = super_admin+admin); escaping пофикшен |
+| 5 | **Веб-панель куратора** (ограниченная) + уведомления куратору в бот | 📋 SPEC `curator-panel` (L) |
+| 6 | Куратор видит только своих (бот + веб) | 📋 SPEC `curator-panel` |
+| 7 | Уведомление куратору при простое ученика >3 дней | 📋 SPEC `inactivity-and-settings` (M) |
+| 8 | Настройки частоты уведомлений на каждого куратора | 📋 SPEC `inactivity-and-settings` |
+| 9 | Фокус куратора на отдельных учениках | 📋 SPEC `focus-and-reports` (L) |
+| 10 | Отчёт по выбранным ученикам (куратор — свои, админ — все) | 📋 SPEC `focus-and-reports` |
+| 11 | Часовые пояса ученика → система двигается по местному поясу | 📋 SPEC `timezone-daygate` (L) |
+| 12 | День выполнен → с 00:00 след. суток (пояс ученика) открыть след. день + уведомление | 📋 SPEC `timezone-daygate` |
+| 13 | Богатый профиль (чем занимается, медиа, ссылки, «как пришёл к Богу») | 📋 SPEC `rich-profile` (M) |
+| 14 | Трекинг: клик по человеку → его профиль + что писал в ленте | 📋 SPEC `rich-profile` (public `/m/u/[id]`) |
+| 15 | Розовый фон для девочек | 📋 SPEC `pink-theme` (M) |
+| 16 | Сделать приложение быстрее | 📋 SPEC `performance` (M) |
+
+«📋 SPEC» = есть Spec-First дизайн + критика (раздел 4 + docs/feature-specs). Не реализовано — каждая фича требует фокусной сессии с миграциями/RLS. Делать «пачкой» вслепую на живой платформе нельзя (RLS-дыры, сломанные cron). Порядок — раздел 5.
 
 ---
 
-*Версия 3.2 | Дата: 2026-05-28 | Предыдущая: 3.1 (2026-05-21) | Команда: продолжить активацию полного флоу онбординга*
+## 3. КРИТИЧЕСКАЯ ПРАВДА КОДА (грабли, которые ловила критика — читать ДО реализации)
+
+1. **Модель «закрытого дня» = 4 источника, НЕ 5.** Живой RPC (последняя миграция `20260620150000_v3_fix_locations_vs_peresказ.sql` перекрывает более ранние): день закрыт по `HAVING count(DISTINCT src)=4`: **крест + молитва + пересказ(audio) + местописания(video_note-locations)**. Квиз и тренажёр в gate НЕ входят (выпилены: `drop_quiz_from_gate`, `drop_trainer_from_gate`). `closed_dates_all`/`passed_blocks_all`/`user_closed_days`/`is_block_unlocked` переопределялись 5–12 раз — **берём ТОЛЬКО последнее живое определение**, не старые файлы.
+2. **Всё по UTC, не по Бали и не по поясу ученика.** `submitted_date`/`prayed_date` = `new Date().toISOString().slice(0,10)` (UTC). Recitations/locations — `(created_at AT TIME ZONE 'UTC')::date`. `block-status/[blockId]` — `todayUTC()`. `profiles.last_active_date` — UTC. НО streak/worked (`lib/activity/worked.ts`) — по **Бали**. `cities.timezone` есть, но НЕ используется. Корень #11/#12.
+3. **Панель на service-role, обходит RLS.** Scoping куратора (#5/#6) **нельзя** через Postgres RLS в панели — только в коде: фильтр `curator_id === session.uid` при `role==='curator'` на каждом data-пути. Главный риск curator-panel.
+4. **Telegram-уведомлений «куратору» пока нет.** `notifyAdmins`/`getAdminChatIds` шлют **админам**. Куратор получает только in-app `notifications_log`. Нужен helper `curatorChatIdForStudent(studentId)` (student.curator_id → telegram_chat_id).
+5. **Миграции:** сегодня 2026-06-22 → имя ПОЗЖЕ `20260621210000` (последняя применённая), формат `20260622HHMMSS_v3_*.sql`. `ADD COLUMN IF NOT EXISTS`. **`ADD CONSTRAINT` НЕ имеет `IF NOT EXISTS`** → `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$;`. RLS на каждой новой таблице. После колонок/RPC — **регенерить types.ts + `tsc --noEmit`** (иначе Vercel молча билдит старый код — memory `feedback_regen_types_after_migration`).
+6. **`role_change_log`** колонки: `changed_user_id, old_role, new_role, changed_by(uuid NN), reason, created_at`. `changed_by = session.uid`.
+7. **Деплой = push `main`.** Gate: `tsc --noEmit` + `npx next build` (в Next 16 нет `next lint`; eslint v8 конфиг сломан — не блокер). Поллить прод по статусу роута.
+
+---
+
+## 4. Спеки больших фич (дистиллят; полные — docs/feature-specs/2026-06-backlog-specs.json)
+
+### 5+6. Curator panel (scoped) + уведомления куратору — `curator-panel` (L)
+- **Auth:** `AdminRole += 'curator'` в `lib/admin/session.ts` (формат токена не меняется). Снять блок куратора: бот `/panel` (`webhook/route.ts:~1228`), `panel/auth/telegram/route.ts:~39`.
+- **Scoping (в КОДЕ):** `panel/students`, `panel/student/[id]` (чужой→404), `stats-data.ts` (фильтр `curator_id===session.uid`). 403 куратору на: `actions/role|transfer|delete|attach`, `requests`, `cities`, `curators`.
+- **Уведомления:** таблица-идемпотентность `curator_notify_state(student_id, event_type, event_key, UNIQUE(...))`. События: registered/first_entry/course_started/day_closed/block_completed. day_closed/block_completed — детект recompute-and-compare внутри submit-роутов, дедуп через таблицу; каждый пуш → `notifications_log`.
+- **Критика:** не копировать day-логику из block-status (4 today-флага, UTC расходится с RPC); куратор никогда не owner.
+
+### 7+8. Простой >3д + настройки — `inactivity-and-settings` (M)
+- **Таблица** `curator_notification_settings(curator_id PK, notify_* bool DEFAULT true, inactivity_threshold_days int DEFAULT 3, digest 'immediate'|'daily'|'off')`.
+- **Cron** (Бали) по каждому куратору ищет его учеников без активности > threshold, дедуп через `notifications_log` (тип `silence_3days` уже есть).
+- **Критика (ship-blocker):** часть `notify_*` не соответствует существующему коду (curator-Telegram-сендов нет — п.4 разд.3); `last_active_date` в UTC, не Бали — считать `inactiveDays` согласованно. Сначала канал «куратору в бот», потом настройки.
+
+### 9+10. Фокус + отчёты — `focus-and-reports` (L)
+- **Таблица** `curator_student_focus(curator_id, student_id, note≤500, created_at, created_by)`. Звезда-тоггл; фокусные вверх + приоритет в уведомлениях.
+- **Отчёты:** расширить `GenerateReport` до выбора учеников. Админ — все, куратор — свои (scoping в коде). На ученика: блоки, закрытые дни, активность.
+- **Критика:** учитывать UTC-день-модель; 4 источника (не квиз). Зависит от `curator-panel` (впуск куратора).
+
+### 11+12. Часовые пояса + day-gate — `timezone-daygate` (L)
+- **Миграция:** `profiles.timezone TEXT NOT NULL DEFAULT 'Asia/Makassar'` (single source), бэкфилл из `cities.timezone`.
+- **Логика:** UTC-штамповку → `localToday(tz)` (Intl) в insert-роутах и RPC; при первом полном выполнении 4 требований дня — событие → в 00:00 локали открыть след. день + пуш «день засчитан, завтра продолжаем». Дедуп — partial unique index / insert-then-send.
+- **Критика (revise!):** живой `is_block_unlocked` = closed-day «≥7 дней» (не недельный календарь). Ретро-перекладка прошлых дней по новому поясу СЛОМАЕТ прошлые closed-days (cross/prayer в DATE-UTC, recitation/location в TIMESTAMPTZ) → forward-only либо консистентный пересчёт. Без города → дефолт Бали. Сохранить `effective_date` (тест-ускорение).
+
+### 13+14. Богатый + публичный профиль — `rich-profile` (M)
+- **Миграции:** `profiles += occupation(≤160), bio(≤1000), testimony, links`; таблица `profile_media`. Constraints через DO/EXCEPTION (idempotent!).
+- **UI:** редактирование в `/m/profile`; **публичный** `/m/u/[id]` (клик из трекинга) с постами пользователя (`community_posts` по `author_id`). Storage — `avatars`(public)/`community-media`(signed). XSS — React auto-escape. В `/m/*` нет supabase-сессии → service-role + initData.
+- **Критика (blockers):** `ADD CONSTRAINT` не идемпотентен (DO/EXCEPTION); `profile_media.kind` = `PostKind('text','audio','video_note','photo')` иначе PostCard не отрендерит.
+
+### 15. Розовая тема — `pink-theme` (M)
+- Тема-движок есть (`ThemeProvider`, `data-theme`, `lib/telegram/theme.ts`, ~17 CSS на `--accent-solid/--accent-gradient`). Добавить `'pink'` в union + override 2 accent-vars + розовые поверхности под `[data-theme="pink"]` (новый `app/m/theme-pink.css`).
+- **Миграция:** `profiles += gender, theme_pref` (DO/EXCEPTION CHECK; имя `20260622...`). Приоритет: `theme_pref` > localStorage > gender-дефолт > light. НЕ в FAB-цикл; выбор pink — строкой в профиле.
+- **Вопрос Михаилу:** auto-по-gender или ручной? Сбор `gender` — только опционально, «оформление», не геймить логику курса. UI-бриф «светлый-первый» → подтвердить отклонение.
+
+### 16. Производительность — `performance` (M)
+- **БД:** `closed_dates_all`/`passed_blocks_all` сканируют все таблицы по ВСЕМ юзерам на каждый вызов. Добавить `*_filtered(p_user_ids uuid[])` + покрывающие индексы. **Критика:** живые тела RPC = 4 источника; не дублировать существующие индексы; `m/tracking` грузит ВСЕХ глобально (не scoped).
+- **MiniApp:** дашборд = 2 последовательных запроса + `getWorkedDates` = 8 последовательных. Слить в один серверный вызов + `Promise.all`.
+- **Бандл/картинки:** `next/image` не используется (сырой `<img>`); world-atlas (~100КБ) статически в onboarding. `images.remotePatterns`, lazy+dimensions, dynamic-import topojson; `cache()` для `getPanelSession/countPendingRequests`.
+
+---
+
+## 5. Как продолжать (методология)
+
+- **Spec-First.** Скиллы: `/feature-spec`, `/implement-feature`, `/create-migration`, `/run-migration`, `/run-qa-review`, `/deploy`, `/handoff`.
+- **Multi-agent поток (как сегодня).** Сохранённый дизайн-workflow: `~/.claude/projects/.../workflows/scripts/krest-feature-specs-wf_c3cb9150-fbb.js` (перезапуск `Workflow({scriptPath})`). Паттерн ревью: dimensions → find → **adversarially verify** каждую находку (default false-positive) → фиксить подтверждённое. Поймало реальные баги (RLS, гонки, escaping, day-модель).
+- **Субагенты:** database-architect, backend-engineer, frontend-developer, content-manager, qa-reviewer, agent-architect.
+- **Деплой:** `tsc --noEmit` → `npx next build` → push `main` → поллить. Миграции — файл в `supabase/migrations/` + применить (MCP) + регенерить types.
+- **Рекоменд. порядок:** `curator-panel` (фундамент #6/#9/#10 + канал «куратору в бот») → `inactivity-and-settings` → `rich-profile`+`/m/u/[id]` (#13/#14) → `pink-theme` (изолированно) → `performance` (индексы безопасны) → `timezone-daygate` (самый рискованный, трогает day-модель и прошлые closed-days).
+
+## 6. Открытые вопросы Михаилу
+- Розовая тема: авто-по-полу или ручной выбор? Сбор `gender` ок?
+- Лидерборд трекинга сейчас глобальный (все ученики) — так и надо, или по группе/прогрессии?
+- Day-gate по поясу: переносить прошлые closed-days или только вперёд (forward-only)?
+- 20:00 напоминание сейчас по Бали; делать по локали ученика — в `timezone-daygate`?
+
+---
+*Сессия 2026-06-22. Полные спеки+критика: docs/feature-specs/2026-06-backlog-specs.json. Источники истины: SPEC.md, UI_UX_BRIEF.md, CLAUDE.md, memory/MEMORY.md.*
