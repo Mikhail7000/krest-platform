@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import type { PanelStudentRow } from '@/app/api/panel/students/route'
 import { StudentRowActions, type Curator } from './StudentRowActions'
 
@@ -43,7 +44,7 @@ export function StudentRow({
         </Link>
       </td>
       <td>{s.cityName || <span className="panel-muted">—</span>}</td>
-      <td>{s.curatorName || <span className="panel-badge panel-badge--warn">нет</span>}</td>
+      <td><CuratorPicker s={s} curators={curators} onDone={onDone} onError={onError} /></td>
       <td><span className="panel-badge panel-badge--acc">{s.passedBlocks} / 10</span></td>
       <td>
         <span style={{ fontWeight: 600 }}>Блок {s.currentBlock}</span>
@@ -55,6 +56,60 @@ export function StudentRow({
         <StudentRowActions student={s} curators={curators} onDone={onDone} onError={onError} />
       </td>
     </tr>
+  )
+}
+
+/** Прямой выбор куратора в строке: привязать / сменить / отвязать одним кликом. */
+function CuratorPicker({
+  s,
+  curators,
+  onDone,
+  onError,
+}: {
+  s: PanelStudentRow
+  curators: Curator[]
+  onDone: (msg: string) => void
+  onError: (msg: string) => void
+}) {
+  const [val, setVal] = useState(s.curatorId ?? '')
+  const [busy, setBusy] = useState(false)
+
+  const change = async (next: string) => {
+    const prev = val
+    setVal(next)
+    setBusy(true)
+    try {
+      const res = await fetch('/api/panel/actions/transfer', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userId: s.id, curatorId: next || null }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) throw new Error(json.error || 'Ошибка')
+      onDone(next ? 'Куратор назначен' : 'Куратор отвязан')
+    } catch (e) {
+      setVal(prev) // откат
+      onError(e instanceof Error ? e.message : 'Ошибка')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <select
+      className="panel-select"
+      value={val}
+      disabled={busy}
+      onChange={(e) => change(e.target.value)}
+      style={{ minWidth: 130, maxWidth: 180, fontSize: '0.85rem', padding: '6px 8px' }}
+    >
+      <option value="">— нет —</option>
+      {curators.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.name || 'Без имени'}
+        </option>
+      ))}
+    </select>
   )
 }
 
