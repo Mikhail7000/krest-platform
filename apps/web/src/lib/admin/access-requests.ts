@@ -113,7 +113,7 @@ export async function countPendingRequests(
 }
 
 export type DecideResult =
-  | { ok: true; name: string; action: DecideAction }
+  | { ok: true; name: string; action: DecideAction; notified?: boolean }
   | { ok: false; error: string }
 
 /**
@@ -171,14 +171,14 @@ export async function decideAccessRequest(
       return { ok: false, error: 'Заявка уже обработана' }
     }
 
-    // Уведомляем заявителя (best-effort — может быть не запущен приватный чат)
-    await sendTelegramMessage(
+    // Уведомляем заявителя; notified=false, если приватный чат с ботом не запущен
+    const notified = await sendTelegramMessage(
       Number(r.telegram_chat_id),
       'Тебя одобрили! ✝️ Открой приложение и начни обучение.',
       { withMiniAppButton: true },
     )
 
-    return { ok: true, name, action }
+    return { ok: true, name, action, notified }
   }
 
   // reject

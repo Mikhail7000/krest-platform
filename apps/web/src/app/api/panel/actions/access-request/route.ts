@@ -54,5 +54,6 @@ export async function POST(req: NextRequest) {
   // notifyAdmins шлёт с parse_mode=HTML — экранируем имя заявителя (может содержать < > &)
   await notifyAdmins(supabase, `📥 ${escapeHtml(session.name ?? 'Админ')} ${verb}: ${escapeHtml(result.name)}`)
 
-  return NextResponse.json({ ok: true })
+  // notified=false → одобрен, но Telegram-пуш заявителю не доставлен (не открыл бота)
+  return NextResponse.json({ ok: true, notified: result.notified })
 }

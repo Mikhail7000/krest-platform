@@ -14,9 +14,10 @@ export function RequestActions({ requestId }: { requestId: string }) {
   const router = useRouter()
   const [busy, setBusy] = useState<Action | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [warn, setWarn] = useState<string | null>(null)
 
   const decide = async (action: Action) => {
-    if (busy) return
+    if (busy || warn) return
     setBusy(action)
     setError(null)
     try {
@@ -27,11 +28,28 @@ export function RequestActions({ requestId }: { requestId: string }) {
       })
       const json = await res.json()
       if (!res.ok || !json.ok) throw new Error(json.error || 'Ошибка')
+      // Одобрен, но Telegram-пуш не доставлен — не прячем строку, сообщаем админу.
+      if (action !== 'reject' && json.notified === false) {
+        setWarn('Доступ открыт, но уведомление в Telegram не доставлено — пользователь ещё не открывал бота. Он увидит доступ при первом входе.')
+        setBusy(null)
+        return
+      }
       router.refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка')
       setBusy(null)
     }
+  }
+
+  if (warn) {
+    return (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
+        <span className="panel-badge panel-badge--warn">✓ Одобрен · {warn}</span>
+        <button type="button" className="panel-btn" onClick={() => router.refresh()}>
+          Обновить
+        </button>
+      </div>
+    )
   }
 
   return (
