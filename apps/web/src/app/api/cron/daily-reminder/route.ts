@@ -2,6 +2,7 @@
  * Cron: ежедневные напоминания ученикам, не заходившим в приложение.
  * Расписание (vercel.json), время Бали (Asia/Makassar, UTC+8):
  *   ?stage=18 → 18:00 Бали (10:00 UTC) — мягкое напоминание
+ *   ?stage=20 → 20:00 Бали (12:00 UTC) — личное, тёплое
  *   ?stage=21 → 21:00 Бали (13:00 UTC) — только если так и не зашёл
  *
  * Защита: Authorization: Bearer ${CRON_SECRET} (Vercel добавляет автоматически).
@@ -21,6 +22,11 @@ const POOL_18 = [
   'Кто верен в малом, верен и в большом (Лк. 16:10). Зайди в КРЕСТ ✝️',
   'Маленький шаг каждый день рождает большую веру. Открой КРЕСТ.',
   'Ты ещё не заходил сегодня. Один шаг в КРЕСТ — и день прожит не зря.',
+]
+
+// 20:00 — личное, тёплое: «я и сам учился по вечерам»
+const POOL_20 = [
+  'Я понимаю, уже поздно, но я и сам учился по вечерам. Верность и постоянство — залог успеха. Не забудь зайти 🙏',
 ]
 
 // 21:00 — сильнее, вызов: «день начинается с вечера»
@@ -43,13 +49,13 @@ export async function GET(req: NextRequest) {
   }
 
   const stage = req.nextUrl.searchParams.get('stage')
-  if (stage !== '18' && stage !== '21') {
-    return NextResponse.json({ error: 'stage must be 18 or 21' }, { status: 400 })
+  if (stage !== '18' && stage !== '20' && stage !== '21') {
+    return NextResponse.json({ error: 'stage must be 18, 20 or 21' }, { status: 400 })
   }
 
   const supabase = createServiceSupabase()
   const today = baliToday()
-  const pool = stage === '18' ? POOL_18 : POOL_21
+  const pool = stage === '18' ? POOL_18 : stage === '20' ? POOL_20 : POOL_21
 
   // Ученики с привязанным Telegram
   const { data: students, error: stErr } = await supabase
@@ -67,10 +73,16 @@ export async function GET(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: actRaw } = await (supabase as any)
     .from('student_daily_activity')
-    .select('user_id, opened, reminded_18, reminded_21')
+    .select('user_id, opened, reminded_18, reminded_20, reminded_21')
     .eq('activity_date', today)
 
-  type Act = { user_id: string; opened: boolean; reminded_18: boolean; reminded_21: boolean }
+  type Act = {
+    user_id: string
+    opened: boolean
+    reminded_18: boolean
+    reminded_20: boolean
+    reminded_21: boolean
+  }
   const actMap = new Map<string, Act>()
   for (const a of (actRaw ?? []) as Act[]) actMap.set(a.user_id, a)
 
@@ -82,7 +94,9 @@ export async function GET(req: NextRequest) {
     if (!chatId) continue
     const act = actMap.get(s.id)
     if (act?.opened) continue // уже заходил сегодня
-    if (stage === '18' ? act?.reminded_18 : act?.reminded_21) continue // уже напомнили
+    const alreadyReminded =
+      stage === '18' ? act?.reminded_18 : stage === '20' ? act?.reminded_20 : act?.reminded_21
+    if (alreadyReminded) continue // уже напомнили на этом этапе
 
     const ok = await sendTelegramMessage(chatId, `✝️ <b>КРЕСТ</b>\n\n${pick(pool)}`, {
       withMiniAppButton: true,
@@ -95,7 +109,11 @@ export async function GET(req: NextRequest) {
       {
         user_id: s.id,
         activity_date: today,
-        ...(stage === '18' ? { reminded_18: true } : { reminded_21: true }),
+        ...(stage === '18'
+          ? { reminded_18: true }
+          : stage === '20'
+            ? { reminded_20: true }
+            : { reminded_21: true }),
         updated_at: nowIso,
       },
       { onConflict: 'user_id,activity_date' },

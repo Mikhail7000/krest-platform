@@ -3,6 +3,25 @@
    Тёмные темы через data-theme="dark" / data-theme="stars".
    ──────────────────────────────────────────────────────────────────── */
 
+/* Поиск по имени/нику */
+.lb-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.25rem;
+  padding: 0.7rem 0.95rem;
+  font-size: 0.95rem;
+  color: inherit;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.lb-search:focus {
+  border-color: var(--accent-solid, #6d5dfc);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-solid, #6d5dfc) 18%, transparent);
+}
+
 /* Список */
 .lb-list {
   display: flex;

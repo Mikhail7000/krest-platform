@@ -5,6 +5,10 @@
       "schedule": "0 10 * * *"
     },
     {
+      "path": "/api/cron/daily-reminder?stage=20",
+      "schedule": "0 12 * * *"
+    },
+    {
       "path": "/api/cron/daily-reminder?stage=21",
       "schedule": "0 13 * * *"
     }

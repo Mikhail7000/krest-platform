@@ -21,6 +21,7 @@ function SkeletonCard({ big }: { big?: boolean }) {
 export function TrackingClient() {
   const [list, setList] = useState<LeaderRow[] | null>(null)
   const [error, setError] = useState(false)
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -70,11 +71,38 @@ export function TrackingClient() {
     )
   }
 
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? list.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          (r.telegram ?? '').toLowerCase().includes(q),
+      )
+    : list
+
   return (
-    <div className="lb-list">
-      {list.map((row) => (
-        <LeaderboardCard key={`${row.rank}-${row.name}`} row={row} />
-      ))}
-    </div>
+    <>
+      <input
+        className="lb-search"
+        type="search"
+        inputMode="search"
+        placeholder="Поиск по имени или нику…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        aria-label="Поиск учеников"
+      />
+      {filtered.length === 0 ? (
+        <div className="lb-empty">
+          <span className="lb-empty__icon">🔍</span>
+          <p className="lb-empty__text">Никого не нашли</p>
+        </div>
+      ) : (
+        <div className="lb-list">
+          {filtered.map((row) => (
+            <LeaderboardCard key={`${row.rank}-${row.name}`} row={row} />
+          ))}
+        </div>
+      )}
+    </>
   )
 }

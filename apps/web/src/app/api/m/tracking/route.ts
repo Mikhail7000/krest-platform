@@ -192,7 +192,9 @@ export async function POST(request: NextRequest) {
     return {
       id: p.id,
       name: p.full_name?.trim() || p.contact_info || 'Ученик',
-      telegram: p.contact_info ?? null,
+      // contact_info хранится как «@ник» — снимаем ведущий @, чтобы карточка
+      // (она сама добавляет @) не показывала «@@ник».
+      telegram: p.contact_info ? p.contact_info.replace(/^@+/, '') : null,
       city,
       avatar_url: avatarUrl(p.avatar_path ?? null),
       is_self: p.id === auth.userId,
