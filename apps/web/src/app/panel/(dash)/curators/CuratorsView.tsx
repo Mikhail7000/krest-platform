@@ -3,15 +3,28 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CuratorRow } from './types'
+import { RoleModal } from './RoleModal'
+
+const ROLE_BADGE: Record<string, { cls: string; label: string }> = {
+  curator: { cls: 'panel-badge panel-badge--acc', label: 'Куратор' },
+  admin: { cls: 'panel-badge panel-badge--warn', label: 'Админ' },
+}
 
 /**
  * Таблица кураторов с разворотом списка учеников + добавление куратора.
  * У каждого куратора — кнопка «Привязать учеников» (массовая привязка по никам).
  * Имена/города выводятся как React-текст (auto-escape, без innerHTML).
  */
-export function CuratorsView({ curators }: { curators: CuratorRow[] }) {
+export function CuratorsView({
+  curators,
+  isSuperAdmin,
+}: {
+  curators: CuratorRow[]
+  isSuperAdmin: boolean
+}) {
   const [openId, setOpenId] = useState<string | null>(null)
   const [attachTarget, setAttachTarget] = useState<CuratorRow | null>(null)
+  const [roleTarget, setRoleTarget] = useState<CuratorRow | null>(null)
 
   return (
     <>
@@ -39,8 +52,10 @@ export function CuratorsView({ curators }: { curators: CuratorRow[] }) {
                     curator={cu}
                     isOpen={isOpen}
                     hasStudents={hasStudents}
+                    canChangeRole={!cu.isProtected && (isSuperAdmin || cu.role !== 'admin')}
                     onToggle={() => setOpenId(isOpen ? null : cu.id)}
                     onAttach={() => setAttachTarget(cu)}
+                    onRole={() => setRoleTarget(cu)}
                   />
                 )
               })}
@@ -53,6 +68,14 @@ export function CuratorsView({ curators }: { curators: CuratorRow[] }) {
         <AttachModal
           curator={attachTarget}
           onClose={() => setAttachTarget(null)}
+        />
+      ) : null}
+
+      {roleTarget ? (
+        <RoleModal
+          curator={roleTarget}
+          isSuperAdmin={isSuperAdmin}
+          onClose={() => setRoleTarget(null)}
         />
       ) : null}
     </>
@@ -130,20 +153,25 @@ function CuratorRowGroup({
   curator,
   isOpen,
   hasStudents,
+  canChangeRole,
   onToggle,
   onAttach,
+  onRole,
 }: {
   curator: CuratorRow
   isOpen: boolean
   hasStudents: boolean
+  canChangeRole: boolean
   onToggle: () => void
   onAttach: () => void
+  onRole: () => void
 }) {
   const cityLabel = curator.city
     ? curator.country
       ? `${curator.city}, ${curator.country}`
       : curator.city
     : '—'
+  const badge = ROLE_BADGE[curator.role]
 
   return (
     <>
@@ -154,6 +182,11 @@ function CuratorRowGroup({
         <td>
           <div style={{ fontWeight: 600 }}>{curator.name ?? 'Без имени'}</div>
           {curator.nick ? <div className="panel-muted">{curator.nick}</div> : null}
+          {badge ? (
+            <span className={badge.cls} style={{ marginTop: 4, display: 'inline-block' }}>
+              {badge.label}
+            </span>
+          ) : null}
         </td>
         <td>{cityLabel}</td>
         <td>
@@ -179,16 +212,32 @@ function CuratorRowGroup({
           ) : null}
         </td>
         <td>
-          <button
-            type="button"
-            className="panel-btn"
-            onClick={(e) => {
-              e.stopPropagation()
-              onAttach()
-            }}
-          >
-            Привязать учеников
-          </button>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="panel-btn"
+              onClick={(e) => {
+                e.stopPropagation()
+                onAttach()
+              }}
+            >
+              Привязать учеников
+            </button>
+            {curator.isProtected ? (
+              <span className="panel-badge" style={{ alignSelf: 'center' }}>🔒 Защищён</span>
+            ) : canChangeRole ? (
+              <button
+                type="button"
+                className="panel-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRole()
+                }}
+              >
+                Сменить роль
+              </button>
+            ) : null}
+          </div>
         </td>
       </tr>
       {isOpen && hasStudents ? (

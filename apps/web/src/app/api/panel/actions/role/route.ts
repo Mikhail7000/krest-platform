@@ -11,8 +11,12 @@ type Role = (typeof ALLOWED_ROLES)[number]
 
 /**
  * POST /api/panel/actions/role  { userId, role }
- * Смена роли ученика: student | curator | admin.
- * Защищённого пользователя (is_protected) менять нельзя → 403.
+ * Смена роли: student | curator | admin.
+ *  - is_protected и super_admin менять нельзя → 403.
+ *  - Свою роль менять нельзя → 400 (защита от самоблокировки).
+ *  - Управлять админ-уровнем (target=admin ИЛИ role=admin) — только super_admin → 403.
+ *  - При понижении до ученика — отвязываем его учеников (curator_id → null).
+ *  - Любая смена пишется в role_change_log (audit, по спеке).
  * Гард: только admin/super_admin, иначе 401.
  */
 export async function POST(req: NextRequest) {
@@ -27,6 +31,12 @@ export async function POST(req: NextRequest) {
 
   if (!userId || !role || !ALLOWED_ROLES.includes(role)) {
     return NextResponse.json({ ok: false, error: 'Неверные параметры' }, { status: 400 })
+  }
+  if (userId === session.uid) {
+    return NextResponse.json(
+      { ok: false, error: 'Нельзя сменить собственную роль' },
+      { status: 400 },
+    )
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,11 +63,39 @@ export async function POST(req: NextRequest) {
       { status: 403 },
     )
   }
+  // Админ-уровнем (назначить админа или менять админа) управляет только супер-админ.
+  if ((target.role === 'admin' || role === 'admin') && session.role !== 'super_admin') {
+    return NextResponse.json(
+      { ok: false, error: 'Только супер-админ может управлять администраторами' },
+      { status: 403 },
+    )
+  }
 
   const { error } = await supabase.from('profiles').update({ role }).eq('id', userId)
   if (error) {
     console.error('[panel/actions/role]', error)
     return NextResponse.json({ ok: false, error: 'Не удалось сменить роль' }, { status: 500 })
+  }
+
+  // Понижение до ученика — отвязываем его учеников, чтобы не осталось «висящих» curator_id.
+  if (role === 'student' && target.role !== 'student') {
+    await supabase.from('profiles').update({ curator_id: null }).eq('curator_id', userId)
+    await supabase
+      .from('testing_whitelist')
+      .update({ assigned_curator_id: null })
+      .eq('assigned_curator_id', userId)
+  }
+
+  // Аудит (по спеке: все изменения роли → role_change_log). changed_by = id админа.
+  if (target.role !== role) {
+    const { error: logErr } = await supabase.from('role_change_log').insert({
+      changed_user_id: userId,
+      old_role: target.role,
+      new_role: role,
+      changed_by: session.uid,
+      reason: 'panel:actions/role',
+    })
+    if (logErr) console.error('[panel/actions/role] audit', logErr)
   }
 
   const roleLabel = role === 'curator' ? 'куратор' : role === 'admin' ? 'админ' : 'ученик'

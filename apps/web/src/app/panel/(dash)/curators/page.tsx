@@ -1,12 +1,13 @@
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { getPanelSession } from '@/lib/admin/guard'
 import { CuratorsView } from './CuratorsView'
 import type { CuratorRow, CuratorStudent } from './types'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * /panel/curators — кураторы платформы: город, страна, число учеников,
- * разворот со списком учеников. Сортировка по числу учеников.
+ * /panel/curators — кураторы и администраторы платформы: роль, город, страна,
+ * число учеников, разворот со списком учеников + смена роли (curator↔admin↔student).
  * Данные через service-role (сервер админа, обход RLS).
  */
 async function loadCurators(): Promise<{
@@ -19,8 +20,8 @@ async function loadCurators(): Promise<{
   const [curatorsRes, studentsRes, citiesRes, countriesRes] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, full_name, contact_info, city_id')
-      .eq('role', 'curator'),
+      .select('id, full_name, contact_info, city_id, role, is_protected')
+      .in('role', ['curator', 'admin']),
     supabase
       .from('profiles')
       .select('id, full_name, contact_info, curator_id')
@@ -62,6 +63,8 @@ async function loadCurators(): Promise<{
       id: cu.id,
       name: cu.full_name,
       nick: cu.contact_info,
+      role: (cu as { role: string }).role,
+      isProtected: !!(cu as { is_protected: boolean | null }).is_protected,
       city: city?.name ?? null,
       country: city?.country ?? null,
       studentsCount: students.length,
@@ -69,21 +72,32 @@ async function loadCurators(): Promise<{
     }
   })
 
+  // Кураторы выше админов (страница про кураторов), внутри — по числу учеников.
+  const order = (r: string) => (r === 'curator' ? 0 : 1)
   curators.sort(
-    (a, b) => b.studentsCount - a.studentsCount || (a.name ?? '').localeCompare(b.name ?? ''),
+    (a, b) =>
+      order(a.role) - order(b.role) ||
+      b.studentsCount - a.studentsCount ||
+      (a.name ?? '').localeCompare(b.name ?? ''),
   )
 
-  return { curators, totalCurators: curators.length, totalStudents }
+  const totalCurators = curators.filter((c) => c.role === 'curator').length
+  return { curators, totalCurators, totalStudents }
 }
 
 export default async function CuratorsPage() {
-  const { curators, totalCurators, totalStudents } = await loadCurators()
+  const [{ curators, totalCurators, totalStudents }, session] = await Promise.all([
+    loadCurators(),
+    getPanelSession(),
+  ])
+  const totalAdmins = curators.filter((c) => c.role === 'admin').length
+  const isSuperAdmin = session?.role === 'super_admin'
 
   return (
     <div>
       <h1 className="panel-page__title">Кураторы</h1>
       <p className="panel-page__subtitle">
-        Кураторы платформы, их города и привязанные ученики
+        Кураторы и администраторы платформы, их города и ученики. Здесь же — смена роли.
       </p>
 
       <div className="panel-grid">
@@ -92,12 +106,16 @@ export default async function CuratorsPage() {
           <span className="panel-stat__value">{totalCurators}</span>
         </div>
         <div className="panel-stat">
+          <span className="panel-stat__label">Администраторов</span>
+          <span className="panel-stat__value">{totalAdmins}</span>
+        </div>
+        <div className="panel-stat">
           <span className="panel-stat__label">Привязанных учеников</span>
           <span className="panel-stat__value">{totalStudents}</span>
         </div>
       </div>
 
-      <CuratorsView curators={curators} />
+      <CuratorsView curators={curators} isSuperAdmin={isSuperAdmin} />
     </div>
   )
 }
