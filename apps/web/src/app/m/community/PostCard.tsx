@@ -30,6 +30,7 @@ interface Props {
 export function PostCard({ post, onDelete }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [zoom, setZoom] = useState(false)
 
   const handleDelete = async () => {
     if (!confirming) {
@@ -120,11 +121,32 @@ export function PostCard({ post, onDelete }: Props) {
           alt={`Фото от ${post.author_name}`}
           className="cm-card__photo"
           loading="lazy"
+          onClick={() => setZoom(true)}
         />
       )}
 
       {post.content_text && post.kind !== 'text' && (
         <p className="cm-card__caption">{post.content_text}</p>
+      )}
+
+      {zoom && post.media_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <div
+          className="cm-lightbox"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setZoom(false)}
+        >
+          <button
+            type="button"
+            className="cm-lightbox__close"
+            aria-label="Закрыть"
+            onClick={() => setZoom(false)}
+          >
+            ×
+          </button>
+          <img src={post.media_url} alt={`Фото от ${post.author_name}`} className="cm-lightbox__img" />
+        </div>
       )}
     </div>
   )
