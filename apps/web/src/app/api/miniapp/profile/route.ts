@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
-      .select('onboarding_done, country_id, city_id, curator_id, full_name, avatar_path')
+      .select('onboarding_done, country_id, city_id, curator_id, full_name, avatar_path, gender, theme_pref')
       .eq('id', auth.userId)
       .maybeSingle()
 
@@ -61,6 +61,8 @@ export async function POST(request: NextRequest) {
       curator_id: profile.curator_id,
       full_name: profile.full_name,
       avatar_url,
+      gender: profile.gender ?? null,
+      theme_pref: profile.theme_pref ?? null,
     })
   } catch (err) {
     console.error('[profile POST]', err)

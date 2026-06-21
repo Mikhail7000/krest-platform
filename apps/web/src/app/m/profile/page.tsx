@@ -7,6 +7,7 @@ import { ProfileActivity } from './ProfileActivity'
 import { AddToHomeScreenButton } from './AddToHomeScreenButton'
 import { AvatarUpload } from './AvatarUpload'
 import { LocationSettings } from './LocationSettings'
+import { ThemeSettings } from './ThemeSettings'
 import '../dashboard/dashboard.css'
 import './profile.css'
 
@@ -31,6 +32,8 @@ export default function ProfilePage() {
         <ProfileActivity />
 
         <LocationSettings />
+
+        <ThemeSettings />
 
         <p className="pf-section">О курсе</p>
         <div className="pf-card">

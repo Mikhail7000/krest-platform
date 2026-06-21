@@ -13,7 +13,7 @@ function getTg(): TgWebApp | null {
   return (window as unknown as { Telegram?: { WebApp: TgWebApp } }).Telegram?.WebApp ?? null
 }
 
-type Theme = 'light' | 'dark' | 'stars'
+type Theme = 'light' | 'dark' | 'stars' | 'pink'
 
 // Палитры тем. Тёмная — чистая ночь; звёзды — звёздное небо; светлая (по умолчанию) — референсы.
 // Тёмная и звёзды делят одну палитру нативной обвязки Telegram.
@@ -33,9 +33,25 @@ const DARK_PALETTE = {
     '--tg-destructive': '#EF4444',
   },
 }
+const PINK_PALETTE = {
+  bg: '#FDF2F8',
+  vars: {
+    '--tg-bg': '#FDF2F8',
+    '--tg-text': '#16181D',
+    '--tg-hint': '#6B7280',
+    '--tg-link': '#EC4899',
+    '--tg-button': '#16181D',
+    '--tg-button-text': '#FFFFFF',
+    '--tg-secondary-bg': '#FFFFFF',
+    '--tg-section-bg': '#FFFFFF',
+    '--tg-section-separator': 'rgba(236, 72, 153, 0.14)',
+    '--tg-destructive': '#DC2626',
+  },
+}
 const PALETTES: Record<Theme, { bg: string; vars: Record<string, string> }> = {
   dark: DARK_PALETTE,
   stars: DARK_PALETTE,
+  pink: PINK_PALETTE,
   light: {
     bg: '#EEF0F3',
     vars: {
@@ -57,7 +73,7 @@ function resolveTheme(theme?: Theme): Theme {
   if (theme) return theme
   if (typeof document === 'undefined') return 'light'
   const t = document.documentElement.dataset.theme
-  return t === 'dark' || t === 'stars' ? t : 'light'
+  return t === 'dark' || t === 'stars' || t === 'pink' ? t : 'light'
 }
 
 // Применяет палитру --tg-* и красит нативную обвязку Telegram под выбранную тему.

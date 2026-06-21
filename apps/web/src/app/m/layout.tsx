@@ -6,6 +6,7 @@ import { ThemedBackground } from '@/components/theme/ThemedBackground'
 import { MiniAppGate } from './_components/MiniAppGate'
 import './miniapp.css'
 import './theme-dark.css'
+import './theme-pink.css'
 
 export const metadata = {
   title: 'КРЕСТ',

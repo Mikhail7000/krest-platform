@@ -1,0 +1,70 @@
+/* Розовая тема — светлое семейство с розовым акцентом.
+   Полностью аддитивная: не трогает light/dark/stars.
+   Все правила строго под [data-theme="pink"].
+   Акцент перекрывает глобальные переменные globals.css,
+   которые читают ~17 файлов CSS через --accent-solid / --accent-gradient. */
+
+/* ── Акцент ─────────────────────────────────────────────────────────── */
+[data-theme="pink"] {
+  --accent-from: #F9A8D4;
+  --accent-to: #EC4899;
+  --accent-gradient: linear-gradient(135deg, #F9A8D4, #EC4899);
+  --accent-solid: #EC4899;
+}
+
+/* ── Корень MiniApp ──────────────────────────────────────────────────── */
+[data-theme="pink"] .miniapp-root {
+  background: #fdf2f8;
+  color: #16181d;
+
+  /* Семантические токены поверхности — как light, с розовым оттенком границ */
+  --surface: #ffffff;
+  --surface-2: rgba(236, 72, 153, 0.04);
+  --surface-border: rgba(236, 72, 153, 0.14);
+  --surface-shadow: 0 1px 2px rgba(236, 72, 153, 0.06), 0 14px 30px rgba(236, 72, 153, 0.09);
+  --hairline: rgba(236, 72, 153, 0.12);
+  --section-title: #16181d;
+  --track: rgba(236, 72, 153, 0.12);
+  --on-accent-tint: #EC4899;
+}
+
+/* ── Навигация (нижняя панель) ────────────────────────────────────────── */
+[data-theme="pink"] .db-bottomnav {
+  background: rgba(253, 242, 248, 0.92);
+  border-top-color: rgba(236, 72, 153, 0.14);
+}
+
+/* ── Карточки дашборда ────────────────────────────────────────────────── */
+/* Используют --tg-section-bg и --tg-section-separator через miniapp.css;
+   те установлены через applyTelegramTheme в PINK_PALETTE — дополнительных
+   правил не требуется. */
+
+/* ── Кнопка онбординга — оставляем тёмной (WCAG AA), как в light ─────── */
+[data-theme="pink"] .onb-cta {
+  background: #16181d;
+  color: #fff;
+}
+
+/* ── Тонкий розовый бордер на карточках профиля ─────────────────────── */
+[data-theme="pink"] .pf-card {
+  border-color: rgba(236, 72, 153, 0.16);
+}
+
+/* ── Кнопки «Изменить» в профиле — розовый акцент вместо чёрного ─────── */
+[data-theme="pink"] .loc-row__edit,
+[data-theme="pink"] .av-upload__btn {
+  background: #EC4899;
+}
+
+/* ── Шторка выбора локации — лёгкий розовый фон ─────────────────────── */
+[data-theme="pink"] .loc-sheet__panel {
+  background: #fdf2f8;
+  border: 1px solid rgba(236, 72, 153, 0.16);
+}
+
+/* ── Обводка выбранного элемента (stage-back, ссылки) ───────────────── */
+[data-theme="pink"] .stage-back {
+  color: #EC4899;
+  background: color-mix(in srgb, #EC4899 12%, #fff);
+  border-color: color-mix(in srgb, #EC4899 24%, transparent);
+}
