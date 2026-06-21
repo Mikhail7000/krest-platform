@@ -78,14 +78,14 @@ async function getAdminProfile(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   chatId: number,
-): Promise<{ id: string; role: string } | null> {
+): Promise<{ id: string; role: string; isOwner: boolean } | null> {
   const { data } = (await supabase
     .from('profiles')
-    .select('id, role')
+    .select('id, role, is_protected')
     .eq('telegram_chat_id', chatId)
-    .maybeSingle()) as { data: { id: string; role: string } | null }
+    .maybeSingle()) as { data: { id: string; role: string; is_protected: boolean | null } | null }
   if (!data || !['admin', 'super_admin'].includes(data.role)) return null
-  return data
+  return { id: data.id, role: data.role, isOwner: !!(data as any).is_protected }
 }
 
 // ─── Обработчик callback_query ────────────────────────────────────────────
@@ -313,17 +313,20 @@ function escapeHtmlTg(s: string): string {
 /**
  * Загружает учеников куратора и считает их прогресс через RPC passed_blocks_all.
  * Возвращает упорядоченный список StudentSummary.
+ * isOwner=true → показывать всех (включая hidden_from_tracking).
+ * isOwner=false → скрытые ученики не попадают в список.
  */
 async function loadStudentsSummary(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
-  opts: { curatorId?: string; all?: boolean },
+  opts: { curatorId?: string; all?: boolean; isOwner?: boolean },
 ): Promise<StudentSummary[]> {
   let query = supabase
     .from('profiles')
     .select('id, full_name, contact_info')
     .eq('role', 'student')
   if (!opts.all) query = query.eq('curator_id', opts.curatorId)
+  if (!opts.isOwner) query = query.eq('hidden_from_tracking', false)
   const { data: students, error: studentsError } = await query
 
   if (studentsError) {
@@ -440,18 +443,19 @@ function ruDayMonth(iso: string): string {
 /**
  * Детальный прогресс одного ученика по нику (для /student @ник).
  * curator видит только своих; admin/super_admin — любого.
+ * Если ученик hidden_from_tracking=TRUE и запрашивающий не владелец — «не найден».
  * Использует дневную модель: passed_blocks_all + user_closed_days.
  */
 async function formatStudentDetail(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
-  requester: { id: string; role: string },
+  requester: { id: string; role: string; isOwner?: boolean },
   rawNick: string,
 ): Promise<string> {
   const handle = `@${rawNick.replace(/^@+/, '').toLowerCase()}`
   const { data: s } = (await supabase
     .from('profiles')
-    .select('id, full_name, contact_info, curator_id, course_started_at')
+    .select('id, full_name, contact_info, curator_id, course_started_at, hidden_from_tracking')
     .eq('role', 'student')
     .ilike('contact_info', handle)
     .maybeSingle()) as {
@@ -461,9 +465,14 @@ async function formatStudentDetail(
       contact_info: string | null
       curator_id: string | null
       course_started_at: string | null
+      hidden_from_tracking: boolean | null
     } | null
   }
   if (!s) return `Ученик ${escapeHtmlTg(handle)} не найден.`
+  // Скрытый ученик: для всех кроме владельца — «не найден» (как будто его нет)
+  if ((s as any).hidden_from_tracking && !requester.isOwner) {
+    return `Ученик ${escapeHtmlTg(handle)} не найден.`
+  }
   if (requester.role === 'curator' && s.curator_id !== requester.id) {
     return `${escapeHtmlTg(s.full_name || handle)} — не твой ученик.`
   }
@@ -732,16 +741,17 @@ async function handleStats(
   supabase: any,
   chatId: number,
   args: string,
+  isOwner: boolean,
 ): Promise<void> {
   const filter = parseStatsFilter(args)
 
-  // Базовый запрос студентов (реальные, не скрытые из трекинга)
+  // Базовый запрос студентов; владелец (is_protected) видит всех включая скрытых
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase
     .from('profiles')
     .select('id, city_id, country_id, course_started_at')
     .eq('role', 'student')
-    .eq('hidden_from_tracking', false)
+  if (!isOwner) query = query.eq('hidden_from_tracking', false)
 
   // Применяем фильтр по месяцу на стороне JS (нет простого ilike на timestamptz)
   const { data: rawStudents, error: studentsErr } = await query
@@ -1254,9 +1264,9 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceSupabase() as any
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, role, full_name')
+      .select('id, role, full_name, is_protected')
       .eq('telegram_chat_id', chatId)
-      .maybeSingle() as { data: { id: string; role: string; full_name: string | null } | null }
+      .maybeSingle() as { data: { id: string; role: string; full_name: string | null; is_protected: boolean | null } | null }
 
     if (!profile) {
       await sendTelegramMessage(
@@ -1277,9 +1287,10 @@ export async function POST(request: NextRequest) {
     }
 
     const isAdmin = profile.role === 'admin' || profile.role === 'super_admin'
+    const isOwner = !!(profile as any).is_protected
     const students = await loadStudentsSummary(
       supabase,
-      isAdmin ? { all: true } : { curatorId: profile.id },
+      isAdmin ? { all: true, isOwner } : { curatorId: profile.id, isOwner },
     )
     const replyText = formatStudentsList(students, isAdmin)
     await sendTelegramMessage(chatId, replyText, { withMiniAppButton: true })
@@ -1294,9 +1305,9 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceSupabase() as any
     const { data: profile } = (await supabase
       .from('profiles')
-      .select('id, role')
+      .select('id, role, is_protected')
       .eq('telegram_chat_id', chatId)
-      .maybeSingle()) as { data: { id: string; role: string } | null }
+      .maybeSingle()) as { data: { id: string; role: string; is_protected: boolean | null } | null }
 
     if (!profile || !['curator', 'admin', 'super_admin'].includes(profile.role)) {
       await sendTelegramMessage(chatId, 'Команда доступна только наставникам.')
@@ -1306,7 +1317,11 @@ export async function POST(request: NextRequest) {
       await sendTelegramMessage(chatId, 'Укажи ник: <code>/student @ivan</code>')
       return NextResponse.json({ ok: true })
     }
-    const detail = await formatStudentDetail(supabase, profile, arg)
+    const detail = await formatStudentDetail(
+      supabase,
+      { id: profile.id, role: profile.role, isOwner: !!(profile as any).is_protected },
+      arg,
+    )
     await sendTelegramMessage(chatId, detail, { withMiniAppButton: true })
     return NextResponse.json({ ok: true })
   }
@@ -1321,7 +1336,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
     const args = text.slice('/stats'.length).trim()
-    await handleStats(supabase, chatId, args)
+    await handleStats(supabase, chatId, args, adminProf.isOwner)
     return NextResponse.json({ ok: true })
   }
 

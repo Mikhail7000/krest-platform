@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { resolveIsOwner } from '@/lib/admin/owner'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,6 +62,9 @@ export async function POST(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
 
+  // Владелец (is_protected) видит всех; остальные — без скрытых учеников
+  const isOwner = await resolveIsOwner(supabase, session.uid)
+
   // 1. Все профили (нужны и кураторы — для карты имён).
   const { data: profilesRaw, error: profErr } = await supabase
     .from('profiles')
@@ -95,7 +99,7 @@ export async function POST(req: NextRequest) {
   }
 
   const rows: PanelStudentRow[] = profiles
-    .filter((p) => p.role === 'student')
+    .filter((p) => p.role === 'student' && (isOwner || !(p as any).hidden_from_tracking))
     .map((p) => {
       const passed = passedById.get(p.id) ?? 0
       return {

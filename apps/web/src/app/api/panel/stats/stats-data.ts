@@ -69,6 +69,16 @@ interface ProfileRow {
 const MAX_BLOCK = 10
 const STUCK_DAYS = 3
 
+/**
+ * Фильтр учеников по видимости.
+ * isOwner=true → все ученики (включая hidden_from_tracking).
+ * isOwner=false → только visible (hidden_from_tracking != true).
+ */
+function visibleStudents(profiles: ProfileRow[], isOwner: boolean): ProfileRow[] {
+  if (isOwner) return profiles.filter((p) => p.role === 'student')
+  return profiles.filter((p) => p.role === 'student' && !(p as any).hidden_from_tracking)
+}
+
 /** UTC-дата YYYY-MM-DD → порядковый номер дня (для поиска подряд-ранов). */
 function dayIndex(d: string): number {
   return Math.floor(Date.parse(`${d}T00:00:00Z`) / 86_400_000)
@@ -89,7 +99,7 @@ function longestStreak(dates: string[]): number {
 
 const todayIndex = () => Math.floor(Date.now() / 86_400_000)
 
-export async function getPanelStats(): Promise<PanelStats> {
+export async function getPanelStats(isOwner = false): Promise<PanelStats> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
 
@@ -136,12 +146,13 @@ export async function getPanelStats(): Promise<PanelStats> {
     passedCourse: 0,
     cities: 0,
   }
-  const students = profiles.filter((p) => p.role === 'student')
+  // Ученики с учётом видимости (скрытые исключаются, если запрашивающий не владелец)
+  const students = visibleStudents(profiles, isOwner)
   for (const p of profiles) {
-    if (p.role === 'student') totals.students++
-    else if (p.role === 'curator') totals.curators++
+    if (p.role === 'curator') totals.curators++
     else if (p.role === 'admin' || p.role === 'super_admin') totals.admins++
   }
+  totals.students = students.length
 
   const passedMap = new Map<string, number>()
   for (const p of passed) passedMap.set(p.user_id, p.blocks_passed)
@@ -197,7 +208,8 @@ export async function getPanelStats(): Promise<PanelStats> {
   const streaks: StreakRow[] = []
   for (const [uid, dates] of datesByUser) {
     const s = studentById.get(uid)
-    if (!s || s.hidden_from_tracking) continue
+    // studentById содержит только видимых учеников (уже отфильтровано через visibleStudents)
+    if (!s) continue
     const totalDays = new Set(dates.map(dayIndex)).size
     streaks.push({
       name: s.full_name ?? 'Без имени',
@@ -214,7 +226,7 @@ export async function getPanelStats(): Promise<PanelStats> {
   const today = todayIndex()
   const stuckList: StuckRow[] = []
   for (const s of students) {
-    if (s.hidden_from_tracking) continue
+    // students уже отфильтрован через visibleStudents — скрытые там не попадают (если !isOwner)
     const dates = datesByUser.get(s.id)
     const hasStarted = !!s.course_started_at
     const passedAll = (passedMap.get(s.id) ?? 0) >= MAX_BLOCK
