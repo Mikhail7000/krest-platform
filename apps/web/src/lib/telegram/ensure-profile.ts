@@ -173,7 +173,7 @@ export async function ensureWhitelistedProfile(params: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: slot } = await (service as any)
       .from('testing_whitelist')
-      .select('id, claimed_chat_id, hidden')
+      .select('id, claimed_chat_id, hidden, assigned_curator_id')
       .ilike('telegram_username', handle) // ники Telegram регистронезависимы
       .maybeSingle()
 
@@ -197,6 +197,7 @@ export async function ensureWhitelistedProfile(params: {
             is_whitelisted: true,
             contact_info: handle,
             ...(slot.hidden ? { hidden_from_tracking: true } : {}),
+            ...(slot.assigned_curator_id ? { curator_id: slot.assigned_curator_id } : {}),
           })
           .eq('id', existing.id)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -216,6 +217,15 @@ export async function ensureWhitelistedProfile(params: {
         hidden: slot.hidden === true,
       })
       if (!created.ok) return created
+
+      // Привязка к куратору, если задана при массовой привязке (/attach)
+      if (slot.assigned_curator_id) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (service as any)
+          .from('profiles')
+          .update({ curator_id: slot.assigned_curator_id })
+          .eq('id', created.userId)
+      }
 
       // Занимаем слот whitelist
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -34,6 +34,7 @@ const ADMIN = [
   { command: 'curators', description: 'Кураторы и ученики' },
   { command: 'add', description: 'Добавить ученика: /add @ник' },
   { command: 'addcurator', description: 'Добавить куратора: /addcurator @ник' },
+  { command: 'attach', description: 'Привязать пачкой: /attach @куратор @уч1 @уч2' },
   { command: 'stats', description: 'Статистика потока' },
   { command: 'transfer', description: 'Перевод: /transfer @ученик @куратор' },
   { command: 'delete', description: 'Удалить ученика: /delete @ник' },

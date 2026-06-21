@@ -4,6 +4,7 @@ import { computeActivity } from '@/lib/activity/streak'
 import { createTelegramProfile } from '@/lib/telegram/ensure-profile'
 import { getAdminChatIds } from '@/lib/telegram/admin-recipients'
 import { signLoginToken } from '@/lib/admin/session'
+import { attachStudentsToCurator } from '@/lib/access/attach'
 import {
   sendTelegramMessage,
   answerCallbackQuery,
@@ -1153,6 +1154,53 @@ export async function POST(request: NextRequest) {
     // Ники есть — обрабатываем сразу, сбрасываем возможный pending
     await (supabase as any).from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
     await processAddNicks(supabase, chatId, adminProfile, afterCmd, 'student')
+    return NextResponse.json({ ok: true })
+  }
+
+  // /attach @куратор @ученик1 @ученик2 — массовая привязка учеников к куратору
+  if (text.startsWith('/attach')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const adminProf = await getAdminProfile(supabase, chatId)
+    if (!adminProf) {
+      await sendTelegramMessage(chatId, 'Команда только для администраторов.')
+      return NextResponse.json({ ok: true })
+    }
+    const handles = parseHandles(text.replace(/^\/\S+\s*/, ''))
+    if (handles.length < 2) {
+      await sendTelegramMessage(
+        chatId,
+        'Формат:\n<code>/attach @куратор @ученик1 @ученик2</code>\nПервый ник — куратор, остальные — ученики.',
+      )
+      return NextResponse.json({ ok: true })
+    }
+    const [curatorHandle, ...studentHandles] = handles
+    const { data: curator } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .ilike('contact_info', curatorHandle)
+      .in('role', ['curator', 'admin', 'super_admin'])
+      .maybeSingle()
+    if (!curator) {
+      await sendTelegramMessage(
+        chatId,
+        `Куратор ${escapeHtmlTg(curatorHandle)} не найден. Он должен сначала зайти в бота как куратор.`,
+      )
+      return NextResponse.json({ ok: true })
+    }
+    const { attached, pending } = await attachStudentsToCurator(
+      supabase,
+      (curator as { id: string }).id,
+      studentHandles,
+      adminProf.id,
+    )
+    const cName = (curator as { full_name: string | null }).full_name || curatorHandle
+    const parts = [`✅ Привязка к <b>${escapeHtmlTg(cName)}</b>:`]
+    if (attached.length)
+      parts.push(`Привязано сейчас (${attached.length}): ${attached.map((h) => escapeHtmlTg(h)).join(', ')}`)
+    if (pending.length)
+      parts.push(`Привяжутся при входе (${pending.length}): ${pending.map((h) => escapeHtmlTg(h)).join(', ')}`)
+    await sendTelegramMessage(chatId, parts.join('\n\n'))
     return NextResponse.json({ ok: true })
   }
 

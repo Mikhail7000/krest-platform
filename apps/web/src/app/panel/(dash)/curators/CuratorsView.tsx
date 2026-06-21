@@ -6,10 +6,12 @@ import type { CuratorRow } from './types'
 
 /**
  * Таблица кураторов с разворотом списка учеников + добавление куратора.
+ * У каждого куратора — кнопка «Привязать учеников» (массовая привязка по никам).
  * Имена/города выводятся как React-текст (auto-escape, без innerHTML).
  */
 export function CuratorsView({ curators }: { curators: CuratorRow[] }) {
   const [openId, setOpenId] = useState<string | null>(null)
+  const [attachTarget, setAttachTarget] = useState<CuratorRow | null>(null)
 
   return (
     <>
@@ -24,6 +26,7 @@ export function CuratorsView({ curators }: { curators: CuratorRow[] }) {
                 <th>Куратор</th>
                 <th>Город</th>
                 <th>Ученики</th>
+                <th>Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -37,6 +40,7 @@ export function CuratorsView({ curators }: { curators: CuratorRow[] }) {
                     isOpen={isOpen}
                     hasStudents={hasStudents}
                     onToggle={() => setOpenId(isOpen ? null : cu.id)}
+                    onAttach={() => setAttachTarget(cu)}
                   />
                 )
               })}
@@ -44,6 +48,13 @@ export function CuratorsView({ curators }: { curators: CuratorRow[] }) {
           </table>
         </div>
       )}
+
+      {attachTarget ? (
+        <AttachModal
+          curator={attachTarget}
+          onClose={() => setAttachTarget(null)}
+        />
+      ) : null}
     </>
   )
 }
@@ -120,11 +131,13 @@ function CuratorRowGroup({
   isOpen,
   hasStudents,
   onToggle,
+  onAttach,
 }: {
   curator: CuratorRow
   isOpen: boolean
   hasStudents: boolean
   onToggle: () => void
+  onAttach: () => void
 }) {
   const cityLabel = curator.city
     ? curator.country
@@ -165,10 +178,22 @@ function CuratorRowGroup({
             </button>
           ) : null}
         </td>
+        <td>
+          <button
+            type="button"
+            className="panel-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              onAttach()
+            }}
+          >
+            Привязать учеников
+          </button>
+        </td>
       </tr>
       {isOpen && hasStudents ? (
         <tr>
-          <td colSpan={3}>
+          <td colSpan={4}>
             <div className="panel-section-title">Ученики ({curator.studentsCount})</div>
             <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
               {curator.students.map((s) => (
@@ -182,5 +207,140 @@ function CuratorRowGroup({
         </tr>
       ) : null}
     </>
+  )
+}
+
+/** Модалка массовой привязки учеников к куратору. */
+function AttachModal({
+  curator,
+  onClose,
+}: {
+  curator: CuratorRow
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [isError, setIsError] = useState(false)
+
+  const submit = async () => {
+    const trimmed = text.trim()
+    if (!trimmed) {
+      setIsError(true)
+      setNotice('Введите хотя бы один ник')
+      return
+    }
+    setBusy(true)
+    setNotice(null)
+    setIsError(false)
+    try {
+      const res = await fetch('/api/panel/actions/attach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ curatorId: curator.id, usernames: trimmed }),
+      })
+      const b = await res.json().catch(() => ({}))
+      if (res.ok && b.ok) {
+        const attached: string[] = b.attached ?? []
+        const pending: string[] = b.pending ?? []
+        setIsError(false)
+        setNotice(
+          `Привязано сразу: ${attached.length}. Привяжутся при входе: ${pending.length}.`,
+        )
+        setText('')
+        router.refresh()
+      } else {
+        setIsError(true)
+        setNotice(b.error || 'Не удалось привязать')
+      }
+    } catch {
+      setIsError(true)
+      setNotice('Сеть недоступна')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onClose()
+  }
+
+  return (
+    <div
+      className="panel-overlay"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        background: 'rgba(0,0,0,0.4)',
+        padding: '16px',
+      }}
+      onClick={handleBackdrop}
+    >
+      <div
+        className="panel-card"
+        style={{
+          width: '100%',
+          maxWidth: 480,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+        }}
+      >
+        <div>
+          <div className="panel-section-title" style={{ marginBottom: 4 }}>
+            Привязать учеников
+          </div>
+          <div className="panel-muted" style={{ fontSize: '0.88rem' }}>
+            Куратор: <strong>{curator.name ?? curator.nick ?? curator.id}</strong>
+          </div>
+        </div>
+
+        <textarea
+          className="panel-input"
+          placeholder="@ник1 @ник2 … через пробел, запятую или с новой строки"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={5}
+          style={{ resize: 'vertical', minHeight: 100, fontFamily: 'inherit' }}
+          disabled={busy}
+        />
+
+        {notice ? (
+          <div
+            className="panel-muted"
+            style={{
+              fontSize: '0.88rem',
+              color: isError ? 'var(--pl-err)' : 'var(--pl-ok)',
+            }}
+          >
+            {notice}
+          </div>
+        ) : null}
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="panel-btn"
+            onClick={onClose}
+            disabled={busy}
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            className="panel-btn panel-btn--primary"
+            onClick={submit}
+            disabled={busy || !text.trim()}
+          >
+            {busy ? '…' : 'Привязать'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
