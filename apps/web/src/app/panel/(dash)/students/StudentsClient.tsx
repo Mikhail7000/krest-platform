@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { PanelStudentRow } from '@/app/api/panel/students/route'
 import type { Curator } from './StudentRowActions'
 import { StudentRow } from './studentBits'
-
-type SortKey = 'name' | 'blocks' | 'days' | 'created'
+import { COLUMNS, compareStudents, defaultDir, type SortDir, type SortKey } from './studentsSort'
 
 export function StudentsClient() {
   const [students, setStudents] = useState<PanelStudentRow[]>([])
@@ -13,7 +12,8 @@ export function StudentsClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [sort, setSort] = useState<SortKey>('created')
+  const [sortKey, setSortKey] = useState<SortKey>('created')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [adding, setAdding] = useState(false)
   const [newNick, setNewNick] = useState('')
   const [addBusy, setAddBusy] = useState(false)
@@ -74,21 +74,19 @@ export function StudentsClient() {
         (s.contact ?? '').toLowerCase().includes(q)
       )
     })
-    arr.sort((a, b) => {
-      switch (sort) {
-        case 'name':
-          return (a.fullName ?? '').localeCompare(b.fullName ?? '', 'ru')
-        case 'blocks':
-          return b.passedBlocks - a.passedBlocks
-        case 'days':
-          return b.closedDays - a.closedDays
-        case 'created':
-        default:
-          return (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
-      }
-    })
+    const mul = sortDir === 'asc' ? 1 : -1
+    arr.sort((a, b) => compareStudents(a, b, sortKey) * mul)
     return arr
-  }, [students, query, sort])
+  }, [students, query, sortKey, sortDir])
+
+  const onSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir(defaultDir(key))
+    }
+  }
 
   return (
     <>
@@ -109,12 +107,9 @@ export function StudentsClient() {
           onChange={(e) => setQuery(e.target.value)}
           style={{ maxWidth: 280 }}
         />
-        <select className="panel-select" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} style={{ maxWidth: 200 }}>
-          <option value="created">Сначала новые</option>
-          <option value="name">По имени</option>
-          <option value="blocks">По сданным блокам</option>
-          <option value="days">По закрытым дням</option>
-        </select>
+        <span className="panel-muted" style={{ fontSize: '0.82rem' }}>
+          Сортировка — клик по заголовку столбца
+        </span>
         <div style={{ marginLeft: 'auto' }}>
           <button type="button" className="panel-btn panel-btn--primary" onClick={() => setAdding((v) => !v)}>
             + Добавить
@@ -156,14 +151,25 @@ export function StudentsClient() {
           <table className="panel-table">
             <thead>
               <tr>
-                <th>Ученик</th>
-                <th>Город</th>
-                <th>Куратор</th>
-                <th>Сдано</th>
-                <th>Текущий блок</th>
-                <th>Дней закрыто</th>
-                <th>Создан</th>
-                <th style={{ textAlign: 'right' }}>Действия</th>
+                {COLUMNS.map((c) =>
+                  c.key ? (
+                    <th
+                      key={c.label}
+                      onClick={() => onSort(c.key!)}
+                      style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
+                      title="Сортировать"
+                    >
+                      {c.label}{' '}
+                      <span style={{ opacity: sortKey === c.key ? 1 : 0.3, fontSize: '0.78em' }}>
+                        {sortKey === c.key ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}
+                      </span>
+                    </th>
+                  ) : (
+                    <th key={c.label} style={{ textAlign: c.align }}>
+                      {c.label}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
