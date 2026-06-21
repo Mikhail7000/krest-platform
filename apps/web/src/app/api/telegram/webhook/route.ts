@@ -1080,7 +1080,8 @@ export async function POST(request: NextRequest) {
   }
 
   const chatId = message.chat.id
-  const text = message.text.trim()
+  // Нормализуем лишние ведущие слеши: «//attach», «///add» → «/attach», «/add»
+  const text = message.text.trim().replace(/^\/+/, '/')
 
   // /addcurator @nick — добавить кураторов по нику (assign_role=curator). Только admin/super_admin.
   // ВАЖНО: проверяется ДО /add (иначе /add перехватит).
