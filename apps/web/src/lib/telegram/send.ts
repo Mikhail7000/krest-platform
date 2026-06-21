@@ -1,6 +1,16 @@
 // Отправка сообщений через Telegram Bot API. Общий хелпер.
 // Бот-токен — TELEGRAM_BOT_TOKEN.
 
+/**
+ * Экранирует пользовательский текст для вставки в сообщение с parse_mode=HTML.
+ * Без этого имя/ник с символами < > & ломает разбор → Telegram отвечает 400 и
+ * сообщение молча теряется. Применять к КАЖДОМУ user-controlled значению,
+ * а не ко всему сообщению (иначе порушит намеренную разметку <b>…</b>).
+ */
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 type InlineKeyboardButton =
   | { text: string; callback_data: string }
   | { text: string; web_app: { url: string } }

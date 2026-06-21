@@ -3,6 +3,7 @@ import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { parseHandles, attachStudentsToCurator } from '@/lib/access/attach'
 import { notifyAdmins } from '@/lib/telegram/admin-recipients'
+import { escapeHtml } from '@/lib/telegram/send'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   await notifyAdmins(
     supabase,
-    `🔗 ${session.name ?? 'Админ'} привязал учеников к куратору ${curatorLabel} (${total})`,
+    `🔗 ${escapeHtml(session.name ?? 'Админ')} привязал учеников к куратору ${escapeHtml(curatorLabel)} (${total})`,
   )
 
   return NextResponse.json({ ok: true, attached, pending })

@@ -1,4 +1,9 @@
+import Link from 'next/link'
 import { getPanelStats } from '@/app/api/panel/stats/stats-data'
+import { getPanelSession } from '@/lib/admin/guard'
+import { resolveIsOwner } from '@/lib/admin/owner'
+import { countPendingRequests } from '@/lib/admin/access-requests'
+import { createServiceSupabase } from '@/lib/supabase-service'
 import { ProgressChart } from './StatsClient'
 import { GenerateReport } from './GenerateReport'
 
@@ -11,7 +16,14 @@ export const dynamic = 'force-dynamic'
  * XSS: имена/города выводим только React-текстом (auto-escape).
  */
 export default async function PanelOverviewPage() {
-  const stats = await getPanelStats()
+  const session = await getPanelSession()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createServiceSupabase() as any
+  const isOwner = session ? await resolveIsOwner(supabase, session.uid) : false
+  const [stats, pendingRequests] = await Promise.all([
+    getPanelStats(isOwner),
+    countPendingRequests(supabase),
+  ])
   const { totals, byCity, byCountry, progress, streaks, stuck } = stats
 
   const maxCountry = Math.max(1, ...byCountry.map((c) => c.count))
@@ -19,6 +31,30 @@ export default async function PanelOverviewPage() {
 
   return (
     <div>
+      {pendingRequests > 0 && (
+        <Link
+          href="/panel/requests"
+          className="panel-card"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 16,
+            textDecoration: 'none',
+            color: 'inherit',
+            borderLeft: '3px solid var(--pl-acc)',
+          }}
+        >
+          <span style={{ fontSize: '1.4rem' }}>📥</span>
+          <span style={{ fontWeight: 600 }}>
+            Новых заявок на доступ: {pendingRequests}
+          </span>
+          <span className="panel-muted" style={{ marginLeft: 'auto' }}>
+            Рассмотреть →
+          </span>
+        </Link>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
         <div>
           <h1 className="panel-page__title">Обзор</h1>

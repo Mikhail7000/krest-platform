@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { notifyAdmins } from '@/lib/telegram/admin-recipients'
+import { escapeHtml } from '@/lib/telegram/send'
 
 export const dynamic = 'force-dynamic'
 
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
   }
 
   const who = target.full_name || target.contact_info || 'пользователь'
-  await notifyAdmins(supabase, `🗑 ${session.name ?? 'Админ'} удалил: ${who}`)
+  await notifyAdmins(supabase, `🗑 ${escapeHtml(session.name ?? 'Админ')} удалил: ${escapeHtml(who)}`)
 
   return NextResponse.json({ ok: true })
 }

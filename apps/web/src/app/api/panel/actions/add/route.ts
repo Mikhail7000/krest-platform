@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { notifyAdmins } from '@/lib/telegram/admin-recipients'
+import { escapeHtml } from '@/lib/telegram/send'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
 
   const roleWord = assignRole === 'curator' ? 'куратора' : 'ученика'
   const notify = () =>
-    notifyAdmins(supabase, `👤 ${session.name ?? 'Админ'} добавил ${roleWord} ${handle} (дашборд)`)
+    notifyAdmins(supabase, `👤 ${escapeHtml(session.name ?? 'Админ')} добавил ${roleWord} ${escapeHtml(handle)} (дашборд)`)
 
   if (existing) {
     const { error } = await supabase

@@ -6,12 +6,21 @@ import { useState } from 'react'
 
 const LINKS = [
   { href: '/panel', label: 'Обзор', icon: '📊' },
+  { href: '/panel/requests', label: 'Заявки', icon: '📥' },
   { href: '/panel/students', label: 'Ученики', icon: '🎓' },
   { href: '/panel/curators', label: 'Кураторы', icon: '🧭' },
   { href: '/panel/cities', label: 'Города', icon: '🌍' },
 ]
 
-export function PanelNav({ name, role }: { name: string | null; role: string }) {
+export function PanelNav({
+  name,
+  role,
+  pendingCount = 0,
+}: {
+  name: string | null
+  role: string
+  pendingCount?: number
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -55,6 +64,9 @@ export function PanelNav({ name, role }: { name: string | null; role: string }) 
             >
               <span className="panel-nav__icon">{l.icon}</span>
               {l.label}
+              {l.href === '/panel/requests' && pendingCount > 0 && (
+                <span className="panel-nav__badge">{pendingCount}</span>
+              )}
             </Link>
           ))}
         </nav>

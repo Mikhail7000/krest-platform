@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { createHmac } from 'node:crypto'
 import { createServiceSupabase } from '@/lib/supabase-service'
-import { sendTelegramMessage } from './send'
+import { sendTelegramMessage, escapeHtml } from './send'
 import { getAdminChatIds } from './admin-recipients'
 
 /**
@@ -120,8 +120,12 @@ async function notifyAdminsAboutRequest(
   const service = createServiceSupabase()
   const adminChatIds = await getAdminChatIds(service)
 
-  const name = [request.first_name, request.last_name].filter(Boolean).join(' ') || 'Без имени'
-  const usernameStr = request.username ? `@${request.username}` : 'нет username'
+  // parse_mode=HTML — экранируем user-controlled значения, иначе символ < > & в
+  // имени/нике даёт Telegram 400 и уведомление о заявке молча теряется.
+  const name = escapeHtml(
+    [request.first_name, request.last_name].filter(Boolean).join(' ') || 'Без имени',
+  )
+  const usernameStr = request.username ? `@${escapeHtml(request.username)}` : 'нет username'
 
   const text =
     `👤 <b>Новая заявка на доступ</b>\n\n` +
