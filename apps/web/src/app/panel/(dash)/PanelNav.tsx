@@ -8,6 +8,7 @@ const ALL_LINKS = [
   { href: '/panel', label: 'Обзор', icon: '📊', curatorVisible: true },
   { href: '/panel/requests', label: 'Заявки', icon: '📥', curatorVisible: false },
   { href: '/panel/students', label: 'Ученики', icon: '🎓', curatorVisible: true },
+  { href: '/panel/activity', label: 'Активность', icon: '📈', curatorVisible: true },
   { href: '/panel/curators', label: 'Кураторы', icon: '🧭', curatorVisible: false },
   { href: '/panel/cities', label: 'Города', icon: '🌍', curatorVisible: false },
 ]
