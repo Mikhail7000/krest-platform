@@ -2,35 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { PanelStudentRow } from '@/app/api/panel/students/route'
-
-interface DayActivity {
-  date: string
-  opened: boolean
-  cross: boolean
-  prayer: boolean
-  recit: boolean
-  loc: boolean
-  quiz: boolean
-  closed: boolean
-}
-interface StudentDays {
-  id: string
-  name: string | null
-  days: DayActivity[]
-}
-
-const PRACTICES: { key: keyof DayActivity; label: string }[] = [
-  { key: 'opened', label: 'Заход' },
-  { key: 'cross', label: 'Крест' },
-  { key: 'prayer', label: 'Молитва' },
-  { key: 'recit', label: 'Пересказ' },
-  { key: 'loc', label: 'Местописания' },
-  { key: 'quiz', label: 'Квиз' },
-]
-
-function fmtDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' })
-}
+import { buildReport, DayGrid, type StudentDays } from './activityBits'
 
 export function ActivityClient() {
   const [students, setStudents] = useState<PanelStudentRow[]>([])
@@ -40,6 +12,8 @@ export function ActivityClient() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [detail, setDetail] = useState<StudentDays[] | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const [report, setReport] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     fetch('/api/panel/students', { method: 'POST', body: '{}' })
@@ -69,9 +43,10 @@ export function ActivityClient() {
   const toggleAll = () =>
     setSelected((prev) => (prev.size === visible.length ? new Set() : new Set(visible.map((s) => s.id))))
 
-  const showActivity = async () => {
+  const generate = async () => {
     if (selected.size === 0) return
     setLoadingDetail(true)
+    setCopied(false)
     try {
       const res = await fetch('/api/panel/activity/days', {
         method: 'POST',
@@ -79,9 +54,24 @@ export function ActivityClient() {
         body: JSON.stringify({ userIds: [...selected] }),
       })
       const j = await res.json()
-      if (j.ok) setDetail(j.students as StudentDays[])
+      if (j.ok) {
+        const days = j.students as StudentDays[]
+        setDetail(days)
+        setReport(buildReport(students, days))
+      }
     } finally {
       setLoadingDetail(false)
+    }
+  }
+
+  const copyReport = async () => {
+    if (!report) return
+    try {
+      await navigator.clipboard.writeText(report)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
     }
   }
 
@@ -102,9 +92,9 @@ export function ActivityClient() {
           type="button"
           className="panel-btn panel-btn--primary"
           disabled={selected.size === 0 || loadingDetail}
-          onClick={showActivity}
+          onClick={generate}
         >
-          {loadingDetail ? 'Загрузка…' : `Показать активность (${selected.size})`}
+          {loadingDetail ? 'Формирую…' : `Сформировать отчёт (${selected.size})`}
         </button>
       </div>
 
@@ -158,54 +148,41 @@ export function ActivityClient() {
         </div>
       )}
 
+      {report ? (
+        <div className="panel-card" style={{ marginBottom: 22 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
+              marginBottom: 10,
+            }}
+          >
+            <div className="panel-section-title" style={{ margin: 0 }}>Отчёт (текст)</div>
+            <button type="button" className="panel-btn panel-btn--primary" onClick={copyReport}>
+              {copied ? '✓ Скопировано' : 'Копировать'}
+            </button>
+          </div>
+          <textarea
+            readOnly
+            value={report}
+            onFocus={(e) => e.currentTarget.select()}
+            className="panel-input"
+            style={{
+              width: '100%',
+              minHeight: 220,
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontSize: '0.8rem',
+              whiteSpace: 'pre',
+              resize: 'vertical',
+            }}
+          />
+        </div>
+      ) : null}
+
       {detail?.map((st) => <DayGrid key={st.id} student={st} />)}
     </>
-  )
-}
-
-function DayGrid({ student }: { student: StudentDays }) {
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div className="panel-section-title">{student.name || 'Без имени'}</div>
-      {student.days.length === 0 ? (
-        <div className="panel-card"><div className="panel-empty">Активности нет</div></div>
-      ) : (
-        <div className="panel-table-wrap">
-          <table className="panel-table">
-            <thead>
-              <tr>
-                <th>День</th>
-                {PRACTICES.map((p) => (
-                  <th key={p.key} style={{ textAlign: 'center' }}>{p.label}</th>
-                ))}
-                <th style={{ textAlign: 'center' }}>День закрыт</th>
-              </tr>
-            </thead>
-            <tbody>
-              {student.days.map((d) => (
-                <tr key={d.date}>
-                  <td style={{ whiteSpace: 'nowrap' }}>{fmtDate(d.date)}</td>
-                  {PRACTICES.map((p) => (
-                    <td
-                      key={p.key}
-                      style={{ textAlign: 'center', color: d[p.key] ? '#16a34a' : '#cbd0d8', fontWeight: 700 }}
-                    >
-                      {d[p.key] ? '✓' : '·'}
-                    </td>
-                  ))}
-                  <td style={{ textAlign: 'center' }}>
-                    {d.closed ? (
-                      <span className="panel-badge panel-badge--ok">закрыт</span>
-                    ) : (
-                      <span className="panel-muted">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
   )
 }
