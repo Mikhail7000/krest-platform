@@ -62,8 +62,11 @@ export async function POST(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
 
-  // Владелец (is_protected) видит всех; остальные — без скрытых учеников
-  const isOwner = await resolveIsOwner(supabase, session.uid)
+  // Куратор видит только своих учеников (scope по curator_id). Не является владельцем.
+  const scopeCuratorId: string | null = session.role === 'curator' ? session.uid : null
+
+  // Владелец (is_protected) видит всех; остальные — без скрытых учеников. Куратор никогда не владелец.
+  const isOwner = scopeCuratorId ? false : await resolveIsOwner(supabase, session.uid)
 
   // 1. Все профили (нужны и кураторы — для карты имён).
   const { data: profilesRaw, error: profErr } = await supabase
@@ -99,7 +102,12 @@ export async function POST(req: NextRequest) {
   }
 
   const rows: PanelStudentRow[] = profiles
-    .filter((p) => p.role === 'student' && (isOwner || !(p as any).hidden_from_tracking))
+    .filter(
+      (p) =>
+        p.role === 'student' &&
+        (isOwner || !(p as any).hidden_from_tracking) &&
+        (!scopeCuratorId || p.curator_id === scopeCuratorId),
+    )
     .map((p) => {
       const passed = passedById.get(p.id) ?? 0
       return {
@@ -120,10 +128,13 @@ export async function POST(req: NextRequest) {
       }
     })
 
-  // Список кураторов для выпадашки «Куратор».
-  const curators = profiles
-    .filter((p) => p.role === 'curator' || p.role === 'admin' || p.role === 'super_admin')
-    .map((p) => ({ id: p.id, name: p.full_name, role: p.role }))
+  // Список кураторов для выпадашки «Куратор» (только для admin/super_admin).
+  // Куратор не может переназначать учеников → пустой массив.
+  const curators = scopeCuratorId
+    ? []
+    : profiles
+        .filter((p) => p.role === 'curator' || p.role === 'admin' || p.role === 'super_admin')
+        .map((p) => ({ id: p.id, name: p.full_name, role: p.role }))
 
   return NextResponse.json({ ok: true, students: rows, curators })
 }

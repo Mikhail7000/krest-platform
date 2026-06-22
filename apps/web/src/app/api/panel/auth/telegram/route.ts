@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
     .eq('telegram_chat_id', verified.id)
     .maybeSingle()
 
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+  if (!profile || !['admin', 'super_admin', 'curator'].includes(profile.role)) {
     return NextResponse.json(
-      { ok: false, error: 'Нет доступа: только администраторы платформы' },
+      { ok: false, error: 'Нет доступа: только администраторы и кураторы' },
       { status: 403 },
     )
   }

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { computeActivity } from '@/lib/activity/streak'
 import { createTelegramProfile } from '@/lib/telegram/ensure-profile'
 import { getAdminChatIds } from '@/lib/telegram/admin-recipients'
-import { signLoginToken } from '@/lib/admin/session'
+import { signLoginToken, type AdminRole } from '@/lib/admin/session'
 import { attachStudentsToCurator } from '@/lib/access/attach'
 import {
   sendTelegramMessage,
@@ -1225,20 +1225,20 @@ export async function POST(request: NextRequest) {
       .eq('telegram_chat_id', chatId)
       .maybeSingle()) as { data: { id: string; role: string; full_name: string | null } | null }
 
-    if (!prof || !['admin', 'super_admin'].includes(prof.role)) {
-      await sendTelegramMessage(chatId, 'Веб-дашборд доступен только администраторам.')
+    if (!prof || !['admin', 'super_admin', 'curator'].includes(prof.role)) {
+      await sendTelegramMessage(chatId, 'Веб-дашборд доступен только администраторам и кураторам.')
       return NextResponse.json({ ok: true })
     }
 
     const token = signLoginToken({
       uid: prof.id,
-      role: prof.role as 'admin' | 'super_admin',
+      role: prof.role as AdminRole,
       name: prof.full_name,
     })
     const url = `${SITE_URL}/panel/enter?token=${encodeURIComponent(token)}`
     await sendTelegramMessage(
       chatId,
-      '🌐 <b>Веб-дашборд администратора</b>\n\nНажми кнопку — откроется уже залогиненным. Ссылка действует 10 минут.',
+      '🌐 <b>Веб-дашборд</b>\n\nНажми кнопку — откроется уже залогиненным. Ссылка действует 10 минут.',
       { inlineKeyboard: [[{ text: '🌐 Открыть веб-дашборд', url }]] },
     )
     return NextResponse.json({ ok: true })

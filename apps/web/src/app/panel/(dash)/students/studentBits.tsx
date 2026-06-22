@@ -24,14 +24,21 @@ const BLOCK_TITLES: Record<number, string> = {
 export function StudentRow({
   s,
   curators,
+  isCurator = false,
   onDone,
   onError,
 }: {
   s: PanelStudentRow
   curators: Curator[]
+  isCurator?: boolean
   onDone: (msg: string) => void
   onError: (msg: string) => void
 }) {
+  // Для куратора: имя текущего куратора читаем из списка (может быть пустым, т.к. API вернул []).
+  const curatorName = s.curatorId
+    ? (curators.find((c) => c.id === s.curatorId)?.name ?? s.curatorId)
+    : null
+
   return (
     <tr>
       <td>
@@ -44,7 +51,15 @@ export function StudentRow({
         </Link>
       </td>
       <td>{s.cityName || <span className="panel-muted">—</span>}</td>
-      <td><CuratorPicker s={s} curators={curators} onDone={onDone} onError={onError} /></td>
+      <td>
+        {isCurator ? (
+          <span className="panel-muted" style={{ fontSize: '0.85rem' }}>
+            {curatorName ?? '—'}
+          </span>
+        ) : (
+          <CuratorPicker s={s} curators={curators} onDone={onDone} onError={onError} />
+        )}
+      </td>
       <td><span className="panel-badge panel-badge--acc">{s.passedBlocks} / 10</span></td>
       <td>
         <span style={{ fontWeight: 600 }}>Блок {s.currentBlock}</span>
@@ -52,9 +67,11 @@ export function StudentRow({
       </td>
       <td>{s.closedDays}</td>
       <td className="panel-muted" style={{ whiteSpace: 'nowrap' }}>{fmtDate(s.createdAt)}</td>
-      <td style={{ textAlign: 'right' }}>
-        <StudentRowActions student={s} curators={curators} onDone={onDone} onError={onError} />
-      </td>
+      {!isCurator && (
+        <td style={{ textAlign: 'right' }}>
+          <StudentRowActions student={s} curators={curators} onDone={onDone} onError={onError} />
+        </td>
+      )}
     </tr>
   )
 }

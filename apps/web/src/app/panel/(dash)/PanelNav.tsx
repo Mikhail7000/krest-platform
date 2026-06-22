@@ -4,13 +4,19 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-const LINKS = [
-  { href: '/panel', label: 'Обзор', icon: '📊' },
-  { href: '/panel/requests', label: 'Заявки', icon: '📥' },
-  { href: '/panel/students', label: 'Ученики', icon: '🎓' },
-  { href: '/panel/curators', label: 'Кураторы', icon: '🧭' },
-  { href: '/panel/cities', label: 'Города', icon: '🌍' },
+const ALL_LINKS = [
+  { href: '/panel', label: 'Обзор', icon: '📊', curatorVisible: true },
+  { href: '/panel/requests', label: 'Заявки', icon: '📥', curatorVisible: false },
+  { href: '/panel/students', label: 'Ученики', icon: '🎓', curatorVisible: true },
+  { href: '/panel/curators', label: 'Кураторы', icon: '🧭', curatorVisible: false },
+  { href: '/panel/cities', label: 'Города', icon: '🌍', curatorVisible: false },
 ]
+
+function roleLabel(role: string): string {
+  if (role === 'super_admin') return 'Супер-админ'
+  if (role === 'curator') return 'Куратор'
+  return 'Админ'
+}
 
 export function PanelNav({
   name,
@@ -24,6 +30,9 @@ export function PanelNav({
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+
+  const isCurator = role === 'curator'
+  const links = ALL_LINKS.filter((l) => !isCurator || l.curatorVisible)
 
   const isActive = (href: string) =>
     href === '/panel' ? pathname === '/panel' : pathname.startsWith(href)
@@ -55,7 +64,7 @@ export function PanelNav({
         <p className="panel-sidebar__sub">Панель администратора</p>
 
         <nav className="panel-nav">
-          {LINKS.map((l) => (
+          {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -64,7 +73,7 @@ export function PanelNav({
             >
               <span className="panel-nav__icon">{l.icon}</span>
               {l.label}
-              {l.href === '/panel/requests' && pendingCount > 0 && (
+              {l.href === '/panel/requests' && !isCurator && pendingCount > 0 && (
                 <span className="panel-nav__badge">{pendingCount}</span>
               )}
             </Link>
@@ -74,9 +83,7 @@ export function PanelNav({
         <div className="panel-sidebar__foot">
           <div className="panel-sidebar__user">
             <span className="panel-sidebar__name">{name ?? 'Админ'}</span>
-            <span className="panel-sidebar__role">
-              {role === 'super_admin' ? 'Супер-админ' : 'Админ'}
-            </span>
+            <span className="panel-sidebar__role">{roleLabel(role)}</span>
           </div>
           <button type="button" className="panel-sidebar__logout" onClick={logout}>
             Выйти

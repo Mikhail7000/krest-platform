@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { getPanelSession } from '@/lib/admin/guard'
 import { CuratorsView } from './CuratorsView'
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic'
  * /panel/curators — кураторы и администраторы платформы: роль, город, страна,
  * число учеников, разворот со списком учеников + смена роли (curator↔admin↔student).
  * Данные через service-role (сервер админа, обход RLS).
+ * Кураторы не имеют доступа к этой странице → 404.
  */
 async function loadCurators(): Promise<{
   curators: CuratorRow[]
@@ -90,6 +92,8 @@ export default async function CuratorsPage() {
     loadCurators(),
     getPanelSession(),
   ])
+  if (session?.role === 'curator') notFound()
+
   const totalAdmins = curators.filter((c) => c.role === 'admin').length
   const isSuperAdmin = session?.role === 'super_admin'
 

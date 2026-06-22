@@ -75,6 +75,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ ok: false, error: 'Ученик не найден' }, { status: 404 })
   }
 
+  // Куратор видит только своих учеников. Возвращаем 404 (не 403), чтобы не раскрывать
+  // факт существования ученика другого куратора.
+  if (session.role === 'curator' && profile.curator_id !== session.uid) {
+    return NextResponse.json({ ok: false, error: 'Ученик не найден' }, { status: 404 })
+  }
+
   // Имя куратора.
   let curatorName: string | null = null
   if (profile.curator_id) {

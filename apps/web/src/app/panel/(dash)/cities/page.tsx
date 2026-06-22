@@ -1,4 +1,6 @@
+import { notFound } from 'next/navigation'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { getPanelSession } from '@/lib/admin/guard'
 import { CitiesView } from './CitiesView'
 
 export const dynamic = 'force-dynamic'
@@ -9,8 +11,11 @@ function normStatus(raw: string | null): CityStatus {
   return raw === 'active' || raw === 'coming_soon' || raw === 'inactive' ? raw : 'inactive'
 }
 
-/** /panel/cities — города и страны, проходящие Крест. */
+/** /panel/cities — города и страны, проходящие Крест. Кураторы не имеют доступа → 404. */
 export default async function CitiesPage() {
+  const session = await getPanelSession()
+  if (session?.role === 'curator') notFound()
+
   const supabase = createServiceSupabase()
 
   const [citiesRes, countriesRes, profilesRes] = await Promise.all([

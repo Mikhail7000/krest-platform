@@ -1,5 +1,7 @@
+import { notFound } from 'next/navigation'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { getAccessRequests } from '@/lib/admin/access-requests'
+import { getPanelSession } from '@/lib/admin/guard'
 import { RequestActions } from './RequestActions'
 
 export const dynamic = 'force-dynamic'
@@ -8,6 +10,7 @@ export const dynamic = 'force-dynamic'
  * /panel/requests — заявки на доступ от незнакомых Telegram-пользователей.
  * Дублирует Telegram inline-кнопки: тот же набор решений, тот же бэкенд.
  * XSS: имена/ники выводим только React-текстом (auto-escape).
+ * Кураторы не имеют доступа к этой странице → 404.
  */
 
 function fmtName(
@@ -40,6 +43,9 @@ function fmtWhen(iso: string | null): string {
 }
 
 export default async function RequestsPage() {
+  const session = await getPanelSession()
+  if (session?.role === 'curator') notFound()
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
   const { pending, decided } = await getAccessRequests(supabase)

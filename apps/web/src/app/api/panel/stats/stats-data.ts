@@ -62,6 +62,7 @@ interface ProfileRow {
   contact_info: string | null
   role: string
   city_id: number | null
+  curator_id: string | null
   course_started_at: string | null
   hidden_from_tracking: boolean | null
 }
@@ -73,10 +74,23 @@ const STUCK_DAYS = 3
  * Фильтр учеников по видимости.
  * isOwner=true → все ученики (включая hidden_from_tracking).
  * isOwner=false → только visible (hidden_from_tracking != true).
+ * scopeCuratorId — если задан, ограничивает выборку учениками этого куратора.
  */
-function visibleStudents(profiles: ProfileRow[], isOwner: boolean): ProfileRow[] {
-  if (isOwner) return profiles.filter((p) => p.role === 'student')
-  return profiles.filter((p) => p.role === 'student' && !(p as any).hidden_from_tracking)
+function visibleStudents(
+  profiles: ProfileRow[],
+  isOwner: boolean,
+  scopeCuratorId?: string,
+): ProfileRow[] {
+  let base: ProfileRow[]
+  if (isOwner) {
+    base = profiles.filter((p) => p.role === 'student')
+  } else {
+    base = profiles.filter((p) => p.role === 'student' && !(p as any).hidden_from_tracking)
+  }
+  if (scopeCuratorId) {
+    base = base.filter((p) => (p as any).curator_id === scopeCuratorId)
+  }
+  return base
 }
 
 /** UTC-дата YYYY-MM-DD → порядковый номер дня (для поиска подряд-ранов). */
@@ -99,7 +113,7 @@ function longestStreak(dates: string[]): number {
 
 const todayIndex = () => Math.floor(Date.now() / 86_400_000)
 
-export async function getPanelStats(isOwner = false): Promise<PanelStats> {
+export async function getPanelStats(isOwner = false, scopeCuratorId?: string): Promise<PanelStats> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
 
@@ -112,7 +126,7 @@ export async function getPanelStats(isOwner = false): Promise<PanelStats> {
   ] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, full_name, contact_info, role, city_id, course_started_at, hidden_from_tracking'),
+      .select('id, full_name, contact_info, role, city_id, curator_id, course_started_at, hidden_from_tracking'),
     supabase.from('cities').select('id, name_ru, country_id'),
     supabase.from('countries').select('id, name_ru'),
     supabase.rpc('passed_blocks_all'),
@@ -147,10 +161,13 @@ export async function getPanelStats(isOwner = false): Promise<PanelStats> {
     cities: 0,
   }
   // Ученики с учётом видимости (скрытые исключаются, если запрашивающий не владелец)
-  const students = visibleStudents(profiles, isOwner)
-  for (const p of profiles) {
-    if (p.role === 'curator') totals.curators++
-    else if (p.role === 'admin' || p.role === 'super_admin') totals.admins++
+  const students = visibleStudents(profiles, isOwner, scopeCuratorId)
+  // Куратор видит только агрегаты своей группы, не платформенные счётчики персонала
+  if (!scopeCuratorId) {
+    for (const p of profiles) {
+      if (p.role === 'curator') totals.curators++
+      else if (p.role === 'admin' || p.role === 'super_admin') totals.admins++
+    }
   }
   totals.students = students.length
 

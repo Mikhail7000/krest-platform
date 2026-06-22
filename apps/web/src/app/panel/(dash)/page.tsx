@@ -19,10 +19,17 @@ export default async function PanelOverviewPage() {
   const session = await getPanelSession()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
-  const isOwner = session ? await resolveIsOwner(supabase, session.uid) : false
+
+  const isCurator = session?.role === 'curator'
+
+  // Куратор видит только своих учеников; isOwner всегда false для куратора.
+  const isOwner = isCurator ? false : (session ? await resolveIsOwner(supabase, session.uid) : false)
+  const scope = isCurator ? session?.uid : undefined
+
+  // Кураторы не видят заявки на доступ — не делаем лишний запрос.
   const [stats, pendingRequests] = await Promise.all([
-    getPanelStats(isOwner),
-    countPendingRequests(supabase),
+    getPanelStats(isOwner, scope),
+    isCurator ? Promise.resolve(0) : countPendingRequests(supabase),
   ])
   const { totals, byCity, byCountry, progress, streaks, stuck } = stats
 
@@ -31,7 +38,7 @@ export default async function PanelOverviewPage() {
 
   return (
     <div>
-      {pendingRequests > 0 && (
+      {!isCurator && pendingRequests > 0 && (
         <Link
           href="/panel/requests"
           className="panel-card"
@@ -58,7 +65,9 @@ export default async function PanelOverviewPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
         <div>
           <h1 className="panel-page__title">Обзор</h1>
-          <p className="panel-page__subtitle" style={{ marginBottom: 0 }}>Сводная статистика платформы</p>
+          <p className="panel-page__subtitle" style={{ marginBottom: 0 }}>
+            {isCurator ? 'Статистика вашей группы' : 'Сводная статистика платформы'}
+          </p>
         </div>
         <GenerateReport stats={stats} />
       </div>
@@ -70,14 +79,18 @@ export default async function PanelOverviewPage() {
           <div className="panel-stat__value">{totals.students}</div>
           <div className="panel-stat__hint">в {totals.cities} городах</div>
         </div>
-        <div className="panel-stat">
-          <div className="panel-stat__label">Кураторов</div>
-          <div className="panel-stat__value">{totals.curators}</div>
-        </div>
-        <div className="panel-stat">
-          <div className="panel-stat__label">Администраторов</div>
-          <div className="panel-stat__value">{totals.admins}</div>
-        </div>
+        {!isCurator && (
+          <div className="panel-stat">
+            <div className="panel-stat__label">Кураторов</div>
+            <div className="panel-stat__value">{totals.curators}</div>
+          </div>
+        )}
+        {!isCurator && (
+          <div className="panel-stat">
+            <div className="panel-stat__label">Администраторов</div>
+            <div className="panel-stat__value">{totals.admins}</div>
+          </div>
+        )}
         <div className="panel-stat">
           <div className="panel-stat__label">Сдали курс</div>
           <div className="panel-stat__value">{totals.passedCourse}</div>

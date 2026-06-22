@@ -19,6 +19,9 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }
+  if (session.role === 'curator') {
+    return NextResponse.json({ ok: false, error: 'Недостаточно прав' }, { status: 403 })
+  }
 
   const body = (await req.json().catch(() => ({}))) as { username?: string; role?: string }
   const raw = (body.username ?? '').trim().replace(/^@+/, '').toLowerCase()

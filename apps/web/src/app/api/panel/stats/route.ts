@@ -20,8 +20,10 @@ async function handle(req: NextRequest) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServiceSupabase() as any
-    const isOwner = await resolveIsOwner(supabase, session.uid)
-    const stats = await getPanelStats(isOwner)
+    // Куратор видит только свою группу, не является владельцем.
+    const scopeCuratorId = session.role === 'curator' ? session.uid : undefined
+    const isOwner = scopeCuratorId ? false : await resolveIsOwner(supabase, session.uid)
+    const stats = await getPanelStats(isOwner, scopeCuratorId)
     return NextResponse.json({ ok: true, ...stats })
   } catch (e) {
     console.error('[panel/stats]', e)

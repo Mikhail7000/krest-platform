@@ -12,9 +12,13 @@ export default async function DashLayout({ children }: { children: React.ReactNo
   const session = await getPanelSession()
   if (!session) redirect('/panel/login')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = createServiceSupabase() as any
-  const pendingCount = await countPendingRequests(supabase)
+  // Кураторы не видят заявки на доступ — не делаем лишний запрос.
+  let pendingCount = 0
+  if (session.role !== 'curator') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    pendingCount = await countPendingRequests(supabase)
+  }
 
   return (
     <div className="panel-shell">

@@ -6,7 +6,7 @@ import type { Curator } from './StudentRowActions'
 import { StudentRow } from './studentBits'
 import { COLUMNS, compareStudents, defaultDir, type SortDir, type SortKey } from './studentsSort'
 
-export function StudentsClient() {
+export function StudentsClient({ isCurator = false }: { isCurator?: boolean }) {
   const [students, setStudents] = useState<PanelStudentRow[]>([])
   const [curators, setCurators] = useState<Curator[]>([])
   const [loading, setLoading] = useState(true)
@@ -110,11 +110,13 @@ export function StudentsClient() {
         <span className="panel-muted" style={{ fontSize: '0.82rem' }}>
           Сортировка — клик по заголовку столбца
         </span>
-        <div style={{ marginLeft: 'auto' }}>
-          <button type="button" className="panel-btn panel-btn--primary" onClick={() => setAdding((v) => !v)}>
-            + Добавить
-          </button>
-        </div>
+        {!isCurator && (
+          <div style={{ marginLeft: 'auto' }}>
+            <button type="button" className="panel-btn panel-btn--primary" onClick={() => setAdding((v) => !v)}>
+              + Добавить
+            </button>
+          </div>
+        )}
       </div>
 
       {adding && (
@@ -151,7 +153,7 @@ export function StudentsClient() {
           <table className="panel-table">
             <thead>
               <tr>
-                {COLUMNS.map((c) =>
+                {COLUMNS.filter((c) => !isCurator || c.label !== 'Действия').map((c) =>
                   c.key ? (
                     <th
                       key={c.label}
@@ -178,6 +180,7 @@ export function StudentsClient() {
                   key={s.id}
                   s={s}
                   curators={curators}
+                  isCurator={isCurator}
                   onDone={(msg) => { flash('ok', msg); void load() }}
                   onError={(msg) => flash('err', msg)}
                 />

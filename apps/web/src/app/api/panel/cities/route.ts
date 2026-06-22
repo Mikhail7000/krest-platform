@@ -42,7 +42,10 @@ function normStatus(raw: string | null): CityStatus {
 /** GET /api/panel/cities — города/страны с числом учеников и кураторов. */
 export async function GET(req: NextRequest) {
   const session = getPanelSessionFromReq(req)
-  if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  if (!session) return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
+  if (session.role === 'curator') {
+    return NextResponse.json({ ok: false, error: 'Недостаточно прав' }, { status: 403 })
+  }
 
   const supabase = createServiceSupabase()
 

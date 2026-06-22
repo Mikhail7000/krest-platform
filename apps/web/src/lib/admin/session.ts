@@ -9,7 +9,11 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 export const ADMIN_COOKIE = 'krest_admin'
 export const ADMIN_COOKIE_MAXAGE = 60 * 60 * 24 * 7 // 7 дней
 
-export type AdminRole = 'admin' | 'super_admin'
+export type AdminRole = 'admin' | 'super_admin' | 'curator'
+
+export function isCuratorRole(r: AdminRole): boolean {
+  return r === 'curator'
+}
 
 export interface AdminSession {
   uid: string
