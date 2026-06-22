@@ -1,45 +1,50 @@
 /**
- * Cron: ежедневные напоминания ученикам, не заходившим в приложение.
- * Расписание (vercel.json), время Бали (Asia/Makassar, UTC+8):
- *   ?stage=18 → 18:00 Бали (10:00 UTC) — мягкое напоминание
- *   ?stage=20 → 20:00 Бали (12:00 UTC) — личное, тёплое
- *   ?stage=21 → 21:00 Бали (13:00 UTC) — только если так и не зашёл
+ * Cron: вечернее напоминание ученикам — 20:00 ПО ЧАСОВОМУ ПОЯСУ УЧЕНИКА.
+ * Запускается ЕЖЕЧАСНО (vercel.json: "0 * * * *"). На каждом запуске шлёт тем,
+ * у кого сейчас 20:00 по их поясу (из города; по умолчанию Бали), кто сегодня
+ * (по локальному дню) не заходил и кому ещё не напоминали в этот локальный день.
+ * Текст ротируется случайно из POOL.
  *
  * Защита: Authorization: Bearer ${CRON_SECRET} (Vercel добавляет автоматически).
  */
-
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { sendTelegramMessage } from '@/lib/telegram/send'
-import { baliToday } from '@/lib/time/bali'
 
 export const dynamic = 'force-dynamic'
 
-// 18:00 — мягкое, мотивирующее «не забудь зайти»
-const POOL_18 = [
+const POOL = [
   'Верность и постоянство — ключ к успеху. Загляни в КРЕСТ сегодня 🙏',
   'Не хлебом единым жив человек (Мф. 4:4). Удели время КРЕСТу сегодня.',
   'Кто верен в малом, верен и в большом (Лк. 16:10). Зайди в КРЕСТ ✝️',
   'Маленький шаг каждый день рождает большую веру. Открой КРЕСТ.',
   'Ты ещё не заходил сегодня. Один шаг в КРЕСТ — и день прожит не зря.',
-]
-
-// 20:00 — личное, тёплое: «я и сам учился по вечерам»
-const POOL_20 = [
   'Я понимаю, уже поздно, но я и сам учился по вечерам. Верность и постоянство — залог успеха. Не забудь зайти 🙏',
-]
-
-// 21:00 — сильнее, вызов: «день начинается с вечера»
-const POOL_21 = [
-  'День начинается с вечера. Ты так и не зашёл сегодня — успей ✝️',
-  'Сдай курс Креста. Но путь проходят каждый день — начни сейчас.',
+  'День начинается с вечера. Успей зайти сегодня ✝️',
   'Не живи двойной жизнью. Будь верен пути — загляни в КРЕСТ.',
-  'Ещё не поздно. Открой КРЕСТ хотя бы на пару минут 🙏',
-  'Постоянство решает. Не пропусти день — он начинается с вечера.',
+  'Не пропусти день — он начинается с вечера.',
 ]
 
-function pick(pool: string[]): string {
-  return pool[Math.floor(Math.random() * pool.length)]
+const TARGET_HOUR = 20
+const DEFAULT_TZ = 'Asia/Makassar'
+
+function pick(): string {
+  return POOL[Math.floor(Math.random() * POOL.length)]
+}
+
+/** Локальные час (0–23) и дата (YYYY-MM-DD) для часового пояса прямо сейчас. */
+function localHourDate(tz: string): { hour: number; date: string } {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hour12: false,
+  })
+  const p: Record<string, string> = {}
+  for (const part of fmt.formatToParts(new Date())) p[part.type] = part.value
+  return { hour: parseInt(p.hour, 10) % 24, date: `${p.year}-${p.month}-${p.day}` }
 }
 
 export async function GET(req: NextRequest) {
@@ -48,85 +53,89 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
   }
 
-  const stage = req.nextUrl.searchParams.get('stage')
-  if (stage !== '18' && stage !== '20' && stage !== '21') {
-    return NextResponse.json({ error: 'stage must be 18, 20 or 21' }, { status: 400 })
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createServiceSupabase() as any
 
-  const supabase = createServiceSupabase()
-  const today = baliToday()
-  const pool = stage === '18' ? POOL_18 : stage === '20' ? POOL_20 : POOL_21
-
-  // Ученики с привязанным Telegram
-  const { data: students, error: stErr } = await supabase
+  // Ученики с Telegram + часовой пояс из города.
+  const { data: students, error } = await supabase
     .from('profiles')
-    .select('id, telegram_chat_id')
+    .select('id, telegram_chat_id, cities(timezone)')
     .eq('role', 'student')
     .not('telegram_chat_id', 'is', null)
-
-  if (stErr) {
-    console.error('[daily-reminder] students error:', stErr)
+  if (error) {
+    console.error('[evening-reminder] students', error)
     return NextResponse.json({ error: 'DB_ERROR' }, { status: 500 })
   }
 
-  // Активность за сегодня
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: actRaw } = await (supabase as any)
-    .from('student_daily_activity')
-    .select('user_id, opened, reminded_18, reminded_20, reminded_21')
-    .eq('activity_date', today)
-
-  type Act = {
-    user_id: string
-    opened: boolean
-    reminded_18: boolean
-    reminded_20: boolean
-    reminded_21: boolean
+  // Кому прямо сейчас 20:00 по их локальному времени.
+  const due: { id: string; chatId: number; date: string }[] = []
+  for (const s of students ?? []) {
+    // Supabase может вернуть cities объектом или массивом — нормализуем.
+    const c = s.cities
+    const tz: string =
+      (Array.isArray(c) ? c[0]?.timezone : c?.timezone) || DEFAULT_TZ
+    let hd: { hour: number; date: string }
+    try {
+      hd = localHourDate(tz)
+    } catch {
+      hd = localHourDate(DEFAULT_TZ)
+    }
+    if (hd.hour === TARGET_HOUR && s.telegram_chat_id) {
+      due.push({ id: s.id, chatId: Number(s.telegram_chat_id), date: hd.date })
+    }
   }
-  const actMap = new Map<string, Act>()
-  for (const a of (actRaw ?? []) as Act[]) actMap.set(a.user_id, a)
+  if (due.length === 0) return NextResponse.json({ ok: true, due: 0, sent: 0 })
+
+  const ids = due.map((d) => d.id)
+  const dueDates = [...new Set(due.map((d) => d.date))]
+
+  // Кто открывал приложение за последние ~20 ч (= сегодня по локальному дню:
+  // в 20:00 локально полночь была 20 ч назад). Сравнение timestamp — на стороне БД.
+  const since = new Date(Date.now() - 20 * 3600 * 1000).toISOString()
+  const { data: openedRows } = await supabase
+    .from('student_daily_activity')
+    .select('user_id')
+    .in('user_id', ids)
+    .eq('opened', true)
+    .gte('opened_at', since)
+  const openedToday = new Set<string>(((openedRows ?? []) as { user_id: string }[]).map((r) => r.user_id))
+
+  // Кому уже напомнили в его локальный день.
+  const { data: remRows } = await supabase
+    .from('student_daily_activity')
+    .select('user_id, activity_date')
+    .in('user_id', ids)
+    .in('activity_date', dueDates)
+    .eq('reminded_evening', true)
+  const reminded = new Set<string>(
+    ((remRows ?? []) as { user_id: string; activity_date: string }[]).map(
+      (r) => `${r.user_id}|${r.activity_date}`,
+    ),
+  )
 
   let sent = 0
   const nowIso = new Date().toISOString()
+  for (const d of due) {
+    if (openedToday.has(d.id)) continue
+    if (reminded.has(`${d.id}|${d.date}`)) continue
 
-  for (const s of students ?? []) {
-    const chatId = s.telegram_chat_id
-    if (!chatId) continue
-    const act = actMap.get(s.id)
-    if (act?.opened) continue // уже заходил сегодня
-    const alreadyReminded =
-      stage === '18' ? act?.reminded_18 : stage === '20' ? act?.reminded_20 : act?.reminded_21
-    if (alreadyReminded) continue // уже напомнили на этом этапе
-
-    const ok = await sendTelegramMessage(chatId, `✝️ <b>КРЕСТ</b>\n\n${pick(pool)}`, {
+    const ok = await sendTelegramMessage(d.chatId, `✝️ <b>КРЕСТ</b>\n\n${pick()}`, {
       withMiniAppButton: true,
     })
     if (!ok) continue
     sent++
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('student_daily_activity').upsert(
-      {
-        user_id: s.id,
-        activity_date: today,
-        ...(stage === '18'
-          ? { reminded_18: true }
-          : stage === '20'
-            ? { reminded_20: true }
-            : { reminded_21: true }),
-        updated_at: nowIso,
-      },
+    await supabase.from('student_daily_activity').upsert(
+      { user_id: d.id, activity_date: d.date, reminded_evening: true, updated_at: nowIso },
       { onConflict: 'user_id,activity_date' },
     )
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('notifications_log').insert({
-      user_id: s.id,
+    await supabase.from('notifications_log').insert({
+      user_id: d.id,
       channel: 'telegram',
-      type: `daily_reminder_${stage}`,
+      type: 'evening_reminder_local',
       status: 'sent',
     })
   }
 
-  return NextResponse.json({ ok: true, stage, date: today, candidates: students?.length ?? 0, sent })
+  return NextResponse.json({ ok: true, due: due.length, sent })
 }
