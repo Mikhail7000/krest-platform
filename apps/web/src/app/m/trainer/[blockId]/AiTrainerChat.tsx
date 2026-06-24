@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRecorder, extFor } from './useRecorder'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -15,16 +16,30 @@ function getInitData(): string {
   )
 }
 
+const AUDIO_MAX = 90
+const VIDEO_MAX = 60
+
 /**
- * Чат-тренажёр «Учиться вместе с ИИ»: живой диалог-квиз по местописаниям блока.
- * ИИ даёт задания (ссылка↔текст, пропуски, «из какого блока»), проверяет мягко.
+ * Чат-тренажёр «Учиться вместе с ИИ»: диалог-квиз по местописаниям блока.
+ * Отвечать можно текстом, голосом (🎤) или видео-кружком (🎥) — запись
+ * распознаётся (Deepgram) и уходит ИИ как ответ ученика.
  */
 export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const [recKind, setRecKind] = useState<null | 'audio' | 'video'>(null)
+
   const scrollRef = useRef<HTMLDivElement>(null)
+  const videoPreviewRef = useRef<HTMLVideoElement>(null)
   const startedRef = useRef(false)
+  const messagesRef = useRef<ChatMessage[]>([])
+  messagesRef.current = messages
+
+  const audioRec = useRecorder(false, AUDIO_MAX)
+  const videoRec = useRecorder(true, VIDEO_MAX)
+  const active = recKind === 'video' ? videoRec : recKind === 'audio' ? audioRec : null
 
   async function send(history: ChatMessage[]) {
     setLoading(true)
@@ -47,7 +62,7 @@ export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: ()
     }
   }
 
-  // Первый вход — приветствие ИИ и первое задание.
+  // Первый вход — приветствие ИИ.
   useEffect(() => {
     if (startedRef.current) return
     startedRef.current = true
@@ -55,19 +70,109 @@ export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: ()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Автоскролл вниз при новых сообщениях.
+  // Автоскролл вниз.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [messages, loading])
+  }, [messages, loading, transcribing, recKind])
+
+  // Живое превью видео-кружка.
+  useEffect(() => {
+    if (recKind === 'video' && videoRec.stream && videoPreviewRef.current) {
+      videoPreviewRef.current.srcObject = videoRec.stream
+    }
+  }, [recKind, videoRec.stream])
+
+  async function finishRecording(rec: typeof audioRec, kind: 'audio' | 'video') {
+    const blob = rec.blob
+    if (!blob) return
+    setTranscribing(true)
+    try {
+      const fd = new FormData()
+      fd.append('initData', getInitData())
+      fd.append('medium', kind === 'video' ? 'video_note' : 'audio')
+      fd.append('file', blob, `answer.${extFor(rec.mime)}`)
+      const res = await fetch('/api/m/trainer/transcribe', { method: 'POST', body: fd })
+      const data = res.ok ? ((await res.json()) as { ok?: boolean; transcript?: string }) : null
+      const transcript = data?.ok ? (data.transcript ?? '').trim() : ''
+      rec.reset()
+      setRecKind(null)
+      if (transcript) {
+        const next: ChatMessage[] = [...messagesRef.current, { role: 'user', content: transcript }]
+        setMessages(next)
+        void send(next)
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'Не расслышал 🙉 Попробуй ещё раз или напиши текстом.' },
+        ])
+      }
+    } catch {
+      rec.reset()
+      setRecKind(null)
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Не удалось распознать запись. Попробуй ещё раз.' },
+      ])
+    } finally {
+      setTranscribing(false)
+    }
+  }
+
+  // Запись завершена → распознаём и отправляем.
+  useEffect(() => {
+    if (recKind === 'audio' && audioRec.state === 'recorded' && audioRec.blob) {
+      void finishRecording(audioRec, 'audio')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioRec.state])
+  useEffect(() => {
+    if (recKind === 'video' && videoRec.state === 'recorded' && videoRec.blob) {
+      void finishRecording(videoRec, 'video')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoRec.state])
+
+  // Нет доступа к микрофону/камере.
+  useEffect(() => {
+    const e = active?.error
+    if (recKind && e) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Нет доступа к микрофону/камере. Разреши доступ или ответь текстом.' },
+      ])
+      audioRec.reset()
+      videoRec.reset()
+      setRecKind(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.error])
+
+  const busy = loading || transcribing
+
+  function startRec(kind: 'audio' | 'video') {
+    if (busy || recKind) return
+    setRecKind(kind)
+    if (kind === 'audio') void audioRec.start()
+    else void videoRec.start()
+  }
+
+  function cancelRec() {
+    if (active?.state === 'recording') active.stop()
+    audioRec.reset()
+    videoRec.reset()
+    setRecKind(null)
+  }
 
   function handleSend() {
     const text = input.trim()
-    if (!text || loading) return
+    if (!text || busy) return
     const next: ChatMessage[] = [...messages, { role: 'user', content: text }]
     setMessages(next)
     setInput('')
     void send(next)
   }
+
+  const recording = Boolean(recKind) && active?.state === 'recording'
 
   return (
     <div className="ai-chat">
@@ -97,20 +202,68 @@ export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: ()
       </div>
 
       <div className="ai-chat__input">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSend()
-          }}
-          placeholder="Напиши ответ…"
-          disabled={loading}
-          aria-label="Ответ ИИ-тренажёру"
-        />
-        <button type="button" onClick={handleSend} disabled={loading || !input.trim()} aria-label="Отправить">
-          ↑
-        </button>
+        {recording ? (
+          <div className="ai-rec-bar">
+            {recKind === 'video' && (
+              <video ref={videoPreviewRef} autoPlay muted playsInline className="ai-rec-preview" />
+            )}
+            <span className="ai-rec-dot" aria-hidden />
+            <span className="ai-rec-time">
+              {recKind === 'video' ? '🎥' : '🎤'} {active?.secs ?? 0}s
+            </span>
+            <button type="button" className="ai-rec-stop" onClick={() => active?.stop()}>
+              ⏹ Готово
+            </button>
+            <button type="button" className="ai-rec-cancel" onClick={cancelRec} aria-label="Отмена">
+              ✕
+            </button>
+          </div>
+        ) : transcribing ? (
+          <div className="ai-rec-bar">
+            <span className="ai-rec-transcribing">Распознаю запись…</span>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="ai-chat__rec"
+              onClick={() => startRec('audio')}
+              disabled={busy}
+              aria-label="Ответить голосом"
+            >
+              🎤
+            </button>
+            <button
+              type="button"
+              className="ai-chat__rec"
+              onClick={() => startRec('video')}
+              disabled={busy}
+              aria-label="Ответить видео-кружком"
+            >
+              🎥
+            </button>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSend()
+              }}
+              placeholder="Напиши ответ…"
+              disabled={busy}
+              aria-label="Ответ ИИ-тренажёру"
+            />
+            <button
+              type="button"
+              className="ai-chat__send"
+              onClick={handleSend}
+              disabled={busy || !input.trim()}
+              aria-label="Отправить"
+            >
+              ↑
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

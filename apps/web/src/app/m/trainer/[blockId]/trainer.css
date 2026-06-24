@@ -622,7 +622,7 @@
   outline: none;
   border-color: var(--accent-solid, #7c5cff);
 }
-.ai-chat__input button {
+.ai-chat__send {
   flex-shrink: 0;
   width: 2.5rem;
   height: 2.5rem;
@@ -633,7 +633,76 @@
   font-size: 1.1rem;
   cursor: pointer;
 }
-.ai-chat__input button:disabled {
+.ai-chat__rec {
+  flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--surface-border, rgba(0, 0, 0, 0.12));
+  background: transparent;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+.ai-chat__send:disabled,
+.ai-chat__rec:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* Полоса записи (идёт запись / распознавание) */
+.ai-rec-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-height: 2.5rem;
+}
+.ai-rec-preview {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  transform: scaleX(-1);
+}
+.ai-rec-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  animation: ai-rec-pulse 1s ease-in-out infinite;
+}
+@keyframes ai-rec-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.ai-rec-time {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--section-title, #16181d);
+}
+.ai-rec-stop {
+  margin-left: auto;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  background: var(--accent-solid, #7c5cff);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ai-rec-cancel {
+  border: none;
+  background: transparent;
+  color: var(--tg-hint, #9ca3af);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.ai-rec-transcribing {
+  font-size: 0.875rem;
+  color: var(--tg-hint, #9ca3af);
+  font-weight: 600;
 }
