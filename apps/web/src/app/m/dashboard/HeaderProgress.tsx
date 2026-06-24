@@ -1,28 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useBlockStatus, type BlockStatusData } from '@/lib/m/block-status-cache'
 
-function getInitData(): string {
-  if (typeof window === 'undefined') return ''
-  return (
-    (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp
-      ?.initData ?? ''
-  )
-}
-
-interface Today {
-  cross: boolean
-  prayer: boolean
-  pereskaz: boolean
-  mestopisaniya: boolean
-}
-interface BlockStatusResponse {
-  ok: boolean
-  closedDays: number
-  target: number
-  today: Today
-}
+type Today = BlockStatusData['today']
 
 const TASK_LABELS: { key: keyof Today; label: string }[] = [
   { key: 'cross', label: 'Крест' },
@@ -42,33 +23,13 @@ interface Props {
  * блоке и что осталось закрыть сегодня (или «день закрыт»). Кликабелен → блок.
  */
 export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
-  const [closedDays, setClosedDays] = useState<number | null>(null)
-  const [target, setTarget] = useState(7)
-  const [remaining, setRemaining] = useState<string[] | null>(null)
+  const status = useBlockStatus(currentBlockId)
 
-  useEffect(() => {
-    if (!currentBlockId) {
-      setClosedDays(0)
-      return
-    }
-    let cancelled = false
-    fetch(`/api/m/block-status/${currentBlockId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: getInitData() }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: BlockStatusResponse | null) => {
-        if (cancelled || !d?.ok) return
-        setClosedDays(d.closedDays)
-        setTarget(d.target || 7)
-        setRemaining(TASK_LABELS.filter((t) => !d.today[t.key]).map((t) => t.label))
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [currentBlockId])
+  const closedDays = currentBlockId == null ? 0 : status?.closedDays ?? null
+  const target = status?.target || 7
+  const remaining = status
+    ? TASK_LABELS.filter((t) => !status.today[t.key]).map((t) => t.label)
+    : null
 
   const CIRC = 62.83
   const filled = CIRC * (coursePct / 100)

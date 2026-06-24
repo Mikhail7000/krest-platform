@@ -9,54 +9,12 @@
  * - Местописания (recitationAudio, recitationVideo) — дневные
  */
 
-import { useEffect, useReducer } from 'react'
+import { useEffect } from 'react'
+import { useBlockStatus, type BlockStatusData } from '@/lib/m/block-status-cache'
 
 // ─── Типы ───────────────────────────────────────────────────────────────────
 
-interface TodayStatus {
-  cross: boolean
-  prayer: boolean
-  pereskaz: boolean
-  mestopisaniya: boolean
-}
-
-interface BlockStatus {
-  closedDays: number
-  target: number
-  today: TodayStatus
-  quiz: boolean
-  friday: boolean
-}
-
-type State =
-  | { phase: 'idle' }
-  | { phase: 'loading' }
-  | { phase: 'done'; status: BlockStatus }
-  | { phase: 'error' }
-
-type Action =
-  | { type: 'FETCH' }
-  | { type: 'OK'; status: BlockStatus }
-  | { type: 'FAIL' }
-
-function reducer(_: State, action: Action): State {
-  switch (action.type) {
-    case 'FETCH':
-      return { phase: 'loading' }
-    case 'OK':
-      return { phase: 'done', status: action.status }
-    case 'FAIL':
-      return { phase: 'error' }
-  }
-}
-
-function getInitData(): string {
-  if (typeof window === 'undefined') return ''
-  return (
-    (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp
-      ?.initData ?? ''
-  )
-}
+type BlockStatus = BlockStatusData
 
 // ─── Мини-сводка «Дней N/7» ─────────────────────────────────────────────────
 
@@ -84,38 +42,9 @@ interface Props {
 }
 
 export function Stage4Status({ blockId }: Props) {
-  const [state, dispatch] = useReducer(reducer, { phase: 'idle' })
+  const status = useBlockStatus(blockId)
 
-  useEffect(() => {
-    dispatch({ type: 'FETCH' })
-    let cancelled = false
-
-    fetch(`/api/m/block-status/${blockId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: getInitData() }),
-    })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((data: BlockStatus & { ok: boolean }) => {
-        if (cancelled) return
-        if (data.ok) {
-          dispatch({ type: 'OK', status: data })
-        } else {
-          dispatch({ type: 'FAIL' })
-        }
-      })
-      .catch(() => {
-        if (!cancelled) dispatch({ type: 'FAIL' })
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [blockId])
-
-  if (state.phase !== 'done') return null
-
-  const { status } = state
+  if (!status) return null
 
   return (
     <>

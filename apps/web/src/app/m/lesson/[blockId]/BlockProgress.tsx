@@ -1,30 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useBlockStatus, type BlockStatusData } from '@/lib/m/block-status-cache'
 
-function getInitData(): string {
-  if (typeof window === 'undefined') return ''
-  return (
-    (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp
-      ?.initData ?? ''
-  )
-}
-
-interface TodayStatus {
-  cross: boolean
-  prayer: boolean
-  mestopisaniya: boolean
-  pereskaz: boolean
-}
-
-interface BlockStatusResponse {
-  ok: boolean
-  closedDays: number
-  target: number
-  today: TodayStatus
-  quiz: boolean
-  friday: boolean
-}
+type TodayStatus = BlockStatusData['today']
 
 interface DayTask {
   key: keyof TodayStatus
@@ -43,24 +21,7 @@ const DAY_TASKS: DayTask[] = [
  * Показывает: N/7 закрытых дней + чеклист «сегодня» (5 задач) + квиз + пятница.
  */
 export function BlockProgress({ blockId }: { blockId: number }) {
-  const [data, setData] = useState<BlockStatusResponse | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    fetch(`/api/m/block-status/${blockId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: getInitData() }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: BlockStatusResponse | null) => {
-        if (!cancelled && d?.ok) setData(d)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [blockId])
+  const data = useBlockStatus(blockId)
 
   if (!data) return null
 
