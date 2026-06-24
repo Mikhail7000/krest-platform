@@ -22,6 +22,18 @@ export const dynamic = 'force-dynamic'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const AVATARS_BUCKET = 'avatars'
 
+// «Крест Капсула Тест» — тестовый аккаунт. Показываем в трекинге, но ВНЕ рейтинга и
+// всегда последним: он закрывает дни в ходе тестов и иначе занимал бы первое место.
+// Матчим по id (неизменный) и по нику (на случай пересоздания).
+const OUT_OF_RANKING_IDS = new Set(['e1b752b0-4729-475e-8e82-87a30965cc2e'])
+const OUT_OF_RANKING_HANDLES = new Set(['@krest777237'])
+function isOutOfRanking(p: { id: string; contact_info: string | null }): boolean {
+  return (
+    OUT_OF_RANKING_IDS.has(p.id) ||
+    (p.contact_info != null && OUT_OF_RANKING_HANDLES.has(p.contact_info.toLowerCase()))
+  )
+}
+
 function avatarUrl(path: string | null): string | null {
   if (!path) return null
   return `${SUPABASE_URL}/storage/v1/object/public/${AVATARS_BUCKET}/${path}`
@@ -207,10 +219,15 @@ export async function POST(request: NextRequest) {
     }
   })
 
-  // 5. Сортировка и ранги
-  list.sort((a, b) => b.points - a.points || b.closedDays - a.closedDays)
+  // 5. Тестовый аккаунт «Крест Капсула Тест» — отделяем: он вне рейтинга, всегда последним.
+  const outOfRankingIds = new Set(profiles.filter(isOutOfRanking).map((p) => p.id))
+  const competitors = list.filter((e) => !outOfRankingIds.has(e.id))
+  const pinned = list.filter((e) => outOfRankingIds.has(e.id))
 
-  const ranked = list.map((entry, i) => {
+  // Сортировка и ранги — только для реальных участников
+  competitors.sort((a, b) => b.points - a.points || b.closedDays - a.closedDays)
+
+  const ranked = competitors.map((entry, i) => {
     const rank = i + 1
     let tier: Tier
     if (rank === 1) tier = 'gold'
@@ -222,5 +239,11 @@ export async function POST(request: NextRequest) {
     return { rank, tier, ...rest }
   })
 
-  return NextResponse.json({ ok: true, list: ranked })
+  // Тестовый аккаунт(ы) — в самом конце, без места (rank=0, outOfRanking)
+  const pinnedRanked = pinned.map((entry) => {
+    const { id: _id, ...rest } = entry
+    return { rank: 0, tier: 'normal' as Tier, outOfRanking: true, ...rest }
+  })
+
+  return NextResponse.json({ ok: true, list: [...ranked, ...pinnedRanked] })
 }

@@ -119,6 +119,12 @@
   background: rgba(0, 0, 0, 0.06);
   color: #6b7280;
 }
+/* Вне рейтинга (тестовый аккаунт) — нейтральный прочерк */
+.lb-rank--out {
+  background: rgba(0, 0, 0, 0.05);
+  color: #9097a1;
+  min-width: auto;
+}
 
 /* Обёртка аватара (корона над ним) */
 .lb-avatar-wrap {
@@ -166,6 +172,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* Кликабельный ник → открывает чат в Telegram */
+.lb-card__telegram--link {
+  display: block;
+  color: var(--accent-solid, #6d5efc);
+  text-decoration: none;
+  cursor: pointer;
+}
+.lb-card__telegram--link:active {
+  opacity: 0.55;
 }
 .lb-card__city {
   font-size: 0.75rem;

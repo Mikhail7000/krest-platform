@@ -1,5 +1,6 @@
 'use client'
 
+import type { MouseEvent } from 'react'
 import { Avatar } from '../_components/Avatar'
 import type { LeaderRow } from './leaderboard.types'
 
@@ -15,8 +16,35 @@ function TierCrown() {
   )
 }
 
-function RankBadge({ rank, tier }: { rank: number; tier: LeaderRow['tier'] }) {
+function RankBadge({
+  rank,
+  tier,
+  outOfRanking,
+}: {
+  rank: number
+  tier: LeaderRow['tier']
+  outOfRanking?: boolean
+}) {
+  if (outOfRanking) {
+    return (
+      <span className="lb-rank lb-rank--out" aria-label="Вне рейтинга">
+        —
+      </span>
+    )
+  }
   return <span className={`lb-rank lb-rank--${tier}`}>#{rank}</span>
+}
+
+/** Открывает чат с учеником в Telegram (нативно из MiniApp, иначе по ссылке t.me). */
+function openTelegram(e: MouseEvent<HTMLAnchorElement>, username: string) {
+  const url = `https://t.me/${username}`
+  const tg = (window as unknown as {
+    Telegram?: { WebApp?: { openTelegramLink?: (u: string) => void } }
+  })?.Telegram?.WebApp
+  if (tg?.openTelegramLink) {
+    e.preventDefault()
+    tg.openTelegramLink(url)
+  }
 }
 
 export function LeaderboardCard({ row }: Props) {
@@ -35,7 +63,7 @@ export function LeaderboardCard({ row }: Props) {
     >
       {/* Шапка: ранг + аватар + имя + баллы */}
       <div className="lb-card__head">
-        <RankBadge rank={row.rank} tier={row.tier} />
+        <RankBadge rank={row.rank} tier={row.tier} outOfRanking={row.outOfRanking} />
 
         <div className="lb-avatar-wrap">
           {isBig && <TierCrown />}
@@ -48,7 +76,15 @@ export function LeaderboardCard({ row }: Props) {
             {row.is_self && <span className="lb-you"> · вы</span>}
           </div>
           {row.telegram && (
-            <div className="lb-card__telegram">@{row.telegram}</div>
+            <a
+              className="lb-card__telegram lb-card__telegram--link"
+              href={`https://t.me/${row.telegram}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => openTelegram(e, row.telegram!)}
+            >
+              @{row.telegram}
+            </a>
           )}
           {row.city && <div className="lb-card__city">{row.city}</div>}
         </div>
