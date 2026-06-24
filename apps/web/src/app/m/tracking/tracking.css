@@ -9,13 +9,22 @@
   box-sizing: border-box;
   margin-top: 0.25rem;
   padding: 0.7rem 0.95rem;
-  font-size: 0.95rem;
-  color: inherit;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  /* 16px — iOS не зумит поле при фокусе */
+  font-size: 16px;
+  /* Текст и фон следуют теме: в тёмной — тёмная коробка со светлым текстом,
+     в светлой/розовой — белая с тёмным. Раньше был белый фон + inherit-цвет,
+     из-за чего в тёмной теме светлый текст не читался. */
+  color: var(--section-title, #16181d);
+  background: var(--surface, #fff);
+  border: 1px solid var(--surface-border, rgba(0, 0, 0, 0.1));
   border-radius: 14px;
   outline: none;
+  caret-color: var(--accent-solid, #6d5dfc);
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+.lb-search::placeholder {
+  color: var(--tg-hint, #9ca3af);
+  opacity: 1;
 }
 .lb-search:focus {
   border-color: var(--accent-solid, #6d5dfc);
