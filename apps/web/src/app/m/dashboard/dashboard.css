@@ -537,3 +537,77 @@
 .db-navitem--active .db-navitem__icon {
   color: var(--accent-solid);
 }
+
+/* ── Крупный блок прогресса дня (главный экран) ──────────────────────── */
+.day-banner {
+  display: block;
+  margin: 16px 0 4px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  text-decoration: none;
+  color: inherit;
+  background: color-mix(in srgb, var(--accent-solid) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--accent-solid) 22%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent-solid) 14%, transparent);
+}
+.day-banner__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.day-banner__label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+.day-banner__count {
+  font-size: 2.3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent-solid);
+}
+.day-banner__slash {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #9097a1;
+}
+.day-banner__status {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4b525d;
+}
+.day-banner--done {
+  background: color-mix(in srgb, #16a34a 12%, #fff);
+  border-color: color-mix(in srgb, #16a34a 30%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, #16a34a 14%, transparent);
+}
+.day-banner--done .day-banner__count {
+  color: #16a34a;
+}
+.day-banner__status--done {
+  color: #15803d;
+}
+[data-theme="dark"] .day-banner,
+[data-theme="stars"] .day-banner {
+  background: color-mix(in srgb, var(--accent-solid) 14%, rgba(0, 0, 0, 0.35));
+  border-color: color-mix(in srgb, var(--accent-solid) 35%, transparent);
+}
+[data-theme="dark"] .day-banner__label,
+[data-theme="stars"] .day-banner__label {
+  color: #b0b6bf;
+}
+[data-theme="dark"] .day-banner__status,
+[data-theme="stars"] .day-banner__status {
+  color: rgba(255, 255, 255, 0.8);
+}
+[data-theme="dark"] .day-banner--done,
+[data-theme="stars"] .day-banner--done {
+  background: color-mix(in srgb, #16a34a 20%, rgba(0, 0, 0, 0.35));
+  border-color: color-mix(in srgb, #16a34a 45%, transparent);
+}
+[data-theme="dark"] .day-banner__status--done,
+[data-theme="stars"] .day-banner__status--done {
+  color: #86efac;
+}
