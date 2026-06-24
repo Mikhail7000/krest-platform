@@ -8,9 +8,9 @@ export type Theme = 'light' | 'dark' | 'stars' | 'pink'
 export const THEME_STORAGE_KEY = 'krest-theme'
 export const DEFAULT_THEME: Theme = 'light'
 
-// Порядок переключения FAB: солнце → луна → звёзды → солнце.
-// Розовая тема НЕ входит в цикл (не даём мужчинам случайно попасть в неё).
-const THEME_CYCLE: Theme[] = ['light', 'dark', 'stars']
+// Порядок переключения FAB: солнце → луна → звёзды → роза → солнце.
+// Розовая входит в цикл — её можно выбрать прямо с главного экрана.
+const THEME_CYCLE: Theme[] = ['light', 'dark', 'stars', 'pink']
 
 interface ThemeContextValue {
   theme: Theme

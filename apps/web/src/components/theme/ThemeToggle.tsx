@@ -10,7 +10,7 @@ import { useTheme, type Theme } from './ThemeProvider'
 const NEXT_LABEL: Record<Theme, string> = {
   light: 'Тёмная тема',
   dark: 'Звёздная тема',
-  stars: 'Светлая тема',
+  stars: 'Розовая тема',
   pink: 'Светлая тема',
 }
 const CURRENT_LABEL: Record<Theme, string> = {
