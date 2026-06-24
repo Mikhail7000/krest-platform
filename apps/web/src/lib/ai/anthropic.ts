@@ -17,7 +17,10 @@ export type AiPurpose =
 export interface AnthropicCallOptions {
   model: string
   systemPrompt: string
-  userMessage: string
+  /** Одиночное сообщение пользователя (если не передан messages). */
+  userMessage?: string
+  /** Многоходовой диалог (чат). Если задан — используется вместо userMessage. */
+  messages?: Array<{ role: 'user' | 'assistant'; content: string }>
   purpose: AiPurpose
   userId?: string | null
   maxTokens?: number
@@ -70,15 +73,21 @@ export async function callAnthropic<T = unknown>(
             data: opts.imageBase64,
           },
         },
-        { type: 'text', text: opts.userMessage },
+        { type: 'text', text: opts.userMessage ?? '' },
       ]
-    : opts.userMessage
+    : opts.userMessage ?? ''
+
+  // Многоходовой чат имеет приоритет над одиночным сообщением.
+  const messages =
+    opts.messages && opts.messages.length > 0
+      ? opts.messages
+      : [{ role: 'user', content: userContent }]
 
   const body = {
     model: opts.model,
     max_tokens: maxTokens,
     system: opts.systemPrompt,
-    messages: [{ role: 'user', content: userContent }],
+    messages,
   }
 
   let lastError: unknown = null
