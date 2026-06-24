@@ -20,6 +20,7 @@ interface DayRow {
   recit_done: boolean
   loc_done: boolean
   quiz_done: boolean
+  closed: boolean
 }
 
 export async function POST(req: NextRequest) {
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
       recit: r.recit_done,
       loc: r.loc_done,
       quiz: r.quiz_done,
-      closed: r.cross_done && r.prayer_done && r.recit_done && r.loc_done,
+      closed: r.closed, // канонический «день закрыт» из RPC (совпадает с ДНЕЙ ЗАКРЫТО)
     })
     byUser.set(r.user_id, arr)
   }
