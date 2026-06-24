@@ -218,7 +218,10 @@ export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: ()
               {active?.secs ?? 0}s
             </span>
             <button type="button" className="ai-rec-stop" onClick={() => active?.stop()}>
-              ⏹ Готово
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+                <rect x="6" y="6" width="12" height="12" rx="3" />
+              </svg>
+              Готово
             </button>
             <button type="button" className="ai-rec-cancel" onClick={cancelRec} aria-label="Отмена">
               ✕

@@ -94,7 +94,10 @@ export function AudioAnswer({ currentText, onTranscript }: Props) {
     <div className="exam-audio">
       {state === 'recording' && (
         <button type="button" className="exam-audio__stop" onClick={stopRecording}>
-          ⏹ Остановить ({secs} / {MAX_SECS} с)
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true">
+            <rect x="6" y="6" width="12" height="12" rx="3" />
+          </svg>
+          Остановить ({secs} / {MAX_SECS} с)
         </button>
       )}
       {state === 'transcribing' && <p className="exam-audio__hint">Распознаём речь…</p>}
