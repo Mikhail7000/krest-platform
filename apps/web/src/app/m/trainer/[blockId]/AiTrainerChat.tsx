@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { IconMic, IconCamera } from '@/app/m/_components/icons'
 import { useRecorder, extFor } from './useRecorder'
 
 interface ChatMessage {
@@ -209,7 +210,12 @@ export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: ()
             )}
             <span className="ai-rec-dot" aria-hidden />
             <span className="ai-rec-time">
-              {recKind === 'video' ? '🎥' : '🎤'} {active?.secs ?? 0}s
+              {recKind === 'video' ? (
+                <IconCamera className="ai-rec-time__icon" />
+              ) : (
+                <IconMic className="ai-rec-time__icon" />
+              )}
+              {active?.secs ?? 0}s
             </span>
             <button type="button" className="ai-rec-stop" onClick={() => active?.stop()}>
               ⏹ Готово
@@ -231,7 +237,7 @@ export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: ()
               disabled={busy}
               aria-label="Ответить голосом"
             >
-              🎤
+              <IconMic className="ai-chat__rec-icon" />
             </button>
             <button
               type="button"
@@ -240,7 +246,7 @@ export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: ()
               disabled={busy}
               aria-label="Ответить видео-кружком"
             >
-              🎥
+              <IconCamera className="ai-chat__rec-icon" />
             </button>
             <input
               type="text"
@@ -251,6 +257,7 @@ export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: ()
               }}
               placeholder="Напиши ответ…"
               disabled={busy}
+              enterKeyHint="send"
               aria-label="Ответ ИИ-тренажёру"
             />
             <button
@@ -260,7 +267,19 @@ export function AiTrainerChat({ blockId, onBack }: { blockId: number; onBack: ()
               disabled={busy || !input.trim()}
               aria-label="Отправить"
             >
-              ↑
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
             </button>
           </>
         )}
