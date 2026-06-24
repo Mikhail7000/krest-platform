@@ -94,7 +94,13 @@ export function BlockProgress({ blockId }: { blockId: number }) {
       {closedDays < target && (
         <div className="lesson-progress-today">
           {todayAllDone ? (
-            <span className="lesson-progress-today__done">День закрыт!</span>
+            <div className="lesson-progress-today__done">
+              <span className="lesson-progress-today__done-title">✓ День закрыт!</span>
+              <span className="lesson-progress-today__done-hint">
+                Следующий день откроется в 00:00 по твоему времени. Тогда снова можно
+                отметить местописания и пересказ — за новый день.
+              </span>
+            </div>
           ) : (
             <>
               <span className="lesson-progress-today__hint">

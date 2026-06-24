@@ -22,13 +22,26 @@ export function Stage4Nav({ blockId }: Props) {
   return (
     <div className="lesson-section">
       <h3 className="lesson-section__title">Практика блока</h3>
-      <Link href={`/m/trainer/${blockId}`} className="lesson-stage4-card" data-s4-key="trainer">
+
+      {/* ── Обязательно для закрытия дня (порядок как в чеклисте «закрой день») ── */}
+      <p className="lesson-stage4-grouplabel">Для закрытия дня</p>
+      <Link href={`/m/cross-photo/${blockId}`} className="lesson-stage4-card" data-s4-key="cross_photo">
         <span className="lesson-stage4-card__icon">
-          <IconCards className={ICON_CLASS} />
+          <IconCamera className={ICON_CLASS} />
         </span>
         <span className="lesson-stage4-card__body">
-          <span className="lesson-stage4-card__title">Тренажёр местописаний</span>
-          <span className="lesson-stage4-card__desc">Выучить стихи перед сдачей — карточки, пропуски, викторина</span>
+          <span className="lesson-stage4-card__title">Ежедневное фото</span>
+          <span className="lesson-stage4-card__desc">7 дней — фото написания Креста</span>
+        </span>
+        <span className="lesson-stage4-card__arrow">›</span>
+      </Link>
+      <Link href={`/m/prayer/${blockId}`} className="lesson-stage4-card" data-s4-key="prayer">
+        <span className="lesson-stage4-card__icon">
+          <IconCross className={ICON_CLASS} />
+        </span>
+        <span className="lesson-stage4-card__body">
+          <span className="lesson-stage4-card__title">Молитва по кресту</span>
+          <span className="lesson-stage4-card__desc">Каждый день — отметка, что помолился</span>
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
@@ -52,23 +65,16 @@ export function Stage4Nav({ blockId }: Props) {
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>
-      <Link href={`/m/prayer/${blockId}`} className="lesson-stage4-card" data-s4-key="prayer">
+
+      {/* ── По желанию ── */}
+      <p className="lesson-stage4-grouplabel">По желанию</p>
+      <Link href={`/m/trainer/${blockId}`} className="lesson-stage4-card" data-s4-key="trainer">
         <span className="lesson-stage4-card__icon">
-          <IconCross className={ICON_CLASS} />
+          <IconCards className={ICON_CLASS} />
         </span>
         <span className="lesson-stage4-card__body">
-          <span className="lesson-stage4-card__title">Молитва по кресту</span>
-          <span className="lesson-stage4-card__desc">Каждый день — отметка, что помолился</span>
-        </span>
-        <span className="lesson-stage4-card__arrow">›</span>
-      </Link>
-      <Link href={`/m/cross-photo/${blockId}`} className="lesson-stage4-card" data-s4-key="cross_photo">
-        <span className="lesson-stage4-card__icon">
-          <IconCamera className={ICON_CLASS} />
-        </span>
-        <span className="lesson-stage4-card__body">
-          <span className="lesson-stage4-card__title">Ежедневное фото</span>
-          <span className="lesson-stage4-card__desc">7 дней — фото написания Креста</span>
+          <span className="lesson-stage4-card__title">Тренажёр местописаний</span>
+          <span className="lesson-stage4-card__desc">Выучить стихи перед сдачей — карточки, пропуски, викторина</span>
         </span>
         <span className="lesson-stage4-card__arrow">›</span>
       </Link>

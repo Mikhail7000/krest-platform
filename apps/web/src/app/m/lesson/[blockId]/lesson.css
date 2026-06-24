@@ -469,11 +469,23 @@
   margin-top: 0.625rem;
 }
 .lesson-progress-today__done {
-  display: block;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, #16a34a 9%, transparent);
+  border: 1px solid color-mix(in srgb, #16a34a 24%, transparent);
+}
+.lesson-progress-today__done-title {
+  font-weight: 700;
   color: #16a34a;
-  font-size: 0.875rem;
-  padding: 0.25rem 0;
+  font-size: 0.9375rem;
+}
+.lesson-progress-today__done-hint {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--tg-text, #4b5563);
 }
 .lesson-progress-today__hint {
   display: block;
@@ -559,6 +571,31 @@
 .lesson-stage4-card:active {
   transform: scale(0.99);
   border-color: color-mix(in srgb, var(--accent-solid) 45%, transparent);
+}
+/* Карточка дневной задачи, закрытой сегодня — вся подсвечена зелёным */
+.lesson-stage4-card--done {
+  background: color-mix(in srgb, #16a34a 9%, var(--surface));
+  border-color: color-mix(in srgb, #16a34a 45%, transparent);
+}
+.lesson-stage4-card--done .lesson-stage4-card__icon {
+  background: color-mix(in srgb, #16a34a 16%, transparent);
+  border-color: color-mix(in srgb, #16a34a 32%, transparent);
+}
+.lesson-stage4-card--done .lesson-stage4-card__icon-svg {
+  color: #16a34a;
+}
+/* Подзаголовки групп карточек: «Для закрытия дня» / «По желанию» */
+.lesson-stage4-grouplabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tg-hint, #9CA3AF);
+  margin: 0 0 0.5rem;
+  padding-left: 0.25rem;
+}
+.lesson-stage4-grouplabel:not(:first-of-type) {
+  margin-top: 1rem;
 }
 .lesson-stage4-card__icon {
   flex-shrink: 0;

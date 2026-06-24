@@ -150,10 +150,21 @@ function makeBadge(classes: string, text: string): HTMLElement {
 
 function Stage4StatusInserter({ status }: { status: BlockStatus }) {
   useEffect(() => {
+    // Какие дневные карточки закрыты сегодня → вся карточка подсвечивается зелёным.
+    const doneMap: Record<string, boolean> = {
+      cross_photo: status.today.cross,
+      prayer: status.today.prayer,
+      recitation: status.today.pereskaz,
+      locations: status.today.mestopisaniya,
+    }
+
     const cards = document.querySelectorAll<HTMLElement>('[data-s4-key]')
     cards.forEach((card) => {
       const key = card.getAttribute('data-s4-key')
       let el: HTMLElement | null = null
+
+      // Подсветка всей карточки, если задача сегодня выполнена
+      card.classList.toggle('lesson-stage4-card--done', key ? doneMap[key] === true : false)
 
       switch (key) {
         case 'quiz':
@@ -200,6 +211,7 @@ function Stage4StatusInserter({ status }: { status: BlockStatus }) {
 
     return () => {
       cards.forEach((card) => {
+        card.classList.remove('lesson-stage4-card--done')
         const body = card.querySelector('.lesson-stage4-card__body')
         if (body) {
           const old = body.querySelector('.s4-status-badge')
