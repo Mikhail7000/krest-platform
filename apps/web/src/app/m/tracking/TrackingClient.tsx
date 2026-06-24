@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { LeaderboardCard } from './LeaderboardCard'
+import { useSwrCache } from '@/lib/m/swr-cache'
 import type { LeaderRow } from './leaderboard.types'
 
 function getInitData(): string {
@@ -12,6 +13,17 @@ function getInitData(): string {
   )
 }
 
+function fetchTracking(): Promise<LeaderRow[] | null> {
+  return fetch('/api/m/tracking', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initData: getInitData() }),
+  })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((x: { list?: LeaderRow[] } | null) => x?.list ?? null)
+    .catch(() => null)
+}
+
 function SkeletonCard({ big }: { big?: boolean }) {
   return (
     <div className={`lb-skeleton${big ? ' lb-skeleton--big' : ''}`} aria-hidden />
@@ -19,44 +31,25 @@ function SkeletonCard({ big }: { big?: boolean }) {
 }
 
 export function TrackingClient() {
-  const [list, setList] = useState<LeaderRow[] | null>(null)
-  const [error, setError] = useState(false)
+  // SWR-кэш: повторное открытие рейтинга — мгновенно, фоном обновляется.
+  const { data: list, loading } = useSwrCache<LeaderRow[]>('m:tracking', fetchTracking, 300_000)
   const [query, setQuery] = useState('')
 
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/m/tracking', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: getInitData() }),
-    })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((x: { list: LeaderRow[] }) => {
-        if (!cancelled) setList(x.list ?? [])
-      })
-      .catch(() => {
-        if (!cancelled) setError(true)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  if (error) {
+  if (!list && loading) {
     return (
-      <div className="lb-empty">
-        <span className="lb-empty__icon">⚠️</span>
-        <p className="lb-empty__text">Не удалось загрузить рейтинг</p>
+      <div className="lb-list">
+        <SkeletonCard big />
+        <SkeletonCard />
+        <SkeletonCard />
       </div>
     )
   }
 
   if (!list) {
     return (
-      <div className="lb-list">
-        <SkeletonCard big />
-        <SkeletonCard />
-        <SkeletonCard />
+      <div className="lb-empty">
+        <span className="lb-empty__icon">⚠️</span>
+        <p className="lb-empty__text">Не удалось загрузить рейтинг</p>
       </div>
     )
   }

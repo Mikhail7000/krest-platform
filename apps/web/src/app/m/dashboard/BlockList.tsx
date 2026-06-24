@@ -8,6 +8,7 @@ import {
   isBlockUnlockedByCompletion,
   lockedBlockHint,
 } from '@/lib/access/block-completion'
+import { useSwrCache } from '@/lib/m/swr-cache'
 import type { DashboardData } from './loadDashboard'
 import { PrepBlockCard } from './PrepBlockCard'
 
@@ -143,29 +144,21 @@ interface BlockListProps {
   onProgress?: (pct: number, currentBlockId: number | null) => void
 }
 
-export function BlockList({ onProgress }: BlockListProps) {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [group, setGroup] = useState<'g1' | 'g2'>('g1')
+function fetchDashboard(): Promise<DashboardData | null> {
+  return fetch('/api/m/dashboard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initData: getInitData() }),
+  })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d: DashboardData | null) => d ?? null)
+    .catch(() => null)
+}
 
-  useEffect(() => {
-    const initData = getInitData()
-    let cancelled = false
-    fetch('/api/m/dashboard', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData }),
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: DashboardData | null) => {
-        if (!cancelled && d) setData(d)
-      })
-      .catch(() => { /* оставим пустой дашборд */ })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [])
+export function BlockList({ onProgress }: BlockListProps) {
+  const [group, setGroup] = useState<'g1' | 'g2'>('g1')
+  // SWR-кэш: возврат на дашборд открывается мгновенно, фоном обновляется.
+  const { data, loading } = useSwrCache<DashboardData>('m:dashboard', fetchDashboard, 120_000)
 
   // Поднимаем прогресс курса в DashboardShell. Хук ОБЯЗАН быть ДО раннего
   // return ниже — иначе порядок хуков меняется между рендерами и страница
@@ -185,7 +178,16 @@ export function BlockList({ onProgress }: BlockListProps) {
   if (loading || !data) {
     return (
       <div className="miniapp-container" style={{ paddingTop: 0 }}>
-        <p className="miniapp-hint">Загружаем блоки…</p>
+        <div className="db-skeleton db-skeleton--prep" aria-hidden />
+        <div className="db-skeleton-chips" aria-hidden>
+          <span className="db-skeleton db-skeleton--chip" />
+          <span className="db-skeleton db-skeleton--chip" />
+        </div>
+        <div className="db-section">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="db-skeleton db-skeleton--block" aria-hidden />
+          ))}
+        </div>
       </div>
     )
   }
