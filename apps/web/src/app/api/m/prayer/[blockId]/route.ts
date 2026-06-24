@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,7 +76,8 @@ export async function POST(req: NextRequest, { params }: Params) {
   const canSkip = Boolean((profile as { can_skip_block_lock?: boolean } | null)?.can_skip_block_lock)
   const testAccel = Boolean((profile as { test_daily_accel?: boolean } | null)?.test_daily_accel)
 
-  const todayStr = formatDate(new Date())
+  // «Сегодня» по локальному поясу ученика (день закрывается в 00:00 его пояса)
+  const todayStr = await studentLocalToday(supabase, userId)
 
   // Отметить день. В ускоренном тест-режиме (test_daily_accel) штампуем ВИРТУАЛЬНОЙ
   // датой (якорь 2000-01-01 + кол-во уже отмеченных дней), чтобы тестировщик закрыл

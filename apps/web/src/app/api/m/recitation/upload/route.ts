@@ -26,6 +26,7 @@ import { callDeepgram } from '@/lib/ai/deepgram'
 import { checkRecitation } from '@/lib/recitation/check'
 import { STUDENT_RECITATIONS_BUCKET } from '@/lib/ai/constants'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -166,11 +167,10 @@ export async function POST(req: NextRequest) {
   const checkResult = await checkRecitation(transcript, summaryMd, userId)
 
   // 8. INSERT student_block_recitations
-  // Ускоренный тест-режим (profiles.test_daily_accel): проставляем ВИРТУАЛЬНЫЙ
-  // effective_date (якорь 2000-01-01 + кол-во уже существующих записей этого medium
-  // для user+block), чтобы тестировщик закрыл много «дней» за один календарный день.
-  // Обычным юзерам — effective_date NULL (гейт берёт COALESCE(effective_date, created_at::date)).
-  let effectiveDate: string | null = null
+  // Обычным юзерам — effective_date = локальная дата ученика (день закрывается в
+  // 00:00 его пояса; гейт берёт COALESCE(effective_date, created_at::date)).
+  // Ускоренный тест-режим (test_daily_accel): ВИРТУАЛЬНЫЙ якорь 2000-01-01 + offset.
+  let effectiveDate: string | null = await studentLocalToday(supabase, userId)
   const { data: accelProfile } = await supabase
     .from('profiles')
     .select('test_daily_accel')

@@ -23,6 +23,7 @@ import { createServiceSupabase } from '@/lib/supabase-service'
 import { callDeepgram } from '@/lib/ai/deepgram'
 import { checkLocation } from '@/lib/locations/check'
 import { STUDENT_RECITATIONS_BUCKET } from '@/lib/ai/constants'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -175,10 +176,9 @@ export async function POST(req: NextRequest) {
   // Нормализуем similarity_score в 0..1 для БД (поле NUMERIC(4,3))
   const similarityDb = Math.round(checkResult.similarity_score) / 100
 
-  // Ускоренный тест-режим: виртуальная дата видеокружка местописания.
-  // День N = '2000-01-01' + (кол-во уже сделанных видеокружков ЭТОГО стиха),
-  // чтобы N-е прочтение каждого стиха попадало на одну виртуальную дату.
-  let effectiveDate: string | null = null
+  // Обычным юзерам — локальная дата ученика (день закрывается в 00:00 его пояса).
+  // Ускоренный тест-режим: виртуальная дата '2000-01-01' + (кол-во видеокружков стиха).
+  let effectiveDate: string | null = await studentLocalToday(supabase, userId)
   if (medium === 'video_note') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: accelProf } = await (supabase as any)

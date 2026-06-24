@@ -24,6 +24,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,11 +34,6 @@ interface Params {
 
 function err(message: string, code: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status })
-}
-
-// Строка сегодняшней даты в UTC (YYYY-MM-DD)
-function todayUTC(): string {
-  return new Date().toISOString().slice(0, 10)
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -56,7 +52,8 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
-  const today = todayUTC()
+  // «Сегодня» — по локальному поясу ученика (день закрывается в 00:00 его пояса)
+  const today = await studentLocalToday(supabase, userId)
 
   // 3. Параллельно: rpc + 5 exists-запросов за сегодня + quiz + friday
   const [
@@ -92,7 +89,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       .eq('prayed_date', today)
       .limit(1) as Promise<{ data: Array<{ prayed_date: string }> | null }>,
 
-    // Местописания аудио сегодня (passed + created_at::date = today)
+    // Пересказ аудио сегодня (passed + effective_date = локальная дата ученика)
     supabase
       .from('student_block_recitations')
       .select('id')
@@ -100,26 +97,26 @@ export async function POST(req: NextRequest, { params }: Params) {
       .eq('block_id', blockId)
       .eq('medium', 'audio')
       .eq('passed', true)
-      .gte('created_at', `${today}T00:00:00.000Z`)
-      .lt('created_at', `${today}T23:59:59.999Z`)
+      .eq('effective_date', today)
       .limit(1) as Promise<{ data: Array<{ id: string }> | null }>,
 
-    // Обязательные стихи блока (для проверки «все местописания за сегодня»)
+    // Обязательные стихи-ВИДЕО блока (practice_mode IS NULL — аудио-притчи не входят
+    // в видео-местописания, иначе день никогда не закрылся бы)
     supabase
       .from('block_locations_to_recite')
       .select('id')
       .eq('block_id', blockId)
-      .eq('is_required', true) as Promise<{ data: Array<{ id: string }> | null }>,
+      .eq('is_required', true)
+      .is('practice_mode', null) as Promise<{ data: Array<{ id: string }> | null }>,
 
-    // Местописания (видеокружок) сделанные сегодня
+    // Местописания (видеокружок) сделанные сегодня (effective_date = локальная дата)
     supabase
       .from('student_location_attempts')
       .select('location_id')
       .eq('user_id', userId)
       .eq('medium', 'video_note')
       .eq('passed', true)
-      .gte('created_at', `${today}T00:00:00.000Z`)
-      .lt('created_at', `${today}T23:59:59.999Z`) as Promise<{
+      .eq('effective_date', today) as Promise<{
       data: Array<{ location_id: string }> | null
     }>,
 

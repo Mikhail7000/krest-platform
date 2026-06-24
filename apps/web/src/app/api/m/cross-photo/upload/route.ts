@@ -23,6 +23,7 @@ import { createServiceSupabase } from '@/lib/supabase-service'
 import { STUDENT_CROSS_PHOTOS_BUCKET } from '@/lib/ai/constants'
 import { checkCrossPhoto } from '@/lib/cross/check'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,10 +45,6 @@ function mimeToExt(mimeType: string): string {
   if (mimeType.includes('heic') || mimeType.includes('heif')) return 'heic'
   if (mimeType.includes('webp')) return 'webp'
   return 'jpg'
-}
-
-function todayDateStr(): string {
-  return new Date().toISOString().slice(0, 10)
 }
 
 // Виртуальная дата для ускоренного тест-режима: якорь 2000-01-01 + offset дней.
@@ -111,7 +108,7 @@ export async function POST(req: NextRequest) {
   // ВИРТУАЛЬНЫМИ датами от якоря 2000-01-01, чтобы тестировщик закрыл много «дней»
   // за один календарный день. Вирт.дата = 2000-01-01 + (кол-во уже существующих
   // записей этой задачи для user+block). Обычным юзерам — реальная сегодняшняя дата (UTC).
-  let dateStr = todayDateStr()
+  let dateStr = await studentLocalToday(supabase, userId)
   const { data: accelProfile } = await supabase
     .from('profiles')
     .select('test_daily_accel')
