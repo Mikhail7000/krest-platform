@@ -1,9 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { getCached, setCached } from '@/lib/m/swr-cache'
 import { PostCard } from './PostCard'
 import { PostComposer } from './PostComposer'
 import type { FeedPost, FeedResponse } from './types'
+
+const FEED_CACHE_KEY = 'm:feed'
+interface FeedCache {
+  posts: FeedPost[]
+  hasMore: boolean
+}
 
 function getInitData(): string {
   if (typeof window === 'undefined') return ''
@@ -16,15 +23,23 @@ function getInitData(): string {
 type LoadState = 'idle' | 'loading' | 'error'
 
 export function CommunityClient() {
-  const [posts, setPosts] = useState<FeedPost[]>([])
-  const [hasMore, setHasMore] = useState(false)
-  const [loadState, setLoadState] = useState<LoadState>('loading')
+  // SWR-кэш первой страницы: повторное открытие ленты — мгновенно из кэша,
+  // фоном обновляется. Пагинация (показать ещё) и optimistic-пост не кэшируются.
+  const [initialCache] = useState(() =>
+    typeof window !== 'undefined' ? getCached<FeedCache>(FEED_CACHE_KEY, 180_000) : null,
+  )
+  const [posts, setPosts] = useState<FeedPost[]>(initialCache?.posts ?? [])
+  const [hasMore, setHasMore] = useState(initialCache?.hasMore ?? false)
+  const [loadState, setLoadState] = useState<LoadState>(initialCache ? 'idle' : 'loading')
   const [loadingMore, setLoadingMore] = useState(false)
+  // true, если экран уже показан (из кэша или после загрузки) — тогда фоновое
+  // обновление не мигает скелетоном и не показывает ошибку поверх контента.
+  const seededRef = useRef(Boolean(initialCache))
 
   const load = useCallback(async (before?: string) => {
     if (before) {
       setLoadingMore(true)
-    } else {
+    } else if (!seededRef.current) {
       setLoadState('loading')
     }
     try {
@@ -38,12 +53,15 @@ export function CommunityClient() {
       if (before) {
         setPosts((prev) => [...prev, ...(data.posts ?? [])])
       } else {
-        setPosts(data.posts ?? [])
+        const fresh = data.posts ?? []
+        setPosts(fresh)
+        setCached(FEED_CACHE_KEY, { posts: fresh, hasMore: data.has_more ?? false })
+        seededRef.current = true
       }
       setHasMore(data.has_more ?? false)
       setLoadState('idle')
     } catch {
-      setLoadState('error')
+      if (!seededRef.current) setLoadState('error')
     } finally {
       setLoadingMore(false)
     }
