@@ -89,16 +89,17 @@ export async function POST(req: NextRequest, { params }: Params) {
       .eq('prayed_date', today)
       .limit(1) as Promise<{ data: Array<{ prayed_date: string }> | null }>,
 
-    // Пересказ аудио сегодня (passed + effective_date = локальная дата ученика)
+    // Пересказ аудио: все passed записи (дата = COALESCE(effective_date, created_at::UTC),
+    // как в гейте — старые записи имеют effective_date=NULL)
     supabase
       .from('student_block_recitations')
-      .select('id')
+      .select('effective_date, created_at')
       .eq('user_id', userId)
       .eq('block_id', blockId)
       .eq('medium', 'audio')
-      .eq('passed', true)
-      .eq('effective_date', today)
-      .limit(1) as Promise<{ data: Array<{ id: string }> | null }>,
+      .eq('passed', true) as Promise<{
+      data: Array<{ effective_date: string | null; created_at: string }> | null
+    }>,
 
     // Обязательные стихи-ВИДЕО блока (practice_mode IS NULL — аудио-притчи не входят
     // в видео-местописания, иначе день никогда не закрылся бы)
@@ -109,15 +110,14 @@ export async function POST(req: NextRequest, { params }: Params) {
       .eq('is_required', true)
       .is('practice_mode', null) as Promise<{ data: Array<{ id: string }> | null }>,
 
-    // Местописания (видеокружок) сделанные сегодня (effective_date = локальная дата)
+    // Местописания (видеокружок): все passed записи (дата = COALESCE(effective_date, created_at::UTC))
     supabase
       .from('student_location_attempts')
-      .select('location_id')
+      .select('location_id, effective_date, created_at')
       .eq('user_id', userId)
       .eq('medium', 'video_note')
-      .eq('passed', true)
-      .eq('effective_date', today) as Promise<{
-      data: Array<{ location_id: string }> | null
+      .eq('passed', true) as Promise<{
+      data: Array<{ location_id: string; effective_date: string | null; created_at: string }> | null
     }>,
 
     // Квиз
@@ -143,19 +143,25 @@ export async function POST(req: NextRequest, { params }: Params) {
   )
   const closedDays = closedDaysRow ? Number(closedDaysRow.days) : 0
 
-  // 5. Местописания за сегодня = ВСЕ обязательные стихи закрыты видеокружком сегодня
+  // Дата записи = COALESCE(effective_date, UTC-дата created_at) — ровно как в гейте.
+  const recDate = (r: { effective_date: string | null; created_at: string }): string =>
+    r.effective_date ?? new Date(r.created_at).toISOString().slice(0, 10)
+
+  // 5. Пересказ сегодня + местописания сегодня (все обязательные видео закрыты)
+  const pereskazToday = (recitAudioToday ?? []).some((r) => recDate(r) === today)
+
   const requiredIds = new Set((requiredLocs ?? []).map((r: { id: string }) => r.id))
   const doneTodayIds = new Set(
-    (locDoneToday ?? []).map((r: { location_id: string }) => r.location_id),
+    (locDoneToday ?? []).filter((r) => recDate(r) === today).map((r) => r.location_id),
   )
   const mestopisaniyaToday =
     requiredIds.size > 0 && [...requiredIds].every((id) => doneTodayIds.has(id))
 
-  // 6. Статусы «сделано сегодня». Пересказ (аудио, ежедневно) = recitations medium='audio'
+  // 6. Статусы «сделано сегодня».
   const todayStatus = {
     cross: (crossToday?.length ?? 0) > 0,
     prayer: (prayerToday?.length ?? 0) > 0,
-    pereskaz: (recitAudioToday?.length ?? 0) > 0,
+    pereskaz: pereskazToday,
     mestopisaniya: mestopisaniyaToday,
   }
 

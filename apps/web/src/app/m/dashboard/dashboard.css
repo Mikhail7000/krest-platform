@@ -84,11 +84,29 @@
   text-decoration: none;
   transition: border-color 0.15s, transform 0.1s;
   /* Не позволяем виджету растягиваться слишком сильно */
-  max-width: 9rem;
+  max-width: 11rem;
 }
 .hp-widget:active {
   transform: scale(0.97);
   border-color: color-mix(in srgb, var(--accent-solid) 35%, transparent);
+}
+.hp-widget__remain {
+  font-size: 0.6rem;
+  line-height: 1.25;
+  font-weight: 600;
+  color: #6b7280;
+  margin-top: 1px;
+}
+.hp-widget__remain--done {
+  color: #16a34a;
+}
+[data-theme="dark"] .hp-widget__remain,
+[data-theme="stars"] .hp-widget__remain {
+  color: rgba(255, 255, 255, 0.7);
+}
+[data-theme="dark"] .hp-widget__remain--done,
+[data-theme="stars"] .hp-widget__remain--done {
+  color: #86efac;
 }
 [data-theme="dark"] .hp-widget,
 [data-theme="stars"] .hp-widget {

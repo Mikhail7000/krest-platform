@@ -11,43 +11,40 @@ function getInitData(): string {
   )
 }
 
-interface TodayStatus {
+interface Today {
   cross: boolean
   prayer: boolean
-  recitationAudio: boolean
-  recitationVideo: boolean
-  trainer: boolean
+  pereskaz: boolean
+  mestopisaniya: boolean
 }
-
 interface BlockStatusResponse {
   ok: boolean
   closedDays: number
   target: number
-  today: TodayStatus
-  quiz: boolean
-  friday: boolean
+  today: Today
 }
 
+const TASK_LABELS: { key: keyof Today; label: string }[] = [
+  { key: 'cross', label: 'Крест' },
+  { key: 'prayer', label: 'Молитва' },
+  { key: 'pereskaz', label: 'Пересказ' },
+  { key: 'mestopisaniya', label: 'Местописания' },
+]
+
 interface Props {
-  /** % завершения курса (0–100), вычислен в BlockList */
   coursePct: number
-  /** ID текущего (первого незавершённого) блока; null — нет активного */
   currentBlockId: number | null
-  /** Стрик (дни подряд) */
   streak: number | null
 }
 
 /**
- * Компактный виджет в правом верхнем углу шапки:
- * – мини-кольцо «N%» — общий прогресс по курсу (подпись «курс»)
- * – «Дней X/7» — закрытых дней в текущем блоке из block-status (подпись «блок»)
- * – стрик (дней подряд) если > 0
- * Кликабелен — ведёт на /m/lesson/[currentBlockId]
+ * Виджет прогресса в правом верхнем углу: кольцо «N% курса», «Дней X/7» в текущем
+ * блоке и что осталось закрыть сегодня (или «день закрыт»). Кликабелен → блок.
  */
 export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
-  // Закрыто дней в текущем блоке (closedDays) и цель (target=7) из block-status
   const [closedDays, setClosedDays] = useState<number | null>(null)
   const [target, setTarget] = useState(7)
+  const [remaining, setRemaining] = useState<string[] | null>(null)
 
   useEffect(() => {
     if (!currentBlockId) {
@@ -65,6 +62,7 @@ export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
         if (cancelled || !d?.ok) return
         setClosedDays(d.closedDays)
         setTarget(d.target || 7)
+        setRemaining(TASK_LABELS.filter((t) => !d.today[t.key]).map((t) => t.label))
       })
       .catch(() => {})
     return () => {
@@ -72,10 +70,8 @@ export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
     }
   }, [currentBlockId])
 
-  // Мини-кольцо: радиус 10, circumference = 2π*10 ≈ 62.83
   const CIRC = 62.83
   const filled = CIRC * (coursePct / 100)
-
   const href = currentBlockId ? `/m/lesson/${currentBlockId}` : '/m/dashboard'
   const daysDisplay = closedDays === null ? '…' : `${closedDays}/${target}`
 
@@ -83,22 +79,10 @@ export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
     <Link
       href={href}
       className="hp-widget"
-      aria-label={`Прогресс курса ${coursePct}%, в текущем блоке закрыто ${daysDisplay} дней`}
+      aria-label={`Прогресс курса ${coursePct}%, в блоке закрыто ${daysDisplay} дней`}
     >
-      {/* Мини-кольцо прогресса по курсу */}
-      <svg
-        className="hp-widget__ring"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <circle
-          className="hp-widget__ring-track"
-          cx="12"
-          cy="12"
-          r="10"
-          fill="none"
-          strokeWidth="2.5"
-        />
+      <svg className="hp-widget__ring" viewBox="0 0 24 24" aria-hidden="true">
+        <circle className="hp-widget__ring-track" cx="12" cy="12" r="10" fill="none" strokeWidth="2.5" />
         <circle
           className="hp-widget__ring-fill"
           cx="12"
@@ -112,16 +96,20 @@ export function HeaderProgress({ coursePct, currentBlockId, streak }: Props) {
         />
       </svg>
 
-      {/* Текстовый блок */}
       <span className="hp-widget__text">
         <span className="hp-widget__pct">
-          {coursePct}%
-          <span className="hp-widget__label">курс</span>
+          {coursePct}%<span className="hp-widget__label">курс</span>
         </span>
         <span className="hp-widget__today">
           <span className="hp-widget__days">Дней {daysDisplay}</span>
           <span className="hp-widget__label">блок</span>
         </span>
+        {remaining !== null &&
+          (remaining.length === 0 ? (
+            <span className="hp-widget__remain hp-widget__remain--done">✓ день закрыт</span>
+          ) : (
+            <span className="hp-widget__remain">осталось: {remaining.join(', ')}</span>
+          ))}
         {streak !== null && streak > 0 && (
           <span className="hp-widget__streak">{streak} дн. подряд</span>
         )}

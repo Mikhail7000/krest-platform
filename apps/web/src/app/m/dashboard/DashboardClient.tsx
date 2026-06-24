@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useTelegram } from '@/components/telegram/TelegramProvider'
 import { STATUS_PHRASES } from './statusPhrases'
 import { HeaderProgress } from './HeaderProgress'
-import { DayProgressBanner } from './DayProgressBanner'
 
 const FALLBACK_SUBTITLE = 'Путь от вступления до сдачи креста наставнику'
 
@@ -112,7 +111,6 @@ export function DashboardClient({ coursePct = 0, currentBlockId = null }: Props)
           <h1 className="db-hero__title">КРЕСТ</h1>
           <p className="db-hero__subtitle">{subtitle}</p>
         </div>
-        <DayProgressBanner currentBlockId={currentBlockId} />
       </header>
     </div>
   )
