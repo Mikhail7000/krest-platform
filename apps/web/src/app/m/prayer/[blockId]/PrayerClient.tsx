@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { formatRuDate } from '@/lib/time/format'
+import { invalidateBlockStatus } from '@/lib/m/block-status-cache'
 
 interface DayEntry {
   day_index: number
@@ -62,14 +63,36 @@ export function PrayerClient({ blockId }: Props) {
   useEffect(() => { load() }, [load])
 
   const markToday = async () => {
+    const alreadyPrayed = days.some((d) => d.date === todayDate && d.prayed)
+    if (marking || alreadyPrayed) return
     setMarking(true)
+
+    // Оптимистично: галочка «сегодня» загорается мгновенно. Счётчик дней и
+    // статус закрытия дня остаются за сервером — при ошибке откатываем.
+    const prevDays = days
+    const prevCompleted = completed
+    setDays((ds) => ds.map((d) => (d.date === todayDate ? { ...d, prayed: true } : d)))
+    setCompleted((c) => Math.min(required, c + 1))
+
     try {
       const res = await fetch(`/api/m/prayer/${blockId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: getInitData(), mark: true }),
       })
-      if (res.ok) apply(await res.json() as PrayerApiResponse)
+      if (res.ok) {
+        // Сервер — источник истины: применяем его ответ.
+        apply((await res.json()) as PrayerApiResponse)
+        // День мог закрыться — сбросить кэш статуса блока, чтобы дашборд/урок
+        // показали свежее «день закрыт».
+        invalidateBlockStatus(blockId)
+      } else {
+        setDays(prevDays)
+        setCompleted(prevCompleted)
+      }
+    } catch {
+      setDays(prevDays)
+      setCompleted(prevCompleted)
     } finally {
       setMarking(false)
     }
