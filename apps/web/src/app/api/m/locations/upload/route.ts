@@ -24,6 +24,7 @@ import { callDeepgram } from '@/lib/ai/deepgram'
 import { checkLocation } from '@/lib/locations/check'
 import { STUDENT_RECITATIONS_BUCKET } from '@/lib/ai/constants'
 import { studentLocalToday } from '@/lib/time/local-day'
+import { notifyCuratorIfDayClosed } from '@/lib/curator/day-close-notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -226,6 +227,9 @@ export async function POST(req: NextRequest) {
     console.error('[locations/upload] insert attempt error:', insertErr)
     // Non-fatal: file uploaded, respond with result
   }
+
+  // Если этим день закрылся — уведомить куратора (один раз).
+  if (effectiveDate) void notifyCuratorIfDayClosed(supabase, userId, effectiveDate)
 
   // 9. Считаем агрегированные попытки для ответа
   const { data: attemptsRaw } = await supabase

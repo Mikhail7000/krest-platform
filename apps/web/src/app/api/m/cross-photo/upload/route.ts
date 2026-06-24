@@ -24,6 +24,7 @@ import { STUDENT_CROSS_PHOTOS_BUCKET } from '@/lib/ai/constants'
 import { checkCrossPhoto } from '@/lib/cross/check'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
 import { studentLocalToday } from '@/lib/time/local-day'
+import { notifyCuratorIfDayClosed } from '@/lib/curator/day-close-notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -175,6 +176,9 @@ export async function POST(req: NextRequest) {
     console.error('[cross-photo/upload] upsert error:', upsertErr)
     return err('Failed to save photo record', 'DB_ERROR', 500)
   }
+
+  // Если этим действием день закрылся — уведомить куратора (один раз).
+  void notifyCuratorIfDayClosed(supabase, userId, dateStr)
 
   // 6. Считаем итоговый счётчик загруженных дней
   const { count: countResult } = await (supabase as unknown as {

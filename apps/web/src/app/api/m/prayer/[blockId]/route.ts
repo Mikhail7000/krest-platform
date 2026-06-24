@@ -14,6 +14,7 @@ import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
 import { studentLocalToday } from '@/lib/time/local-day'
+import { notifyCuratorIfDayClosed } from '@/lib/curator/day-close-notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -107,6 +108,8 @@ export async function POST(req: NextRequest, { params }: Params) {
         { user_id: userId, block_id: blockId, prayed_date: markDate },
         { onConflict: 'user_id,block_id,prayed_date' },
       )
+    // Если этим день закрылся — уведомить куратора (один раз).
+    void notifyCuratorIfDayClosed(supabase, userId, markDate)
   }
 
   // Загрузить отмеченные дни

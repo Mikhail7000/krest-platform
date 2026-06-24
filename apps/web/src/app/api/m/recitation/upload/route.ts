@@ -27,6 +27,7 @@ import { checkRecitation } from '@/lib/recitation/check'
 import { STUDENT_RECITATIONS_BUCKET } from '@/lib/ai/constants'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
 import { studentLocalToday } from '@/lib/time/local-day'
+import { notifyCuratorIfDayClosed } from '@/lib/curator/day-close-notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -223,6 +224,9 @@ export async function POST(req: NextRequest) {
     console.error('[recitation/upload] insert error:', insertErr)
     // Non-fatal — respond with check result anyway
   }
+
+  // Если этим день закрылся — уведомить куратора (один раз).
+  if (effectiveDate) void notifyCuratorIfDayClosed(supabase, userId, effectiveDate)
 
   // 9. Update student_block_progress recitation_*_passed_at on first pass
   if (checkResult.passed) {

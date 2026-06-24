@@ -1,0 +1,24 @@
+name: Evening reminder (per-timezone)
+
+# Ежечасно дёргает cron-эндпоинт КРЕСТ. Сам роут решает, кому сейчас 20:00
+# по локальному поясу, и шлёт напоминание. Не зависит от тарифа Vercel
+# (Vercel cron ограничен дневной частотой) — частоту даёт GitHub Actions.
+#
+# ТРЕБУЕТСЯ секрет репозитория CRON_SECRET = то же значение, что в Vercel env.
+# Settings → Secrets and variables → Actions → New repository secret.
+
+on:
+  schedule:
+    - cron: '0 * * * *' # каждый час (UTC)
+  workflow_dispatch: {} # ручной запуск из вкладки Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reminder endpoint
+        run: |
+          curl -fsS --max-time 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://krest-platform-web.vercel.app/api/cron/daily-reminder" \
+            && echo "reminder triggered"
