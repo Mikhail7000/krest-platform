@@ -513,7 +513,7 @@
 .ai-chat {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 15rem);
+  height: calc(100dvh - 5.5rem);
   min-height: 24rem;
   border: 1px solid var(--surface-border, rgba(0, 0, 0, 0.1));
   border-radius: 18px;

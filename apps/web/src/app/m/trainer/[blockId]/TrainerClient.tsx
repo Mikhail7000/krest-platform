@@ -6,7 +6,6 @@ import { Flashcards } from './Flashcards'
 import { ClozeExercise } from './ClozeExercise'
 import { ReferenceQuiz } from './ReferenceQuiz'
 import { ReciteExercise } from './ReciteExercise'
-import { AiTrainerChat } from './AiTrainerChat'
 import { useFavorites } from './useFavorites'
 import type { TrainerData } from './types'
 
@@ -94,7 +93,6 @@ export function TrainerClient({ blockId }: { blockId: number }) {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<BlockFilter>(blockId)
   const [mode, setMode] = useState<Mode>('cards')
-  const [aiMode, setAiMode] = useState(false)
   const { isFav, ids } = useFavorites()
   const favKey = ids.slice().sort().join(',')
 
@@ -159,26 +157,6 @@ export function TrainerClient({ blockId }: { blockId: number }) {
         <p className="trainer-header__subtitle">Выучи стихи перед сдачей блока</p>
       </header>
 
-      {/* Подсвеченная кнопка ИИ-тренажёра — всегда наверху */}
-      <button
-        type="button"
-        className="trainer-ai-cta"
-        onClick={() => setAiMode((v) => !v)}
-      >
-        <span className="trainer-ai-cta__spark">✨</span>
-        <span className="trainer-ai-cta__text">
-          <span className="trainer-ai-cta__title">Учиться вместе с ИИ</span>
-          <span className="trainer-ai-cta__sub">
-            {aiMode ? 'Вернуться к карточкам' : 'Чат-квиз: проверь, как помнишь стихи'}
-          </span>
-        </span>
-        <span className="trainer-ai-cta__arrow">{aiMode ? '×' : '›'}</span>
-      </button>
-
-      {aiMode ? (
-        <AiTrainerChat blockId={blockId} onBack={() => setAiMode(false)} />
-      ) : (
-        <>
       {/* Дневной баннер — каждый день кнопка снова активна */}
       <TrainerCompleteBanner
         blockId={blockId}
@@ -241,8 +219,6 @@ export function TrainerClient({ blockId }: { blockId: number }) {
         <ReferenceQuiz key={`quiz-${filter}`} verses={verses} />
       ) : (
         <ReciteExercise key={`recite-${filter}`} verses={verses} />
-      )}
-        </>
       )}
     </div>
   )

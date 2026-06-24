@@ -42,6 +42,48 @@
   margin-bottom: 0.875rem;
 }
 
+/* ── Вход в ИИ-тренажёр (карточка под прогрессом курса) ─────────────── */
+.db-ai-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 18px;
+  text-decoration: none;
+  background: linear-gradient(135deg, #7c5cff, #a855f7);
+  color: #fff;
+  box-shadow: 0 8px 22px color-mix(in srgb, #7c5cff 32%, transparent);
+  transition: transform 0.1s;
+}
+.db-ai-entry:active {
+  transform: scale(0.985);
+}
+.db-ai-entry__spark {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+.db-ai-entry__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.db-ai-entry__title {
+  font-weight: 800;
+  font-size: 1rem;
+}
+.db-ai-entry__sub {
+  font-size: 0.75rem;
+  opacity: 0.92;
+}
+.db-ai-entry__arrow {
+  font-size: 1.4rem;
+  font-weight: 300;
+  flex-shrink: 0;
+}
+
 /* ── Шапка: аватар + приветствие ─────────────────────────────────── */
 .db-topbar {
   display: flex;

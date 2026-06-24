@@ -11,6 +11,7 @@ import {
 import { useSwrCache } from '@/lib/m/swr-cache'
 import type { DashboardData } from './loadDashboard'
 import { PrepBlockCard } from './PrepBlockCard'
+import { AiTrainerEntry } from './AiTrainerEntry'
 
 type Block = Database['public']['Tables']['blocks']['Row']
 type BlockProgress = Database['public']['Tables']['student_block_progress']['Row']
@@ -202,6 +203,9 @@ export function BlockList({ onProgress }: BlockListProps) {
 
   // Только основные блоки (order_num 1..10)
   const mainBlocks = blocks.filter((b) => (b.order_num ?? 0) >= 1)
+  // Текущий блок для входа в ИИ-тренажёр (первый несданный, иначе первый/вводный)
+  const aiBlock =
+    mainBlocks.find((b) => !progressByBlockId[b.id]?.block_passed_at) ?? mainBlocks[0] ?? prepBlock
   const blocks1to5 = mainBlocks.filter((b) => (b.order_num ?? 0) <= 5)
   const blocks6to10 = mainBlocks.filter((b) => (b.order_num ?? 0) >= 6)
 
@@ -220,6 +224,8 @@ export function BlockList({ onProgress }: BlockListProps) {
 
   return (
     <div className="miniapp-container" style={{ paddingTop: 0 }}>
+      {aiBlock && <AiTrainerEntry blockId={aiBlock.id} />}
+
       {prepBlock && (
         <PrepBlockCard
           blockId={prepBlock.id}
