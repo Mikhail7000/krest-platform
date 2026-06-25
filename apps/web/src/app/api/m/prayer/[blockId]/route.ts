@@ -135,7 +135,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   for (let i = 0; i < prayedDates.length; i++) {
     days.push({ index: i + 1, state: 'done', date: isVirtual(prayedDates[i]) ? null : prayedDates[i] })
   }
-  if (!gate2.blockComplete) {
+  // Молитва — независимая практика: набираем до 7 дней молитвы (даже если другие
+  // практики отстают). После 7 — слотов больше не предлагаем.
+  if (prayedDates.length < DAY_TARGET) {
     // Следующий слот: сегодня (можно отметить) ИЛИ ожидание (молитва за сегодня уже
     // отмечена / первый день нового блока — откроется в 00:00 след. суток).
     const nextState: DayState = canMarkToday ? 'today' : 'waiting'

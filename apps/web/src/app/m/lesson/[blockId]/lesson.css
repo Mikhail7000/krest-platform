@@ -488,6 +488,24 @@
   vertical-align: -2px;
 }
 .lesson-progress-icon--done { color: #16a34a; }
+.lesson-progress-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.lesson-progress-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-solid, #7c5cff) 10%, transparent);
+  color: var(--accent-solid, #7c5cff);
+}
+.lesson-progress-chip--lag {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
 .lesson-progress-today__done-hint {
   font-size: 0.8125rem;
   line-height: 1.4;
