@@ -34,10 +34,11 @@ export function StudentRow({
   onDone: (msg: string) => void
   onError: (msg: string) => void
 }) {
-  // Для куратора: имя текущего куратора читаем из списка (может быть пустым, т.к. API вернул []).
-  const curatorName = s.curatorId
-    ? (curators.find((c) => c.id === s.curatorId)?.name ?? s.curatorId)
-    : null
+  // Имя куратора из API (s.curatorName заполнен и для куратора, и для админа).
+  // Фолбэк на список (для админа) — но НЕ показываем UUID, если имени нет.
+  const curatorName =
+    s.curatorName ??
+    (s.curatorId ? curators.find((c) => c.id === s.curatorId)?.name ?? null : null)
 
   return (
     <tr>
