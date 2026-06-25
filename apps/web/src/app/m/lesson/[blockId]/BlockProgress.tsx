@@ -1,6 +1,7 @@
 'use client'
 
 import { useBlockStatus, type BlockStatusData } from '@/lib/m/block-status-cache'
+import { IconCheck, IconLock } from '@/app/m/_components/icons'
 
 type TodayStatus = BlockStatusData['today']
 
@@ -60,7 +61,15 @@ export function BlockProgress({ blockId }: { blockId: number }) {
           {todayAllDone || dayLocked ? (
             <div className="lesson-progress-today__done">
               <span className="lesson-progress-today__done-title">
-                {todayAllDone ? '✓ День закрыт!' : '🔒 Следующий день ещё не открылся'}
+                {todayAllDone ? (
+                  <>
+                    <IconCheck className="lesson-progress-icon lesson-progress-icon--done" /> День закрыт!
+                  </>
+                ) : (
+                  <>
+                    <IconLock className="lesson-progress-icon" /> Следующий день ещё не открылся
+                  </>
+                )}
               </span>
               <span className="lesson-progress-today__done-hint">
                 Следующий день откроется в 00:00 по твоему времени. Тогда снова можно

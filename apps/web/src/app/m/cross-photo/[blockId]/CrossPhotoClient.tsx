@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { formatRuDate } from '@/lib/time/format'
 import { invalidateBlockStatus } from '@/lib/m/block-status-cache'
+import { IconCheck, IconClock, IconLock } from '@/app/m/_components/icons'
 
 type DayState = 'done' | 'today' | 'waiting' | 'future'
 
@@ -138,7 +139,9 @@ export function CrossPhotoClient({ blockId }: Props) {
         <div className="cp-day-card cp-day-card--done">
           <div className="cp-day-card__header">
             <span className="cp-day-card__num">Готово</span>
-            <span className="cp-day-card__status">✅</span>
+            <span className="cp-day-card__status">
+              <IconCheck className="cp-status-icon cp-status-icon--done" />
+            </span>
           </div>
           <p className="cp-uploading-hint">Все 7 дней закрыты — фото креста сдано.</p>
         </div>
@@ -158,7 +161,13 @@ export function CrossPhotoClient({ blockId }: Props) {
               <span className="cp-day-card__num">День {day.index}</span>
               <span className="cp-day-card__date">{day.date ? formatRuDate(day.date) : ''}</span>
               <span className="cp-day-card__status">
-                {day.state === 'done' ? '✅' : day.state === 'today' ? '⏳' : day.state === 'waiting' ? '🔒' : ''}
+                {day.state === 'done' ? (
+                  <IconCheck className="cp-status-icon cp-status-icon--done" />
+                ) : day.state === 'today' ? (
+                  <IconClock className="cp-status-icon cp-status-icon--today" />
+                ) : day.state === 'waiting' ? (
+                  <IconLock className="cp-status-icon cp-status-icon--lock" />
+                ) : null}
               </span>
             </div>
 

@@ -142,6 +142,36 @@ export function IconFeed(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+// Готово / день закрыт — галочка
+export function IconCheck(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M4 12.5l5 5 11-11" />
+    </Svg>
+  )
+}
+
+// Заблокировано — замок
+export function IconLock(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <rect x="4.5" y="11" width="15" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+      <circle cx="12" cy="15.5" r="1.1" fill="currentColor" stroke="none" />
+    </Svg>
+  )
+}
+
+// Сегодня / в процессе — часы
+export function IconClock(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5V12l3 2" />
+    </Svg>
+  )
+}
+
 // Сертификат — кубок
 export function IconTrophy(props: SVGProps<SVGSVGElement>) {
   return (

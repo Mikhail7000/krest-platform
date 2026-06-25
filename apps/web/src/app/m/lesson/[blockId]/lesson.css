@@ -482,6 +482,12 @@
   color: #16a34a;
   font-size: 0.9375rem;
 }
+.lesson-progress-icon {
+  width: 1rem;
+  height: 1rem;
+  vertical-align: -2px;
+}
+.lesson-progress-icon--done { color: #16a34a; }
 .lesson-progress-today__done-hint {
   font-size: 0.8125rem;
   line-height: 1.4;

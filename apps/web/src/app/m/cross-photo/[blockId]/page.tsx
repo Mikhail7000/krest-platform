@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Database } from '../../../../../../../packages/supabase/src/types'
-import { CROSS_RUBRICS } from '@/lib/cross/rubrics'
+import { crossTaskFor } from '@/lib/cross/rubrics'
 import { CrossPhotoClient } from './CrossPhotoClient'
 import './cross-photo.css'
 
@@ -25,14 +25,6 @@ async function loadBlock(blockId: number) {
   return block ?? null
 }
 
-/** Разбивает рубрику на строки для отображения списком. */
-function parseRubricLines(rubric: string): string[] {
-  return rubric
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-}
-
 export default async function CrossPhotoPage({
   params,
 }: {
@@ -46,8 +38,7 @@ export default async function CrossPhotoPage({
   if (!block) notFound()
 
   const orderNum = block.order_num ?? id
-  const rubric = CROSS_RUBRICS[orderNum] ?? null
-  const rubricLines = rubric ? parseRubricLines(rubric) : []
+  const task = crossTaskFor(orderNum)
 
   return (
     <div className="miniapp-container cross-photo-page">
@@ -65,29 +56,18 @@ export default async function CrossPhotoPage({
       <div className="cp-task-card">
         <p className="cp-task-card__heading">Задание</p>
         <p className="cp-task-card__instruction">
-          Каждый день переписывай крест блока от руки и загружай фото.
+          Каждый день переписывай от руки «крест блока» — {block.title_ru} — и загружай фото.
         </p>
 
-        {rubricLines.length > 0 && (
+        {task && (
           <div className="cp-task-card__rubric">
-            <p className="cp-task-card__rubric-label">Что должно быть в кресте:</p>
+            <p className="cp-task-card__rubric-label">{task.essence}</p>
             <ul className="cp-task-card__rubric-list">
-              {rubricLines.map((line, i) => {
-                const isBullet = line.startsWith('•')
-                const isTitle = !isBullet && !line.match(/^\d+\./)
-                return (
-                  <li
-                    key={i}
-                    className={
-                      isTitle
-                        ? 'cp-task-card__rubric-title'
-                        : 'cp-task-card__rubric-item'
-                    }
-                  >
-                    {isBullet ? line.slice(1).trim() : line}
-                  </li>
-                )
-              })}
+              {task.points.map((point, i) => (
+                <li key={i} className="cp-task-card__rubric-item">
+                  {point}
+                </li>
+              ))}
             </ul>
           </div>
         )}

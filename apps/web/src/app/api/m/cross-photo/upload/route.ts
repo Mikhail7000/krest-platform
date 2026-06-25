@@ -8,13 +8,12 @@
  *   file      (Blob, image/*)
  *
  * Алгоритм:
- *   1. resolveUserId
+ *   1. resolveUserId + block-gate + дневной гейт (не забегать на новый день)
  *   2. Validate image MIME
- *   3. Upload в student-cross-photos/{user_id}/{block_id}/{YYYY-MM-DD}.{ext}
- *   4. INSERT в student_block_daily_cross — ON CONFLICT (user, block, date) UPDATE storage_path
- *   5. Обновить счётчик (SELECT COUNT)
- *
- * AI содержимое НЕ проверяет — только факт загрузки.
+ *   3. ИИ-сверка с ЭТАЛОНОМ блока ДО записи: если на фото явно не крест блока —
+ *      422 PHOTO_REJECTED, день НЕ засчитывается (fail-open при ошибке ИИ)
+ *   4. Upload в student-cross-photos/{user_id}/{block_id}/{YYYY-MM-DD}.{ext}
+ *   5. UPSERT в student_block_daily_cross + счётчик
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -62,6 +61,24 @@ interface DailyCrossInsert {
   block_id: number
   submitted_date: string
   storage_path: string
+}
+
+// Эталон «креста блока» лежит в block-resources/cross-reference/{order}.jpg.
+// Возвращает base64 для vision-сверки или null (тогда проверка идёт по текстовой рубрике).
+async function loadCrossReference(
+  supabase: ReturnType<typeof createServiceSupabase>,
+  orderNum: number,
+): Promise<{ base64: string; mediaType: string } | null> {
+  try {
+    const { data, error } = await supabase.storage
+      .from('block-resources')
+      .download(`cross-reference/${orderNum}.jpg`)
+    if (error || !data) return null
+    const buf = Buffer.from(await data.arrayBuffer())
+    return { base64: buf.toString('base64'), mediaType: 'image/jpeg' }
+  } catch {
+    return null
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -158,11 +175,50 @@ export async function POST(req: NextRequest) {
     if (rejection) return err(rejection, 'DAY_LOCKED', 403)
   }
 
-  // 4. Upload to Storage
+  const fileBuffer = Buffer.from(await file.arrayBuffer())
+
+  // 4. ИИ-проверка «креста блока» ДО записи: сверяем фото ученика с ЭТАЛОНОМ блока.
+  // Гейтим только распознаваемые vision-форматы (HEIC vision не читает — пропускаем).
+  // Тест-ускорение (accel) не гейтим. Любая ошибка ИИ — fail-open (не блокируем сдачу).
+  let aiFeedback: string | null = null
+  let aiMatched: boolean | null = null
+  const VISION_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+  const { data: blk } = await supabase
+    .from('blocks')
+    .select('order_num, title_ru')
+    .eq('id', blockId)
+    .maybeSingle()
+  const order = (blk as { order_num?: number } | null)?.order_num ?? blockId
+  const title = (blk as { title_ru?: string } | null)?.title_ru ?? `Блок ${blockId}`
+
+  if (!testAccel && VISION_MIMES.has(mimeType)) {
+    try {
+      const reference = await loadCrossReference(supabase, order)
+      const r = await checkCrossPhoto(
+        fileBuffer.toString('base64'),
+        mimeType,
+        order,
+        title,
+        userId,
+        reference,
+      )
+      aiFeedback = r.feedback
+      aiMatched = r.matched
+      if (r.matched === false) {
+        // Явно не «крест блока» — день НЕ засчитываем, просим переснять.
+        return NextResponse.json(
+          { error: { code: 'PHOTO_REJECTED', message: r.feedback } },
+          { status: 422 },
+        )
+      }
+    } catch (e) {
+      console.error('[cross-photo/upload] AI check failed (fail-open):', e)
+    }
+  }
+
+  // 5. Upload to Storage (только после прохождения проверки)
   const ext = mimeToExt(mimeType)
   const storagePath = `${userId}/${blockId}/${dateStr}.${ext}`
-
-  const fileBuffer = Buffer.from(await file.arrayBuffer())
 
   // upsert=true — перезаписываем если уже было фото за сегодня
   const { error: uploadErr } = await supabase.storage
@@ -236,28 +292,6 @@ export async function POST(req: NextRequest) {
     .from(STUDENT_CROSS_PHOTOS_BUCKET)
     .createSignedUrl(storagePath, 60 * 60)
   const photoUrl = signed?.signedUrl ?? null
-
-  // ИИ-проверка «креста блока» по фото (мягко, не блокирует). HEIC пропускаем —
-  // vision принимает jpeg/png/webp/gif.
-  let aiFeedback: string | null = null
-  let aiMatched: boolean | null = null
-  const VISION_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-  if (VISION_MIMES.has(mimeType)) {
-    try {
-      const { data: blk } = await supabase
-        .from('blocks')
-        .select('order_num, title_ru')
-        .eq('id', blockId)
-        .maybeSingle()
-      const order = (blk as { order_num?: number } | null)?.order_num ?? blockId
-      const title = (blk as { title_ru?: string } | null)?.title_ru ?? `Блок ${blockId}`
-      const r = await checkCrossPhoto(fileBuffer.toString('base64'), mimeType, order, title, userId)
-      aiFeedback = r.feedback
-      aiMatched = r.matched
-    } catch (e) {
-      console.error('[cross-photo/upload] AI check failed:', e)
-    }
-  }
 
   return NextResponse.json({
     ok: true,

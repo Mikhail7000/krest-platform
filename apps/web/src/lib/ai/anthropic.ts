@@ -30,6 +30,8 @@ export interface AnthropicCallOptions {
   imageBase64?: string
   /** MIME изображения, напр. 'image/jpeg' */
   imageMediaType?: string
+  /** Несколько изображений в порядке передачи (имеет приоритет над imageBase64). */
+  images?: Array<{ base64: string; mediaType: string }>
 }
 
 export interface AnthropicCallResult<T = string> {
@@ -62,20 +64,25 @@ export async function callAnthropic<T = unknown>(
   const maxTokens = opts.maxTokens ?? ANTHROPIC_DEFAULT_MAX_TOKENS
   const timeoutMs = opts.timeoutMs ?? ANTHROPIC_DEFAULT_TIMEOUT_MS
 
-  // Vision: если передано изображение — content становится массивом блоков
-  const userContent = opts.imageBase64
-    ? [
-        {
-          type: 'image',
-          source: {
-            type: 'base64',
-            media_type: opts.imageMediaType ?? 'image/jpeg',
-            data: opts.imageBase64,
-          },
-        },
-        { type: 'text', text: opts.userMessage ?? '' },
-      ]
-    : opts.userMessage ?? ''
+  // Vision: одно или несколько изображений → content становится массивом блоков.
+  // images[] имеет приоритет (несколько фото), иначе одиночный imageBase64.
+  const imageList =
+    opts.images && opts.images.length > 0
+      ? opts.images
+      : opts.imageBase64
+        ? [{ base64: opts.imageBase64, mediaType: opts.imageMediaType ?? 'image/jpeg' }]
+        : []
+
+  const userContent =
+    imageList.length > 0
+      ? [
+          ...imageList.map((img) => ({
+            type: 'image',
+            source: { type: 'base64', media_type: img.mediaType, data: img.base64 },
+          })),
+          { type: 'text', text: opts.userMessage ?? '' },
+        ]
+      : opts.userMessage ?? ''
 
   // Многоходовой чат имеет приоритет над одиночным сообщением.
   const messages =

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { formatRuDate } from '@/lib/time/format'
 import { invalidateBlockStatus } from '@/lib/m/block-status-cache'
+import { IconCheck, IconLock } from '@/app/m/_components/icons'
 
 type DayState = 'done' | 'today' | 'waiting' | 'future'
 
@@ -112,13 +113,17 @@ export function PrayerClient({ blockId }: Props) {
             <span className="prayer-day__num">День {d.index}</span>
             <span className="prayer-day__date">{d.date ? formatRuDate(d.date) : ''}</span>
             <span className="prayer-day__status">
-              {d.state === 'done'
-                ? '✓ Помолился'
-                : d.state === 'today'
-                ? 'сегодня'
-                : d.state === 'waiting'
-                ? '🔒'
-                : '—'}
+              {d.state === 'done' ? (
+                <>
+                  <IconCheck className="prayer-status-icon prayer-status-icon--done" /> Помолился
+                </>
+              ) : d.state === 'today' ? (
+                'сегодня'
+              ) : d.state === 'waiting' ? (
+                <IconLock className="prayer-status-icon prayer-status-icon--lock" />
+              ) : (
+                '—'
+              )}
             </span>
           </div>
         ))}
