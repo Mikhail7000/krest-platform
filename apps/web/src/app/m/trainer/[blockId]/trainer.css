@@ -575,6 +575,36 @@
   color: #fff;
   border-bottom-right-radius: 4px;
 }
+
+/* Markdown внутри ответа ИИ — без сырых звёздочек, аккуратные стили в пузыре. */
+.ai-md { white-space: normal; }
+.ai-md > :first-child { margin-top: 0; }
+.ai-md > :last-child { margin-bottom: 0; }
+.ai-md p { margin: 0 0 0.45rem; }
+.ai-md strong { font-weight: 700; }
+.ai-md em { font-style: italic; }
+.ai-md ul, .ai-md ol { margin: 0.3rem 0; padding-left: 1.1rem; }
+.ai-md li { margin: 0.1rem 0; }
+.ai-md blockquote {
+  margin: 0.4rem 0;
+  padding: 0.3rem 0.65rem;
+  border-left: 3px solid color-mix(in srgb, var(--accent-solid, #7c5cff) 55%, transparent);
+  background: color-mix(in srgb, var(--accent-solid, #7c5cff) 7%, transparent);
+  border-radius: 0 6px 6px 0;
+  font-style: italic;
+}
+.ai-md blockquote p { margin: 0; }
+.ai-md hr {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  margin: 0.5rem 0;
+}
+.ai-md code {
+  font-size: 0.85em;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
 .ai-msg--typing {
   display: inline-flex;
   gap: 4px;
