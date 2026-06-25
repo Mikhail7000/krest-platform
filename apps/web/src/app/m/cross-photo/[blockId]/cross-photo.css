@@ -181,6 +181,16 @@
 .cp-status-icon--done { color: #22c55e; }
 .cp-status-icon--today { color: var(--accent-solid); }
 .cp-status-icon--lock { color: var(--tg-hint, #9CA3AF); }
+.cp-status-icon--photo { color: #f59e0b; }
+.cp-day-card--photo-only {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.05), rgba(245, 158, 11, 0.01));
+}
+.cp-photo-only-note {
+  font-size: 0.8125rem;
+  color: #b45309;
+  margin-top: 0.25rem;
+}
 
 /* ── Uploaded photo thumbnail ────────────────────────────────────── */
 .cp-photo-thumb {

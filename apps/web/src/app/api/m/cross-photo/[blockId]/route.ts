@@ -56,6 +56,8 @@ interface DayRow {
   state: DayState
   date: string | null
   photo_url: string | null
+  /** Закрыт ли ВЕСЬ день (все 4 практики за эту дату) — только для state='done'. */
+  closed?: boolean
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -127,6 +129,22 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
   }
 
+  // 5b. Закрыт ли ВЕСЬ день (все 4 практики за эту дату) — для статуса карточки фото.
+  //     Считаем по той же логике, что и «Закрыто дней» (rpc is_day_closed).
+  const closedByDate = new Map<string, boolean>()
+  if (photoDates.length > 0) {
+    const checks = await Promise.all(
+      photoDates.map((d) =>
+        (supabase as unknown as {
+          rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown }>
+        })
+          .rpc('is_day_closed', { p_user_id: userId, p_d: d })
+          .then((r) => [d, r.data === true] as [string, boolean]),
+      ),
+    )
+    for (const [d, c] of checks) closedByDate.set(d, c)
+  }
+
   // 6. Строим список дней: [done…] + [today | waiting] + [future…] до 7.
   // Виртуальные даты ускоренного тест-режима (якорь 2000-01-..) не показываем —
   // для accel-тестировщика день идёт по счётчику, реальной даты у него нет.
@@ -141,6 +159,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       state: 'done',
       date: isVirtual(date) ? null : date,
       photo_url: path ? urlByPath.get(path) ?? null : null,
+      closed: closedByDate.get(date) ?? false,
     })
   }
   if (!gate.blockComplete) {

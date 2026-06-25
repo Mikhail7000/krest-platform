@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { formatRuDate } from '@/lib/time/format'
 import { invalidateBlockStatus } from '@/lib/m/block-status-cache'
-import { IconCheck, IconClock, IconLock } from '@/app/m/_components/icons'
+import { IconCheck, IconClock, IconLock, IconCamera } from '@/app/m/_components/icons'
 
 type DayState = 'done' | 'today' | 'waiting' | 'future'
 
@@ -12,6 +12,7 @@ interface DayRow {
   state: DayState
   date: string | null
   photo_url: string | null
+  closed?: boolean
 }
 
 interface CrossPhotoApiResponse {
@@ -120,14 +121,17 @@ export function CrossPhotoClient({ blockId }: Props) {
     )
   }
 
-  const progressPct = Math.min(100, Math.round((data.photo_days / data.target) * 100))
+  const progressPct = Math.min(100, Math.round((data.closed_days / data.target) * 100))
 
   return (
     <div>
-      <div className="cp-header__progress">{data.photo_days} / {data.target} дней</div>
+      <div className="cp-header__progress">Закрыто дней: {data.closed_days} / {data.target}</div>
       <div className="cp-progress-bar">
         <div className="cp-progress-bar__fill" style={{ width: `${progressPct}%` }} />
       </div>
+      <p className="cp-uploading-hint" style={{ marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+        Фото — 1 из 4 заданий дня. День закрывается, когда за дату сделаны все 4 (фото, молитва, местописания, пересказ).
+      </p>
 
       {data.test_mode && (
         <div className="cp-test-banner">
@@ -148,9 +152,12 @@ export function CrossPhotoClient({ blockId }: Props) {
       )}
 
       {data.days.map((day) => {
+        const photoOnly = day.state === 'done' && !day.closed
         const cardClass =
           day.state === 'done'
-            ? 'cp-day-card cp-day-card--done'
+            ? photoOnly
+              ? 'cp-day-card cp-day-card--photo-only'
+              : 'cp-day-card cp-day-card--done'
             : day.state === 'today'
             ? 'cp-day-card cp-day-card--today'
             : 'cp-day-card cp-day-card--future'
@@ -162,7 +169,11 @@ export function CrossPhotoClient({ blockId }: Props) {
               <span className="cp-day-card__date">{day.date ? formatRuDate(day.date) : ''}</span>
               <span className="cp-day-card__status">
                 {day.state === 'done' ? (
-                  <IconCheck className="cp-status-icon cp-status-icon--done" />
+                  day.closed ? (
+                    <IconCheck className="cp-status-icon cp-status-icon--done" />
+                  ) : (
+                    <IconCamera className="cp-status-icon cp-status-icon--photo" />
+                  )
                 ) : day.state === 'today' ? (
                   <IconClock className="cp-status-icon cp-status-icon--today" />
                 ) : day.state === 'waiting' ? (
@@ -178,6 +189,12 @@ export function CrossPhotoClient({ blockId }: Props) {
                 className="cp-photo-thumb"
                 loading="lazy"
               />
+            )}
+
+            {photoOnly && (
+              <p className="cp-photo-only-note">
+                Фото есть · день не закрыт — осталось: молитва, местописания, пересказ
+              </p>
             )}
 
             {day.state === 'today' && feedback && (
