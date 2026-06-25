@@ -204,13 +204,10 @@ export async function POST(req: NextRequest) {
       )
       aiFeedback = r.feedback
       aiMatched = r.matched
-      if (r.matched === false) {
-        // Явно не «крест блока» — день НЕ засчитываем, просим переснять.
-        return NextResponse.json(
-          { error: { code: 'PHOTO_REJECTED', message: r.feedback } },
-          { status: 422 },
-        )
-      }
+      // МЯГКО: фото записываем ВСЕГДА — не блокируем легитимный крест ложным негативом.
+      // Если ИИ сомневается (matched=false) — отдаём флаг + комментарий; куратор видит
+      // фото в веб-панели и проверяет. День засчитывается, но помечен. (Раньше был 422 —
+      // блокировал и настоящие кресты, поэтому загрузка «не регистрировалась».)
     } catch (e) {
       console.error('[cross-photo/upload] AI check failed (fail-open):', e)
     }

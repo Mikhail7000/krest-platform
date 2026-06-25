@@ -96,7 +96,11 @@ export async function loadDayGate(
  * @returns null если можно; иначе текст ошибки для 403.
  */
 export function dayGateRejection(gate: DayGate, taskDoneToday: boolean): string | null {
-  if (gate.maxClosedDate !== null && gate.localToday <= gate.maxClosedDate && !taskDoneToday) {
+  // Блокируем ТОЛЬКО строго прошлые дни (localToday < maxClosedDate). Сегодняшний
+  // день (localToday === maxClosedDate) НИКОГДА не блокируем — даже если он закрылся
+  // за счёт других практик. Так легитимная сдача за сегодня не падает с DAY_LOCKED.
+  // «Не забегать на новый день/блок» обеспечивает дисплей (кнопка скрыта), а не этот гвард.
+  if (gate.maxClosedDate !== null && gate.localToday < gate.maxClosedDate && !taskDoneToday) {
     return 'Следующий день откроется в 00:00 по твоему времени.'
   }
   return null

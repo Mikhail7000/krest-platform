@@ -38,6 +38,7 @@ export function PrayerClient({ blockId }: Props) {
   const [view, setView] = useState<'loading' | 'error' | 'idle'>('loading')
   const [data, setData] = useState<PrayerApiResponse | null>(null)
   const [marking, setMarking] = useState(false)
+  const [markError, setMarkError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setView('loading')
@@ -60,20 +61,27 @@ export function PrayerClient({ blockId }: Props) {
   const markToday = async () => {
     if (marking || !data?.can_mark_today) return
     setMarking(true)
+    setMarkError(null)
     try {
       const res = await fetch(`/api/m/prayer/${blockId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: getInitData(), mark: true }),
       })
+      const body = (await res.json().catch(() => ({}))) as PrayerApiResponse & {
+        error?: { message?: string }
+      }
       if (res.ok) {
         // Сервер — источник истины: применяем его ответ.
-        setData((await res.json()) as PrayerApiResponse)
+        setData(body as PrayerApiResponse)
         // День мог закрыться — сбросить кэш статуса блока (урок/дашборд).
         invalidateBlockStatus(blockId)
+      } else {
+        // Раньше ошибка глушилась молча — теперь показываем.
+        setMarkError(body?.error?.message ?? `Не удалось отметить (ошибка ${res.status}).`)
       }
     } catch {
-      // оставляем прежнее состояние; пользователь может повторить
+      setMarkError('Сеть недоступна. Попробуй ещё раз.')
     } finally {
       setMarking(false)
     }
@@ -140,6 +148,8 @@ export function PrayerClient({ blockId }: Props) {
       ) : (
         <div className="prayer-done-row">Следующий день откроется в 00:00 по твоему времени.</div>
       )}
+
+      {markError && <p className="prayer-mark-error">{markError}</p>}
     </div>
   )
 }
