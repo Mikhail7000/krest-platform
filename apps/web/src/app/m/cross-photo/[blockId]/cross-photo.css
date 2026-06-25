@@ -313,3 +313,82 @@
   font-size: 0.875rem;
   line-height: 1.4;
 }
+
+/* ── Эталон-превью (пример креста блока) ─────────────────────────── */
+.cp-ref { margin-top: 0.875rem; }
+.cp-ref__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tg-hint, #9CA3AF);
+  margin-bottom: 0.5rem;
+}
+.cp-ref__thumb {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--tg-section-separator, rgba(0,0,0,0.08));
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+  position: relative;
+}
+.cp-ref__thumb img {
+  display: block;
+  width: 100%;
+  max-height: 17rem;
+  object-fit: contain;
+  background: #fff;
+}
+.cp-ref__hint {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0,0,0,0.55);
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
+.cp-ref__download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent-solid);
+  text-decoration: none;
+}
+.cp-ref__download:active { opacity: 0.7; }
+.cp-ref__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.cp-ref__full {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+}
+.cp-ref__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+}

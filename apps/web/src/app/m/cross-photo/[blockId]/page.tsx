@@ -2,8 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Database } from '../../../../../../../packages/supabase/src/types'
-import { crossTaskFor } from '@/lib/cross/rubrics'
 import { CrossPhotoClient } from './CrossPhotoClient'
+import { CrossReferencePreview } from './CrossReferencePreview'
 import './cross-photo.css'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +22,23 @@ async function loadBlock(blockId: number) {
     .select('id, title_ru, order_num')
     .eq('id', blockId)
     .maybeSingle()
-  return block ?? null
+  if (!block) return null
+
+  // Эталон «креста блока»: block-resources/cross-reference/{order}.jpg (private bucket).
+  // Подписываем URL для показа (inline) и для скачивания (content-disposition).
+  const order = block.order_num ?? blockId
+  const path = `cross-reference/${order}.jpg`
+  const title = block.title_ru ?? `Блок ${order}`
+  const [{ data: viewSigned }, { data: dlSigned }] = await Promise.all([
+    supabase.storage.from('block-resources').createSignedUrl(path, 60 * 60),
+    supabase.storage.from('block-resources').createSignedUrl(path, 60 * 60, { download: `${title}.jpg` }),
+  ])
+
+  return {
+    block,
+    refUrl: viewSigned?.signedUrl ?? null,
+    refDownloadUrl: dlSigned?.signedUrl ?? null,
+  }
 }
 
 export default async function CrossPhotoPage({
@@ -34,11 +50,12 @@ export default async function CrossPhotoPage({
   const id = Number(blockId)
   if (!Number.isInteger(id) || id < 1) notFound()
 
-  const block = await loadBlock(id)
-  if (!block) notFound()
+  const data = await loadBlock(id)
+  if (!data) notFound()
 
+  const { block, refUrl, refDownloadUrl } = data
   const orderNum = block.order_num ?? id
-  const task = crossTaskFor(orderNum)
+  const title = block.title_ru ?? `Блок ${orderNum}`
 
   return (
     <div className="miniapp-container cross-photo-page">
@@ -56,20 +73,11 @@ export default async function CrossPhotoPage({
       <div className="cp-task-card">
         <p className="cp-task-card__heading">Задание</p>
         <p className="cp-task-card__instruction">
-          Каждый день переписывай от руки «крест блока» — {block.title_ru} — и загружай фото.
+          Каждый день переписывай {title} от руки и загружай фото.
         </p>
 
-        {task && (
-          <div className="cp-task-card__rubric">
-            <p className="cp-task-card__rubric-label">{task.essence}</p>
-            <ul className="cp-task-card__rubric-list">
-              {task.points.map((point, i) => (
-                <li key={i} className="cp-task-card__rubric-item">
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
+        {refUrl && refDownloadUrl && (
+          <CrossReferencePreview url={refUrl} downloadUrl={refDownloadUrl} title={title} />
         )}
       </div>
 
