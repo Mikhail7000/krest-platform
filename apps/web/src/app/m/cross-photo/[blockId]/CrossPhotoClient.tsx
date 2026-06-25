@@ -152,10 +152,13 @@ export function CrossPhotoClient({ blockId }: Props) {
       )}
 
       {data.days.map((day) => {
-        const photoOnly = day.state === 'done' && !day.closed
+        // «День не закрыт» показываем ТОЛЬКО для ПРОШЛЫХ дней (сутки закончились, не всё
+        // сдано). Для сегодняшнего дня фото просто принято (день ещё идёт) → зелёная ✓.
+        const pastUnclosed =
+          day.state === 'done' && !day.closed && day.date != null && day.date < data.today
         const cardClass =
           day.state === 'done'
-            ? photoOnly
+            ? pastUnclosed
               ? 'cp-day-card cp-day-card--photo-only'
               : 'cp-day-card cp-day-card--done'
             : day.state === 'today'
@@ -169,10 +172,10 @@ export function CrossPhotoClient({ blockId }: Props) {
               <span className="cp-day-card__date">{day.date ? formatRuDate(day.date) : ''}</span>
               <span className="cp-day-card__status">
                 {day.state === 'done' ? (
-                  day.closed ? (
-                    <IconCheck className="cp-status-icon cp-status-icon--done" />
-                  ) : (
+                  pastUnclosed ? (
                     <IconCamera className="cp-status-icon cp-status-icon--photo" />
+                  ) : (
+                    <IconCheck className="cp-status-icon cp-status-icon--done" />
                   )
                 ) : day.state === 'today' ? (
                   <IconClock className="cp-status-icon cp-status-icon--today" />
@@ -191,7 +194,7 @@ export function CrossPhotoClient({ blockId }: Props) {
               />
             )}
 
-            {photoOnly && (
+            {pastUnclosed && (
               <p className="cp-photo-only-note">
                 Фото есть · день не закрыт — осталось: молитва, местописания, пересказ
               </p>
