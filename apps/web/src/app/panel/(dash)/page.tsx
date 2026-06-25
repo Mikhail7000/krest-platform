@@ -4,6 +4,7 @@ import { getPanelSession } from '@/lib/admin/guard'
 import { resolveIsOwner } from '@/lib/admin/owner'
 import { countPendingRequests } from '@/lib/admin/access-requests'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { findSilentStudents } from '@/lib/activity/silence'
 import { ProgressChart } from './StatsClient'
 import { GenerateReport } from './GenerateReport'
 
@@ -27,9 +28,11 @@ export default async function PanelOverviewPage() {
   const scope = isCurator ? session?.uid : undefined
 
   // Кураторы не видят заявки на доступ — не делаем лишний запрос.
-  const [stats, pendingRequests] = await Promise.all([
+  // Молчащие ученики (3+ дня без активности) — алерт ТОЛЬКО куратору (не админам).
+  const [stats, pendingRequests, silent] = await Promise.all([
     getPanelStats(isOwner, scope),
     isCurator ? Promise.resolve(0) : countPendingRequests(supabase),
+    isCurator && session ? findSilentStudents(supabase, { curatorId: session.uid }) : Promise.resolve([]),
   ])
   const { totals, byCity, byCountry, progress, streaks, stuck } = stats
 
@@ -38,6 +41,31 @@ export default async function PanelOverviewPage() {
 
   return (
     <div>
+      {isCurator && silent.length > 0 && (
+        <div
+          className="panel-card"
+          style={{ marginBottom: 16, borderLeft: '3px solid var(--pl-err, #ef4444)' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: '1.3rem' }}>🔕</span>
+            <span style={{ fontWeight: 700 }}>Не заходят 3+ дня</span>
+            <span className="panel-badge panel-badge--err" style={{ marginLeft: 6 }}>
+              {silent.length}
+            </span>
+          </div>
+          <ul style={{ margin: '2px 0 0', paddingLeft: 18 }}>
+            {silent.map((s) => (
+              <li key={s.id} style={{ marginBottom: 4 }}>
+                <span style={{ fontWeight: 600 }}>{s.name}</span>
+                {s.telegram ? <span className="panel-muted"> {s.telegram}</span> : null}
+                {' — '}
+                <span className="panel-badge panel-badge--warn">{s.daysSilent} дн.</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {!isCurator && pendingRequests > 0 && (
         <Link
           href="/panel/requests"
