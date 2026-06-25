@@ -53,6 +53,7 @@ export function CuratorsView({
                     isOpen={isOpen}
                     hasStudents={hasStudents}
                     canChangeRole={!cu.isProtected && (isSuperAdmin || cu.role !== 'admin')}
+                    canViewAs={isSuperAdmin && !cu.isProtected}
                     onToggle={() => setOpenId(isOpen ? null : cu.id)}
                     onAttach={() => setAttachTarget(cu)}
                     onRole={() => setRoleTarget(cu)}
@@ -154,6 +155,7 @@ function CuratorRowGroup({
   isOpen,
   hasStudents,
   canChangeRole,
+  canViewAs,
   onToggle,
   onAttach,
   onRole,
@@ -162,10 +164,33 @@ function CuratorRowGroup({
   isOpen: boolean
   hasStudents: boolean
   canChangeRole: boolean
+  canViewAs: boolean
   onToggle: () => void
   onAttach: () => void
   onRole: () => void
 }) {
+  const [viewBusy, setViewBusy] = useState(false)
+
+  const enterViewAs = async () => {
+    setViewBusy(true)
+    try {
+      const res = await fetch('/api/panel/view-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: curator.id }),
+      })
+      if (res.ok) {
+        window.location.href = '/panel' // полная перезагрузка под новой view-as сессией
+      } else {
+        const b = await res.json().catch(() => ({}))
+        console.error('[view-as]', b.error || res.status)
+        setViewBusy(false)
+      }
+    } catch {
+      setViewBusy(false)
+    }
+  }
+
   const cityLabel = curator.city
     ? curator.country
       ? `${curator.city}, ${curator.country}`
@@ -213,6 +238,20 @@ function CuratorRowGroup({
         </td>
         <td>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            {canViewAs ? (
+              <button
+                type="button"
+                className="panel-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  enterViewAs()
+                }}
+                disabled={viewBusy}
+                title="Открыть панель этого пользователя в режиме просмотра"
+              >
+                {viewBusy ? '…' : '👁 Войти как'}
+              </button>
+            ) : null}
             <button
               type="button"
               className="panel-btn"

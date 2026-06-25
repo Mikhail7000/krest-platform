@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { PanelStudentDetail } from '@/app/api/panel/student/[id]/route'
 import { Avatar, fmtDate, fmtDateTime } from '../studentBits'
+import { CrossGallery } from './CrossGallery'
 
 const REQUIRED_DAYS = 7
 
@@ -129,6 +130,9 @@ export function StudentDetailClient({ id }: { id: string }) {
           </tbody>
         </table>
       </div>
+
+      {/* Галерея загруженных фото крестов по дням */}
+      <CrossGallery id={id} />
     </>
   )
 }

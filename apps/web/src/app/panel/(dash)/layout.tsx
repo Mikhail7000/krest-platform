@@ -3,6 +3,7 @@ import { getPanelSession } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { countPendingRequests } from '@/lib/admin/access-requests'
 import { PanelNav } from './PanelNav'
+import { ViewAsBanner } from './ViewAsBanner'
 
 /**
  * Гард-каркас дашборда: требует cookie-сессию админа, иначе → /panel/login.
@@ -23,7 +24,10 @@ export default async function DashLayout({ children }: { children: React.ReactNo
   return (
     <div className="panel-shell">
       <PanelNav name={session.name} role={session.role} pendingCount={pendingCount} />
-      <main className="panel-main">{children}</main>
+      <main className="panel-main">
+        {session.via && <ViewAsBanner name={session.name} role={session.role} />}
+        {children}
+      </main>
     </div>
   )
 }
