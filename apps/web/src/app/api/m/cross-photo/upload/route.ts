@@ -23,7 +23,7 @@ import { createServiceSupabase } from '@/lib/supabase-service'
 import { STUDENT_CROSS_PHOTOS_BUCKET } from '@/lib/ai/constants'
 import { checkCrossPhoto } from '@/lib/cross/check'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
-import { studentLocalToday } from '@/lib/time/local-day'
+import { loadDayGate, dayGateRejection } from '@/lib/m/day-gate'
 import { notifyCuratorIfDayClosed } from '@/lib/curator/day-close-notify'
 
 export const dynamic = 'force-dynamic'
@@ -108,8 +108,9 @@ export async function POST(req: NextRequest) {
   // Ускоренный тест-режим (profiles.test_daily_accel): дневные задания штампуются
   // ВИРТУАЛЬНЫМИ датами от якоря 2000-01-01, чтобы тестировщик закрыл много «дней»
   // за один календарный день. Вирт.дата = 2000-01-01 + (кол-во уже существующих
-  // записей этой задачи для user+block). Обычным юзерам — реальная сегодняшняя дата (UTC).
-  let dateStr = await studentLocalToday(supabase, userId)
+  // записей этой задачи для user+block). Обычным юзерам — реальная локальная дата.
+  const gate = await loadDayGate(supabase, userId, blockId)
+  let dateStr = gate.localToday
   const { data: accelProfile } = await supabase
     .from('profiles')
     .select('test_daily_accel')
@@ -131,6 +132,30 @@ export async function POST(req: NextRequest) {
       .eq('user_id', userId)
       .eq('block_id', blockId)
     dateStr = accelDate(existing ?? 0)
+  } else {
+    // Дневной гейт: нельзя забегать на новый день/новый блок раньше 00:00 след. суток.
+    // Переотправка фото за сегодня (день уже начат/закрыт) — разрешена.
+    const { data: todayRow } = await (supabase as unknown as {
+      from: (t: string) => {
+        select: (cols: string) => {
+          eq: (col: string, val: unknown) => {
+            eq: (col: string, val: unknown) => {
+              eq: (col: string, val: unknown) => {
+                limit: (n: number) => Promise<{ data: Array<{ submitted_date: string }> | null }>
+              }
+            }
+          }
+        }
+      }
+    })
+      .from('student_block_daily_cross')
+      .select('submitted_date')
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+      .eq('submitted_date', gate.localToday)
+      .limit(1)
+    const rejection = dayGateRejection(gate, (todayRow?.length ?? 0) > 0)
+    if (rejection) return err(rejection, 'DAY_LOCKED', 403)
   }
 
   // 4. Upload to Storage

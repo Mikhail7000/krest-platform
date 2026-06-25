@@ -23,7 +23,7 @@ import { createServiceSupabase } from '@/lib/supabase-service'
 import { callDeepgram } from '@/lib/ai/deepgram'
 import { checkLocation } from '@/lib/locations/check'
 import { STUDENT_RECITATIONS_BUCKET } from '@/lib/ai/constants'
-import { studentLocalToday } from '@/lib/time/local-day'
+import { loadDayGate, dayGateRejection } from '@/lib/m/day-gate'
 import { notifyCuratorIfDayClosed } from '@/lib/curator/day-close-notify'
 
 export const dynamic = 'force-dynamic'
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
   // 4. Load location (эталон)
   const { data: location, error: locErr } = await supabase
     .from('block_locations_to_recite')
-    .select('id, reference, exact_text, check_mode, similarity_threshold, is_required, practice_mode')
+    .select('id, block_id, reference, exact_text, check_mode, similarity_threshold, is_required, practice_mode')
     .eq('id', locationId)
     .maybeSingle()
 
@@ -106,6 +106,32 @@ export async function POST(req: NextRequest) {
   const practiceMode = (location as unknown as { practice_mode?: string | null }).practice_mode ?? null
   if (medium === 'video_note' && practiceMode !== null) {
     return err('Этот этап только для аудио', 'VIDEO_NOT_ALLOWED', 400)
+  }
+
+  // 4a. Дневной гейт. Видеокружок местописания закрывает день → гейтим, чтобы нельзя
+  // было начать новый день/новый блок раньше 00:00 следующих суток. Аудио-практики
+  // (practice_mode != null) в дневной гейт не входят — их не гейтим.
+  const locBlockId = Number((location as unknown as { block_id?: number }).block_id ?? 0)
+  const gate = await loadDayGate(supabase, userId, locBlockId)
+  const { data: accelProf } = await supabase
+    .from('profiles')
+    .select('test_daily_accel')
+    .eq('id', userId)
+    .maybeSingle()
+  const testAccel = Boolean((accelProf as { test_daily_accel?: boolean } | null)?.test_daily_accel)
+  if (medium === 'video_note' && !testAccel) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: todayVid } = await (supabase as any)
+      .from('student_location_attempts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('location_id', locationId)
+      .eq('medium', 'video_note')
+      .eq('passed', true)
+      .eq('effective_date', gate.localToday)
+      .limit(1)
+    const rejection = dayGateRejection(gate, ((todayVid as unknown[] | null)?.length ?? 0) > 0)
+    if (rejection) return err(rejection, 'DAY_LOCKED', 403)
   }
 
   // 5. Upload file to Storage
@@ -177,27 +203,19 @@ export async function POST(req: NextRequest) {
   // Нормализуем similarity_score в 0..1 для БД (поле NUMERIC(4,3))
   const similarityDb = Math.round(checkResult.similarity_score) / 100
 
-  // Обычным юзерам — локальная дата ученика (день закрывается в 00:00 его пояса).
-  // Ускоренный тест-режим: виртуальная дата '2000-01-01' + (кол-во видеокружков стиха).
-  let effectiveDate: string | null = await studentLocalToday(supabase, userId)
-  if (medium === 'video_note') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: accelProf } = await (supabase as any)
-      .from('profiles')
-      .select('test_daily_accel')
-      .eq('id', userId)
-      .maybeSingle()
-    if (accelProf?.test_daily_accel) {
-      const { count: existingVN } = await supabase
-        .from('student_location_attempts')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('location_id', locationId)
-        .eq('medium', 'video_note')
-      const d = new Date(Date.UTC(2000, 0, 1))
-      d.setUTCDate(d.getUTCDate() + (existingVN ?? 0))
-      effectiveDate = d.toISOString().slice(0, 10)
-    }
+  // Обычным юзерам — локальная дата ученика (gate.localToday; день закрывается в
+  // 00:00 его пояса). Ускоренный тест-режим: виртуальная дата '2000-01-01' + offset.
+  let effectiveDate: string | null = gate.localToday
+  if (medium === 'video_note' && testAccel) {
+    const { count: existingVN } = await supabase
+      .from('student_location_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('location_id', locationId)
+      .eq('medium', 'video_note')
+    const d = new Date(Date.UTC(2000, 0, 1))
+    d.setUTCDate(d.getUTCDate() + (existingVN ?? 0))
+    effectiveDate = d.toISOString().slice(0, 10)
   }
 
   // 8. INSERT student_location_attempts

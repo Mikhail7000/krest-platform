@@ -21,6 +21,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,20 +33,20 @@ function err(message: string, code: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status })
 }
 
-// local interface — medium/created_at пробрасываются для подсчёта recurring-дней
+// local interface — medium/created_at/effective_date пробрасываются для подсчёта recurring-дней
 interface LocationAttemptRow {
   location_id: string
   medium: string
   passed: boolean
   created_at: string
+  effective_date: string | null
 }
 
 const DAILY_DAYS_REQUIRED = 7
 
-function dayKey(iso: string): string {
-  // YYYY-MM-DD по UTC — достаточно для подсчёта уникальных дней.
-  // Локализация по timezone профиля — задача на потом.
-  return iso.slice(0, 10)
+/** Дата записи = локальная (effective_date), иначе UTC-дата created_at (как в гейте). */
+function attemptDate(r: { effective_date: string | null; created_at: string }): string {
+  return r.effective_date ?? r.created_at.slice(0, 10)
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -117,9 +118,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   const locationIds = locations.map((l) => l.id)
 
   // cast через unknown — medium добавлен позже, не в сгенерированных типах
-  const { data: attemptsRaw } = await supabase
+  // effective_date добавлен миграцией — ещё не в сгенерированных типах, читаем через any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: attemptsRaw } = await (supabase as any)
     .from('student_location_attempts')
-    .select('location_id, medium, passed, created_at')
+    .select('location_id, medium, passed, created_at, effective_date')
     .eq('user_id', userId)
     .in('location_id', locationIds)
 
@@ -136,7 +139,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     todayHasPassedAudio: boolean
   }
   const progressMap = new Map<string, LocProgress>()
-  const todayKey = dayKey(new Date().toISOString())
+  const todayKey = await studentLocalToday(supabase, userId)
 
   for (const attempt of attempts) {
     const key = attempt.location_id
@@ -153,7 +156,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       cur.audioAttempts += 1
       if (attempt.passed) {
         cur.audioPassed = true
-        const d = dayKey(attempt.created_at)
+        const d = attemptDate(attempt)
         cur.audioPassedDays.add(d)
         if (d === todayKey) cur.todayHasPassedAudio = true
       }

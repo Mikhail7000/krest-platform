@@ -26,6 +26,10 @@ export interface BlockStatusData {
   today: { cross: boolean; prayer: boolean; pereskaz: boolean; mestopisaniya: boolean }
   quiz: boolean
   friday: boolean
+  /** Можно ли работать над днём сегодня (локальная дата позже последней закрытой). */
+  canActToday: boolean
+  /** Следующий день откроется в 00:00 (сегодня уже закрыт / первый день нового блока). */
+  nextDayLocked: boolean
 }
 
 const TTL_MS = 12_000

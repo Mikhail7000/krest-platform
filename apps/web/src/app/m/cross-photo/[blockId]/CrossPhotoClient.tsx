@@ -2,34 +2,37 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { formatRuDate } from '@/lib/time/format'
+import { invalidateBlockStatus } from '@/lib/m/block-status-cache'
 
-interface DayEntry {
-  day_index: number
-  date: string
-  submitted: boolean
-  storage_path: string | null
+type DayState = 'done' | 'today' | 'waiting' | 'future'
+
+interface DayRow {
+  index: number
+  state: DayState
+  date: string | null
   photo_url: string | null
 }
 
 interface CrossPhotoApiResponse {
   ok: boolean
-  block_unlocked_at: string | null
-  today_index: number
-  days: DayEntry[]
-  completed_count: number
+  closed_days: number
+  target: number
+  block_complete: boolean
+  today: string
+  today_done: boolean
+  can_submit_today: boolean
+  next_day_locked: boolean
+  photo_days: number
+  days: DayRow[]
   test_mode?: boolean
 }
 
 interface UploadResult {
   ok: boolean
   date?: string
-  day_index?: number
-  submitted?: boolean
-  storage_path: string | null
-  photo_url: string | null
-  completed_count?: number
   ai_feedback?: string | null
   ai_matched?: boolean | null
+  error?: { code: string; message: string }
 }
 
 function getInitData(): string {
@@ -37,111 +40,16 @@ function getInitData(): string {
   return (window as unknown as { Telegram?: { WebApp?: { initData?: string } } })?.Telegram?.WebApp?.initData ?? ''
 }
 
-interface DayCardProps {
-  day: DayEntry
-  isToday: boolean
-  blockId: number
-  feedback?: string | null
-  onUploaded: (result: UploadResult) => void
-}
-
-function DayCard({ day, isToday, blockId, feedback, onUploaded }: DayCardProps) {
-  const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    setError(null)
-    const initData = getInitData()
-    const fd = new FormData()
-    fd.append('initData', initData)
-    fd.append('block_id', String(blockId))
-    fd.append('file', file, file.name)
-    try {
-      const res = await fetch('/api/m/cross-photo/upload', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json() as UploadResult
-      onUploaded(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки')
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const isFuture = !isToday && !day.submitted
-  const cardClass = day.submitted
-    ? 'cp-day-card cp-day-card--done'
-    : isToday
-    ? 'cp-day-card cp-day-card--today'
-    : isFuture
-    ? 'cp-day-card cp-day-card--future'
-    : 'cp-day-card'
-
-  return (
-    <div className={cardClass}>
-      <div className="cp-day-card__header">
-        <span className="cp-day-card__num">День {day.day_index}</span>
-        <span className="cp-day-card__date">{formatRuDate(day.date)}</span>
-        <span className="cp-day-card__status">
-          {day.submitted ? '✅' : isToday ? '⏳' : ''}
-        </span>
-      </div>
-
-      {day.submitted && day.photo_url && (
-        <img
-          src={day.photo_url}
-          alt={`Крест день ${day.day_index}`}
-          className="cp-photo-thumb"
-          loading="lazy"
-        />
-      )}
-
-      {feedback && (
-        <div className="cp-ai-feedback">
-          <span className="cp-ai-feedback__label">Комментарий AI</span>
-          <p>{feedback}</p>
-        </div>
-      )}
-
-      {isToday && !day.submitted && (
-        <div>
-          <label
-            className={`cp-upload-label${uploading ? ' cp-upload-label--disabled' : ''}`}
-            onClick={() => !uploading && fileRef.current?.click()}
-          >
-            {uploading ? 'Загружаем…' : 'Загрузить фото (камера или галерея)'}
-          </label>
-          {/* Без capture — пользователь сам выбирает камеру или существующее фото из галереи */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="cp-file-input"
-            onChange={handleFile}
-            disabled={uploading}
-          />
-          {uploading && <p className="cp-uploading-hint">Отправляем фото…</p>}
-          {error && <p className="cp-upload-error">{error}</p>}
-        </div>
-      )}
-    </div>
-  )
-}
-
 interface Props { blockId: number }
 
 export function CrossPhotoClient({ blockId }: Props) {
   const [view, setView] = useState<'loading' | 'error' | 'idle'>('loading')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [todayIndex, setTodayIndex] = useState(0)
-  const [days, setDays] = useState<DayEntry[]>([])
-  const [completedCount, setCompletedCount] = useState(0)
-  const [testMode, setTestMode] = useState(false)
-  const [feedbackByDate, setFeedbackByDate] = useState<Record<string, string>>({})
+  const [data, setData] = useState<CrossPhotoApiResponse | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     setView('loading')
@@ -153,11 +61,7 @@ export function CrossPhotoClient({ blockId }: Props) {
         body: JSON.stringify({ initData }),
       })
       if (!res.ok) { setErrorMsg(`Ошибка ${res.status}`); setView('error'); return }
-      const data = await res.json() as CrossPhotoApiResponse
-      setTodayIndex(data.today_index)
-      setDays(data.days)
-      setCompletedCount(data.completed_count)
-      setTestMode(Boolean(data.test_mode))
+      setData(await res.json() as CrossPhotoApiResponse)
       setView('idle')
     } catch {
       setErrorMsg('Не удалось загрузить данные.')
@@ -167,26 +71,33 @@ export function CrossPhotoClient({ blockId }: Props) {
 
   useEffect(() => { load() }, [load])
 
-  function handleUploaded(result: UploadResult) {
-    setDays((prev) =>
-      prev.map((d) =>
-        d.date === result.date
-          ? {
-              ...d,
-              submitted: result.submitted ?? true,
-              storage_path: result.storage_path,
-              photo_url: result.photo_url,
-            }
-          : d,
-      ),
-    )
-    if (result.completed_count !== undefined) setCompletedCount(result.completed_count)
-    else if (result.submitted ?? true) setCompletedCount((c) => c + 1)
-    if (result.date && result.ai_feedback) {
-      setFeedbackByDate((m) => ({ ...m, [result.date as string]: result.ai_feedback as string }))
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadError(null)
+    const fd = new FormData()
+    fd.append('initData', getInitData())
+    fd.append('block_id', String(blockId))
+    fd.append('file', file, file.name)
+    try {
+      const res = await fetch('/api/m/cross-photo/upload', { method: 'POST', body: fd })
+      const result = await res.json().catch(() => ({})) as UploadResult
+      if (!res.ok) {
+        setUploadError(result?.error?.message ?? `Ошибка ${res.status}`)
+        return
+      }
+      if (result.ai_feedback) setFeedback(result.ai_feedback)
+      // День мог закрыться — сбросить кэш статуса блока (урок/дашборд).
+      invalidateBlockStatus(blockId)
+      // Перечитываем состояние: сервер — источник истины (дни/гейт/счётчик).
+      await load()
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Ошибка загрузки')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
     }
-    // Перечитываем состояние: тестировщику после первого фото засчитается вся неделя
-    void load()
   }
 
   if (view === 'loading') {
@@ -198,7 +109,7 @@ export function CrossPhotoClient({ blockId }: Props) {
     )
   }
 
-  if (view === 'error') {
+  if (view === 'error' || !data) {
     return (
       <div className="cp-error">
         <p className="cp-error__title">Ошибка загрузки</p>
@@ -208,31 +119,92 @@ export function CrossPhotoClient({ blockId }: Props) {
     )
   }
 
-  const progressPct = Math.min(100, Math.round((completedCount / 7) * 100))
+  const progressPct = Math.min(100, Math.round((data.photo_days / data.target) * 100))
 
   return (
     <div>
-      <div className="cp-header__progress">{completedCount} / 7 дней</div>
+      <div className="cp-header__progress">{data.photo_days} / {data.target} дней</div>
       <div className="cp-progress-bar">
         <div className="cp-progress-bar__fill" style={{ width: `${progressPct}%` }} />
       </div>
 
-      {testMode && (
+      {data.test_mode && (
         <div className="cp-test-banner">
           🧪 Тестовый режим: система засчитала вам всю неделю автоматически.
         </div>
       )}
 
-      {days.map((day) => (
-        <DayCard
-          key={day.day_index}
-          day={day}
-          isToday={day.day_index === todayIndex}
-          blockId={blockId}
-          feedback={feedbackByDate[day.date]}
-          onUploaded={handleUploaded}
-        />
-      ))}
+      {data.block_complete && (
+        <div className="cp-day-card cp-day-card--done">
+          <div className="cp-day-card__header">
+            <span className="cp-day-card__num">Готово</span>
+            <span className="cp-day-card__status">✅</span>
+          </div>
+          <p className="cp-uploading-hint">Все 7 дней закрыты — фото креста сдано.</p>
+        </div>
+      )}
+
+      {data.days.map((day) => {
+        const cardClass =
+          day.state === 'done'
+            ? 'cp-day-card cp-day-card--done'
+            : day.state === 'today'
+            ? 'cp-day-card cp-day-card--today'
+            : 'cp-day-card cp-day-card--future'
+
+        return (
+          <div className={cardClass} key={day.index}>
+            <div className="cp-day-card__header">
+              <span className="cp-day-card__num">День {day.index}</span>
+              <span className="cp-day-card__date">{day.date ? formatRuDate(day.date) : ''}</span>
+              <span className="cp-day-card__status">
+                {day.state === 'done' ? '✅' : day.state === 'today' ? '⏳' : day.state === 'waiting' ? '🔒' : ''}
+              </span>
+            </div>
+
+            {day.state === 'done' && day.photo_url && (
+              <img
+                src={day.photo_url}
+                alt={`Крест день ${day.index}`}
+                className="cp-photo-thumb"
+                loading="lazy"
+              />
+            )}
+
+            {day.state === 'today' && feedback && (
+              <div className="cp-ai-feedback">
+                <span className="cp-ai-feedback__label">Комментарий AI</span>
+                <p>{feedback}</p>
+              </div>
+            )}
+
+            {day.state === 'today' && (
+              <div>
+                <label
+                  className={`cp-upload-label${uploading ? ' cp-upload-label--disabled' : ''}`}
+                  onClick={() => !uploading && fileRef.current?.click()}
+                >
+                  {uploading ? 'Загружаем…' : 'Загрузить фото (камера или галерея)'}
+                </label>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="cp-file-input"
+                  onChange={handleFile}
+                  disabled={uploading}
+                />
+                {uploading && <p className="cp-uploading-hint">Отправляем фото…</p>}
+                {uploadError && <p className="cp-upload-error">{uploadError}</p>}
+              </div>
+            )}
+
+            {day.state === 'waiting' && (
+              <p className="cp-uploading-hint">Следующий день откроется в 00:00 по твоему времени.</p>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

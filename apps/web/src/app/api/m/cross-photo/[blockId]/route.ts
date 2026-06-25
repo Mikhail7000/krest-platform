@@ -1,27 +1,37 @@
 /**
  * POST /api/m/cross-photo/[blockId]
- * Состояние календаря ежедневных фото крестов.
+ * Состояние ежедневных фото крестов — СЧЁТЧИК-модель (канон 2026-06-25).
+ *
+ * Никаких фиксированных будущих дат: дни идут по одному, следующий открывается
+ * только с 00:00 следующих суток по поясу ученика (см. lib/m/day-gate.ts).
  *
  * Body: { initData: string }
  *
  * Response 200:
  * {
  *   ok: true,
- *   block_unlocked_at: string | null,
- *   today_index: number,          // 1..7 (день с момента block_completed_at), может быть >7
+ *   closed_days: number,            // закрытых дней блока (все 4 практики)
+ *   target: 7,
+ *   block_complete: boolean,
+ *   today: string,                  // локальная дата ученика YYYY-MM-DD
+ *   today_done: boolean,            // фото за сегодня уже загружено
+ *   can_submit_today: boolean,      // можно загрузить фото за сегодня
+ *   next_day_locked: boolean,       // следующий день откроется в 00:00
+ *   photo_days: number,             // уникальных дней с фото
  *   days: Array<{
- *     day_index: number,           // 1..7
- *     date: string (YYYY-MM-DD),
- *     submitted: boolean,
- *     storage_path: string | null,
+ *     index: number,                // 1..7
+ *     state: 'done' | 'today' | 'waiting' | 'future',
+ *     date: string | null,          // только для done/today
+ *     photo_url: string | null,
  *   }>,
- *   completed_count: number,       // кол-во уникальных дней с фото
+ *   test_mode?: boolean,
  * }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { loadDayGate, DAY_TARGET } from '@/lib/m/day-gate'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,14 +43,19 @@ function err(message: string, code: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status })
 }
 
-// local interfaces — tables not yet in generated types
+// local interface — table not yet in generated types
 interface DailyCrossRow {
   submitted_date: string
   storage_path: string
 }
 
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10)
+type DayState = 'done' | 'today' | 'waiting' | 'future'
+
+interface DayRow {
+  index: number
+  state: DayState
+  date: string | null
+  photo_url: string | null
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -59,46 +74,30 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const supabase = createServiceSupabase()
 
-  // 3. Дата разлока блока (откуда отсчитываем 7 дней).
-  //    Используем block_unlocked_at из student_block_progress.
-  //    Если у пользователя can_skip_block_lock — для удобства тестов считаем,
-  //    что блок открылся "сегодня" и календарь начинается с текущей даты.
-  const [{ data: profile }, { data: progress }] = await Promise.all([
+  // 3. Дневной гейт (локальная дата, закрытые дни, можно ли действовать сегодня)
+  const [gate, { data: profile }, { data: rowsRaw, error: fetchErr }] = await Promise.all([
+    loadDayGate(supabase, userId, blockId),
     supabase.from('profiles').select('can_skip_block_lock').eq('id', userId).maybeSingle(),
-    supabase
-      .from('student_block_progress')
-      .select('block_unlocked_at')
-      .eq('user_id', userId)
-      .eq('block_id', blockId)
-      .maybeSingle(),
-  ])
-
-  let blockUnlockedAt: string | null = progress?.block_unlocked_at ?? null
-  if (!blockUnlockedAt && profile?.can_skip_block_lock) {
-    blockUnlockedAt = new Date().toISOString()
-  }
-  const blockCompletedAt = blockUnlockedAt
-
-  // 4. Загружаем записи из student_block_daily_cross
-  const { data: rowsRaw, error: fetchErr } = await (supabase as unknown as {
-    from: (t: string) => {
-      select: (cols: string) => {
-        eq: (col: string, val: unknown) => {
+    (supabase as unknown as {
+      from: (t: string) => {
+        select: (cols: string) => {
           eq: (col: string, val: unknown) => {
-            order: (col: string, opts: { ascending: boolean }) => Promise<{
-              data: DailyCrossRow[] | null
-              error: unknown
-            }>
+            eq: (col: string, val: unknown) => {
+              order: (col: string, opts: { ascending: boolean }) => Promise<{
+                data: DailyCrossRow[] | null
+                error: unknown
+              }>
+            }
           }
         }
       }
-    }
-  })
-    .from('student_block_daily_cross')
-    .select('submitted_date, storage_path')
-    .eq('user_id', userId)
-    .eq('block_id', blockId)
-    .order('submitted_date', { ascending: true })
+    })
+      .from('student_block_daily_cross')
+      .select('submitted_date, storage_path')
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+      .order('submitted_date', { ascending: true }),
+  ])
 
   if (fetchErr) {
     console.error('[cross-photo/state] fetch error:', fetchErr)
@@ -107,107 +106,71 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const rows = (rowsRaw ?? []) as DailyCrossRow[]
 
-  // 5. Вычисляем today_index в UTC (хранение в БД — DATE без timezone, формат ISO YYYY-MM-DD).
-  const today = new Date()
-  const todayStr = formatDate(today)
-
-  let todayIndex = 1
-  if (blockCompletedAt) {
-    const startDate = new Date(blockCompletedAt)
-    startDate.setUTCHours(0, 0, 0, 0)
-    const todayUtc = new Date(today)
-    todayUtc.setUTCHours(0, 0, 0, 0)
-    const diffMs = todayUtc.getTime() - startDate.getTime()
-    todayIndex = Math.max(1, Math.floor(diffMs / 86_400_000) + 1)
+  // 4. Уникальные даты с фото (по возрастанию) + путь к файлу
+  const pathByDate = new Map<string, string>()
+  for (const r of rows) {
+    if (!pathByDate.has(r.submitted_date)) pathByDate.set(r.submitted_date, r.storage_path)
   }
+  const photoDates = [...pathByDate.keys()].sort() // YYYY-MM-DD лексикографически = хронологически
+  const todayDone = pathByDate.has(gate.localToday)
+  const canSubmitToday = gate.canActToday && !todayDone
 
-  // 6. Строим calendar на 7 дней, начиная с block_completed_at (всё в UTC).
-  const submittedMap = new Map<string, string>()
-  for (const row of rows) {
-    submittedMap.set(row.submitted_date, row.storage_path)
-  }
-
-  const days: Array<{
-    day_index: number
-    date: string
-    submitted: boolean
-    storage_path: string | null
-    photo_url: string | null
-  }> = []
-
-  if (blockCompletedAt) {
-    const startDate = new Date(blockCompletedAt)
-    startDate.setUTCHours(0, 0, 0, 0)
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(startDate)
-      d.setUTCDate(d.getUTCDate() + i)
-      const dateStr = formatDate(d)
-      const storagePath = submittedMap.get(dateStr) ?? null
-      days.push({
-        day_index: i + 1,
-        date: dateStr,
-        submitted: submittedMap.has(dateStr),
-        storage_path: storagePath,
-        photo_url: null,
-      })
-    }
-  } else {
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today)
-      d.setUTCDate(d.getUTCDate() + i)
-      days.push({
-        day_index: i + 1,
-        date: formatDate(d),
-        submitted: false,
-        storage_path: null,
-        photo_url: null,
-      })
-    }
-  }
-
-  // 7. Добавляем сегодняшний день, если он за пределами 7 дней (>7)
-  if (todayIndex > 7) {
-    const alreadyInDays = days.some((d) => d.date === todayStr)
-    if (!alreadyInDays) {
-      days.push({
-        day_index: todayIndex,
-        date: todayStr,
-        submitted: submittedMap.has(todayStr),
-        storage_path: submittedMap.get(todayStr) ?? null,
-        photo_url: null,
-      })
-    }
-  }
-
-  // 8. Подписываем URL для каждого submitted дня (bucket private, public-URL не работает).
-  const submittedPaths = days
-    .map((d) => d.storage_path)
-    .filter((p): p is string => Boolean(p))
+  // 5. Подписываем URL для submitted дней (bucket private)
+  const submittedPaths = [...pathByDate.values()]
+  const urlByPath = new Map<string, string>()
   if (submittedPaths.length > 0) {
     const { data: signed } = await supabase.storage
       .from('student-cross-photos')
       .createSignedUrls(submittedPaths, 60 * 60)
-    const urlByPath = new Map<string, string>()
     for (const item of signed ?? []) {
       if (item.signedUrl && item.path) urlByPath.set(item.path, item.signedUrl)
     }
-    for (const d of days) {
-      if (d.storage_path) d.photo_url = urlByPath.get(d.storage_path) ?? null
+  }
+
+  // 6. Строим список дней: [done…] + [today | waiting] + [future…] до 7.
+  const days: DayRow[] = []
+  for (let i = 0; i < photoDates.length; i++) {
+    const date = photoDates[i]
+    const path = pathByDate.get(date) ?? null
+    days.push({
+      index: i + 1,
+      state: 'done',
+      date,
+      photo_url: path ? urlByPath.get(path) ?? null : null,
+    })
+  }
+  if (!gate.blockComplete) {
+    // Следующий слот: сегодня (можно сдать) ИЛИ ожидание (фото за сегодня уже сдано /
+    // первый день нового блока — откроется в 00:00 след. суток).
+    const nextState: DayState = canSubmitToday ? 'today' : 'waiting'
+    days.push({
+      index: days.length + 1,
+      state: nextState,
+      date: nextState === 'today' ? gate.localToday : null,
+      photo_url: null,
+    })
+    // заполняем оставшиеся слоты до 7 как future (без дат — открываются по одному)
+    while (days.length < DAY_TARGET) {
+      days.push({ index: days.length + 1, state: 'future', date: null, photo_url: null })
     }
   }
 
   // Тестировщику (can_skip_block_lock) неделя засчитывается целиком — но только
   // после первой загрузки фото (нужно реально проверить хотя бы одно фото)
-  const isTester = Boolean(profile?.can_skip_block_lock)
+  const isTester = Boolean((profile as { can_skip_block_lock?: boolean } | null)?.can_skip_block_lock)
   const weekCounted = isTester && rows.length >= 1
-  const completedCount = weekCounted ? 7 : rows.length
 
   return NextResponse.json({
     ok: true,
-    block_unlocked_at: blockCompletedAt,
-    today_index: todayIndex,
+    closed_days: gate.closedDays,
+    target: DAY_TARGET,
+    block_complete: gate.blockComplete,
+    today: gate.localToday,
+    today_done: todayDone,
+    can_submit_today: canSubmitToday,
+    next_day_locked: gate.nextDayLocked,
+    photo_days: weekCounted ? DAY_TARGET : photoDates.length,
     days,
-    completed_count: completedCount,
     test_mode: weekCounted,
   })
 }

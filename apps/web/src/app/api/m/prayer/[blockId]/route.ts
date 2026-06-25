@@ -1,24 +1,23 @@
 /**
  * POST /api/m/prayer/[blockId]
- * Состояние и отметка ежедневной молитвы по кресту (галочка на доверии, 7 дней).
+ * Состояние и отметка ежедневной молитвы по кресту — СЧЁТЧИК-модель (канон 2026-06-25).
  *
  * Body: { initData: string, mark?: boolean }
- *  - mark=true → отметить сегодняшний день как «помолился»
+ *  - mark=true → отметить сегодняшний день как «помолился» (если день доступен)
  *  - иначе просто вернуть состояние
  *
- * Тестировщику (can_skip_block_lock) после первой отметки засчитывается вся неделя.
+ * Никаких фиксированных будущих дат: следующий день открывается с 00:00 след. суток
+ * по поясу ученика (см. lib/m/day-gate.ts). Тестировщику (test_daily_accel) — вирт.даты.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
-import { studentLocalToday } from '@/lib/time/local-day'
+import { loadDayGate, dayGateRejection, DAY_TARGET } from '@/lib/m/day-gate'
 import { notifyCuratorIfDayClosed } from '@/lib/curator/day-close-notify'
 
 export const dynamic = 'force-dynamic'
-
-const DAYS_REQUIRED = 7
 
 interface Params {
   params: Promise<{ blockId: string }>
@@ -28,12 +27,7 @@ function err(message: string, code: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status })
 }
 
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
-
 // Виртуальная дата для ускоренного тест-режима: якорь 2000-01-01 + offset дней.
-// Якорь намеренно вне реальных дат, чтобы «закрытые дни» не пересекались с боевыми.
 function accelDate(offset: number): string {
   const d = new Date(Date.UTC(2000, 0, 1))
   d.setUTCDate(d.getUTCDate() + offset)
@@ -43,6 +37,8 @@ function accelDate(offset: number): string {
 interface PrayerRow {
   prayed_date: string
 }
+
+type DayState = 'done' | 'today' | 'waiting' | 'future'
 
 export async function POST(req: NextRequest, { params }: Params) {
   const body = (await req.json().catch(() => ({}))) as { initData?: string; mark?: boolean }
@@ -61,30 +57,36 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const supabase = createServiceSupabase()
 
-  const [{ data: profile }, { data: progress }] = await Promise.all([
+  const [gate, { data: profile }] = await Promise.all([
+    loadDayGate(supabase, userId, blockId),
     supabase
       .from('profiles')
       .select('can_skip_block_lock, test_daily_accel')
       .eq('id', userId)
       .maybeSingle(),
-    supabase
-      .from('student_block_progress')
-      .select('block_unlocked_at')
-      .eq('user_id', userId)
-      .eq('block_id', blockId)
-      .maybeSingle(),
   ])
   const canSkip = Boolean((profile as { can_skip_block_lock?: boolean } | null)?.can_skip_block_lock)
   const testAccel = Boolean((profile as { test_daily_accel?: boolean } | null)?.test_daily_accel)
 
-  // «Сегодня» по локальному поясу ученика (день закрывается в 00:00 его пояса)
-  const todayStr = await studentLocalToday(supabase, userId)
+  // Загрузить отмеченные дни (до возможной отметки — нужно для гварда/счётчика)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const loadRows = async (): Promise<Set<string>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: rowsRaw } = await (supabase as any)
+      .from('student_block_daily_prayer')
+      .select('prayed_date')
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+      .order('prayed_date', { ascending: true })
+    return new Set(((rowsRaw ?? []) as PrayerRow[]).map((r) => r.prayed_date))
+  }
 
-  // Отметить день. В ускоренном тест-режиме (test_daily_accel) штампуем ВИРТУАЛЬНОЙ
-  // датой (якорь 2000-01-01 + кол-во уже отмеченных дней), чтобы тестировщик закрыл
-  // неделю за один календарный день. Обычным юзерам — реальная сегодняшняя дата (UTC).
-  if (body.mark) {
-    let markDate = todayStr
+  let prayedSet = await loadRows()
+  const todayPrayed = prayedSet.has(gate.localToday)
+
+  // Отметить день, если запрошено и разрешено гейтом.
+  if (body.mark && !todayPrayed) {
+    let markDate = gate.localToday
     if (testAccel) {
       const { count: existing } = await (supabase as unknown as {
         from: (t: string) => {
@@ -100,6 +102,10 @@ export async function POST(req: NextRequest, { params }: Params) {
         .eq('user_id', userId)
         .eq('block_id', blockId)
       markDate = accelDate(existing ?? 0)
+    } else {
+      // Дневной гейт: нельзя начать новый день/новый блок раньше 00:00 след. суток.
+      const rejection = dayGateRejection(gate, todayPrayed)
+      if (rejection) return err(rejection, 'DAY_LOCKED', 403)
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (supabase as any)
@@ -108,50 +114,51 @@ export async function POST(req: NextRequest, { params }: Params) {
         { user_id: userId, block_id: blockId, prayed_date: markDate },
         { onConflict: 'user_id,block_id,prayed_date' },
       )
-    // Если этим день закрылся — уведомить куратора (один раз).
     void notifyCuratorIfDayClosed(supabase, userId, markDate)
+    prayedSet = await loadRows()
   }
 
-  // Загрузить отмеченные дни
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rowsRaw } = await (supabase as any)
-    .from('student_block_daily_prayer')
-    .select('prayed_date')
-    .eq('user_id', userId)
-    .eq('block_id', blockId)
-    .order('prayed_date', { ascending: true })
-  const rows = (rowsRaw ?? []) as PrayerRow[]
-  const prayedSet = new Set(rows.map((r) => r.prayed_date))
+  // Пересчитываем гейт после возможной отметки (день мог закрыться → следующий
+  // блокируется до полуночи). closedDays/maxClosedDate уже свежие в новом вызове.
+  const gate2 = body.mark && !todayPrayed ? await loadDayGate(supabase, userId, blockId) : gate
+  const nowPrayedToday = prayedSet.has(gate2.localToday)
+  const canMarkToday = gate2.canActToday && !nowPrayedToday
 
-  // Старт календаря: block_unlocked_at, иначе сегодня (для тестировщика / нового блока)
-  let startStr = (progress as { block_unlocked_at?: string | null } | null)?.block_unlocked_at ?? null
-  if (!startStr) startStr = new Date().toISOString()
-  const start = new Date(startStr)
-  start.setUTCHours(0, 0, 0, 0)
+  // Уникальные даты молитвы (по возрастанию)
+  const prayedDates = [...prayedSet].sort()
 
-  const todayUtc = new Date()
-  todayUtc.setUTCHours(0, 0, 0, 0)
-  const todayIndex = Math.max(1, Math.floor((todayUtc.getTime() - start.getTime()) / 86_400_000) + 1)
-
-  const days: Array<{ day_index: number; date: string; prayed: boolean }> = []
-  for (let i = 0; i < DAYS_REQUIRED; i++) {
-    const d = new Date(start)
-    d.setUTCDate(d.getUTCDate() + i)
-    const dateStr = formatDate(d)
-    days.push({ day_index: i + 1, date: dateStr, prayed: prayedSet.has(dateStr) })
+  // Строим список дней: [done…] + [today | waiting] + [future…] до 7.
+  const days: Array<{ index: number; state: DayState; date: string | null }> = []
+  for (let i = 0; i < prayedDates.length; i++) {
+    days.push({ index: i + 1, state: 'done', date: prayedDates[i] })
+  }
+  if (!gate2.blockComplete) {
+    // Следующий слот: сегодня (можно отметить) ИЛИ ожидание (молитва за сегодня уже
+    // отмечена / первый день нового блока — откроется в 00:00 след. суток).
+    const nextState: DayState = canMarkToday ? 'today' : 'waiting'
+    days.push({
+      index: days.length + 1,
+      state: nextState,
+      date: nextState === 'today' ? gate2.localToday : null,
+    })
+    while (days.length < DAY_TARGET) {
+      days.push({ index: days.length + 1, state: 'future', date: null })
+    }
   }
 
-  // Тестировщику после первой отметки засчитывается вся неделя
-  const weekCounted = canSkip && rows.length >= 1
-  const completedCount = weekCounted ? DAYS_REQUIRED : rows.length
+  const weekCounted = canSkip && prayedSet.size >= 1
 
   return NextResponse.json({
     ok: true,
-    today_index: todayIndex,
-    today_date: todayStr,
+    closed_days: gate2.closedDays,
+    target: DAY_TARGET,
+    block_complete: gate2.blockComplete,
+    today: gate2.localToday,
+    today_prayed: nowPrayedToday,
+    can_mark_today: canMarkToday,
+    next_day_locked: gate2.nextDayLocked,
+    prayed_days: weekCounted ? DAY_TARGET : prayedDates.length,
     days,
-    completed_count: completedCount,
-    days_required: DAYS_REQUIRED,
     test_mode: weekCounted,
   })
 }

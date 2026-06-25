@@ -26,7 +26,7 @@ import { callDeepgram } from '@/lib/ai/deepgram'
 import { checkRecitation } from '@/lib/recitation/check'
 import { STUDENT_RECITATIONS_BUCKET } from '@/lib/ai/constants'
 import { isBlockUnlocked } from '@/lib/access/block-gate'
-import { studentLocalToday } from '@/lib/time/local-day'
+import { loadDayGate, dayGateRejection } from '@/lib/m/day-gate'
 import { notifyCuratorIfDayClosed } from '@/lib/curator/day-close-notify'
 
 export const dynamic = 'force-dynamic'
@@ -109,6 +109,32 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceSupabase()
 
+  // 3b. Дневной гейт: локальная дата + запрет «забегания» на новый день/блок.
+  const gate = await loadDayGate(supabase, userId, blockId)
+  const { data: accelProfile } = await supabase
+    .from('profiles')
+    .select('test_daily_accel')
+    .eq('id', userId)
+    .maybeSingle()
+  const testAccel = Boolean((accelProfile as { test_daily_accel?: boolean } | null)?.test_daily_accel)
+
+  // Пересказ-аудио закрывает день → гейтим. Видеокружок пересказа в дневной гейт
+  // не входит. Тест-ускорение обходит гейт (виртуальные даты).
+  if (medium === 'audio' && !testAccel) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: todayAudio } = await (supabase as any)
+      .from('student_block_recitations')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('block_id', blockId)
+      .eq('medium', 'audio')
+      .eq('passed', true)
+      .eq('effective_date', gate.localToday)
+      .limit(1)
+    const rejection = dayGateRejection(gate, ((todayAudio as unknown[] | null)?.length ?? 0) > 0)
+    if (rejection) return err(rejection, 'DAY_LOCKED', 403)
+  }
+
   // 4. Upload file to Storage
   const mimeType = file.type || (medium === 'video_note' ? 'video/mp4' : 'audio/ogg')
   const ext = mimeToExt(mimeType, medium)
@@ -171,13 +197,8 @@ export async function POST(req: NextRequest) {
   // Обычным юзерам — effective_date = локальная дата ученика (день закрывается в
   // 00:00 его пояса; гейт берёт COALESCE(effective_date, created_at::date)).
   // Ускоренный тест-режим (test_daily_accel): ВИРТУАЛЬНЫЙ якорь 2000-01-01 + offset.
-  let effectiveDate: string | null = await studentLocalToday(supabase, userId)
-  const { data: accelProfile } = await supabase
-    .from('profiles')
-    .select('test_daily_accel')
-    .eq('id', userId)
-    .maybeSingle()
-  if ((accelProfile as { test_daily_accel?: boolean } | null)?.test_daily_accel) {
+  let effectiveDate: string | null = gate.localToday
+  if (testAccel) {
     const { count: existing } = await (supabase as unknown as {
       from: (t: string) => {
         select: (cols: string, opts: { count: 'exact'; head: boolean }) => {

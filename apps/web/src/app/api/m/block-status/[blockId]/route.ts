@@ -65,6 +65,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     { data: locDoneToday },
     { data: sbp },
     { data: fridayRow },
+    { data: maxClosedDateRaw },
   ] = await Promise.all([
     // user_closed_days — закрытые дни по каждому блоку
     supabase.rpc('user_closed_days', { p_user_id: userId }) as Promise<{
@@ -135,6 +136,11 @@ export async function POST(req: NextRequest, { params }: Params) {
       .eq('user_id', userId)
       .eq('block_id', blockId)
       .limit(1) as Promise<{ data: Array<{ id: string }> | null }>,
+
+    // Последняя полностью закрытая дата по всем блокам — для дневного гейта
+    supabase.rpc('user_max_closed_date', { p_user_id: userId }) as Promise<{
+      data: string | null
+    }>,
   ])
 
   // 4. Подсчёт закрытых дней для текущего блока
@@ -168,6 +174,14 @@ export async function POST(req: NextRequest, { params }: Params) {
   const quiz = Boolean(sbp?.quiz_passed_at)
   const friday = (fridayRow?.length ?? 0) > 0
 
+  // Дневной гейт: действовать сегодня можно, только если localToday строго позже
+  // последней полностью закрытой даты (по всем блокам). nextDayLocked → показываем
+  // «следующий день откроется в 00:00».
+  const maxClosedDate = (maxClosedDateRaw as string | null) ?? null
+  const blockComplete = closedDays >= 7
+  const canActToday = !blockComplete && (maxClosedDate === null || today > maxClosedDate)
+  const nextDayLocked = !blockComplete && maxClosedDate !== null && today <= maxClosedDate
+
   return NextResponse.json({
     ok: true,
     closedDays,
@@ -175,5 +189,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     today: todayStatus,
     quiz,
     friday,
+    canActToday,
+    nextDayLocked,
   })
 }

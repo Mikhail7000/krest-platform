@@ -25,12 +25,15 @@ export function BlockProgress({ blockId }: { blockId: number }) {
 
   if (!data) return null
 
-  const { closedDays, target, today } = data
+  const { closedDays, target, today, nextDayLocked } = data
   const pct = Math.round((Math.min(closedDays, target) / target) * 100)
 
   const todayAllDone = DAY_TASKS.every((t) => today[t.key])
   const pendingTasks = DAY_TASKS.filter((t) => !today[t.key])
   const blockComplete = closedDays >= target
+  // Следующий день ещё не открылся (сегодня уже закрыт день / первый день нового
+  // блока в те же сутки). Задания нельзя сдавать — день «висит» до 00:00.
+  const dayLocked = nextDayLocked && !todayAllDone
 
   if (blockComplete) {
     return (
@@ -54,12 +57,14 @@ export function BlockProgress({ blockId }: { blockId: number }) {
       {/* «Сегодня» — блок */}
       {closedDays < target && (
         <div className="lesson-progress-today">
-          {todayAllDone ? (
+          {todayAllDone || dayLocked ? (
             <div className="lesson-progress-today__done">
-              <span className="lesson-progress-today__done-title">✓ День закрыт!</span>
+              <span className="lesson-progress-today__done-title">
+                {todayAllDone ? '✓ День закрыт!' : '🔒 Следующий день ещё не открылся'}
+              </span>
               <span className="lesson-progress-today__done-hint">
                 Следующий день откроется в 00:00 по твоему времени. Тогда снова можно
-                отметить местописания и пересказ — за новый день.
+                закрыть день — фото креста, молитва, местописания и пересказ.
               </span>
             </div>
           ) : (
