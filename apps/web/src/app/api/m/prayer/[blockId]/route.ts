@@ -127,10 +127,13 @@ export async function POST(req: NextRequest, { params }: Params) {
   // Уникальные даты молитвы (по возрастанию)
   const prayedDates = [...prayedSet].sort()
 
+  // Виртуальные даты ускоренного тест-режима (якорь 2000-01-..) не показываем.
+  const isVirtual = (d: string) => d.startsWith('2000-')
+
   // Строим список дней: [done…] + [today | waiting] + [future…] до 7.
   const days: Array<{ index: number; state: DayState; date: string | null }> = []
   for (let i = 0; i < prayedDates.length; i++) {
-    days.push({ index: i + 1, state: 'done', date: prayedDates[i] })
+    days.push({ index: i + 1, state: 'done', date: isVirtual(prayedDates[i]) ? null : prayedDates[i] })
   }
   if (!gate2.blockComplete) {
     // Следующий слот: сегодня (можно отметить) ИЛИ ожидание (молитва за сегодня уже

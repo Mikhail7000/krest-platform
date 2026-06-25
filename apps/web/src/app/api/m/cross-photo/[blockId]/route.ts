@@ -128,6 +128,10 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   // 6. Строим список дней: [done…] + [today | waiting] + [future…] до 7.
+  // Виртуальные даты ускоренного тест-режима (якорь 2000-01-..) не показываем —
+  // для accel-тестировщика день идёт по счётчику, реальной даты у него нет.
+  const isVirtual = (d: string) => d.startsWith('2000-')
+
   const days: DayRow[] = []
   for (let i = 0; i < photoDates.length; i++) {
     const date = photoDates[i]
@@ -135,7 +139,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     days.push({
       index: i + 1,
       state: 'done',
-      date,
+      date: isVirtual(date) ? null : date,
       photo_url: path ? urlByPath.get(path) ?? null : null,
     })
   }
