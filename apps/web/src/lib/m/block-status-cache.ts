@@ -30,8 +30,6 @@ export interface BlockStatusData {
   canActToday: boolean
   /** Следующий день откроется в 00:00 (сегодня уже закрыт / первый день нового блока). */
   nextDayLocked: boolean
-  /** Независимый прогресс по 4 практикам (0..7). closedDays = минимум из них. */
-  progress?: { cross: number; prayer: number; pereskaz: number; mestopisaniya: number }
 }
 
 const TTL_MS = 12_000

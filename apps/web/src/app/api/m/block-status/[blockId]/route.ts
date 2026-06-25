@@ -66,7 +66,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     { data: sbp },
     { data: fridayRow },
     { data: maxClosedDateRaw },
-    { data: practiceRows },
   ] = await Promise.all([
     // user_closed_days — закрытые дни по каждому блоку
     supabase.rpc('user_closed_days', { p_user_id: userId }) as Promise<{
@@ -142,18 +141,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     supabase.rpc('user_max_closed_date', { p_user_id: userId }) as Promise<{
       data: string | null
     }>,
-
-    // Независимые счётчики дней по 4 практикам (для разбивки прогресса)
-    supabase.rpc('user_practice_day_counts', { p_user_id: userId }) as Promise<{
-      data: Array<{
-        block_id: number
-        cross_days: number
-        prayer_days: number
-        recv_days: number
-        loc_days: number
-        loc_required: boolean
-      }> | null
-    }>,
   ])
 
   // 4. Подсчёт закрытых дней для текущего блока
@@ -195,16 +182,6 @@ export async function POST(req: NextRequest, { params }: Params) {
   const canActToday = !blockComplete && (maxClosedDate === null || today > maxClosedDate)
   const nextDayLocked = !blockComplete && maxClosedDate !== null && today <= maxClosedDate
 
-  // Разбивка прогресса по 4 практикам (независимый подсчёт; closedDays = минимум).
-  const cap = (n: number) => Math.min(7, Number(n) || 0)
-  const pr = (practiceRows ?? []).find((r) => Number(r.block_id) === blockId)
-  const progress = {
-    cross: cap(pr?.cross_days ?? 0),
-    prayer: cap(pr?.prayer_days ?? 0),
-    mestopisaniya: cap(pr?.loc_days ?? 0),
-    pereskaz: cap(pr?.recv_days ?? 0),
-  }
-
   return NextResponse.json({
     ok: true,
     closedDays,
@@ -214,6 +191,5 @@ export async function POST(req: NextRequest, { params }: Params) {
     friday,
     canActToday,
     nextDayLocked,
-    progress,
   })
 }

@@ -55,24 +55,6 @@ export function BlockProgress({ blockId }: { blockId: number }) {
         <div className="lesson-progress-bar__fill" style={{ width: `${pct}%` }} />
       </div>
 
-      {/* Разбивка по 4 практикам (каждая считается независимо; «Закрыто дней» = минимум) */}
-      {data.progress && (
-        <div className="lesson-progress-breakdown">
-          {DAY_TASKS.map((t) => {
-            const val = data.progress![t.key as keyof typeof data.progress]
-            const lagging = val <= closedDays && val < target
-            return (
-              <span
-                key={t.key}
-                className={`lesson-progress-chip${lagging ? ' lesson-progress-chip--lag' : ''}`}
-              >
-                {t.label} {val}/{target}
-              </span>
-            )
-          })}
-        </div>
-      )}
-
       {/* «Сегодня» — блок */}
       {closedDays < target && (
         <div className="lesson-progress-today">

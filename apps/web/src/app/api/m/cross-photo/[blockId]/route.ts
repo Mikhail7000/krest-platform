@@ -143,9 +143,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       photo_url: path ? urlByPath.get(path) ?? null : null,
     })
   }
-  // Фото — независимая практика: набираем до 7 фото-дней (даже если другие практики
-  // отстают). После 7 фото слотов больше не предлагаем.
-  if (photoDates.length < DAY_TARGET) {
+  if (!gate.blockComplete) {
     // Следующий слот: сегодня (можно сдать) ИЛИ ожидание (фото за сегодня уже сдано /
     // первый день нового блока — откроется в 00:00 след. суток).
     const nextState: DayState = canSubmitToday ? 'today' : 'waiting'
