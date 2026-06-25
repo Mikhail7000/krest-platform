@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { getPanelSession } from '@/lib/admin/guard'
+import { resolveIsOwner } from '@/lib/admin/owner'
 import { CuratorsView } from './CuratorsView'
 import type { CuratorRow, CuratorStudent } from './types'
 
@@ -96,6 +97,8 @@ export default async function CuratorsPage() {
 
   const totalAdmins = curators.filter((c) => c.role === 'admin').length
   const isSuperAdmin = session?.role === 'super_admin'
+  // View-as доступен ТОЛЬКО владельцу платформы (is_protected = Михаил).
+  const isOwner = session ? await resolveIsOwner(createServiceSupabase(), session.uid) : false
 
   return (
     <div>
@@ -119,7 +122,7 @@ export default async function CuratorsPage() {
         </div>
       </div>
 
-      <CuratorsView curators={curators} isSuperAdmin={isSuperAdmin} />
+      <CuratorsView curators={curators} isSuperAdmin={isSuperAdmin} isOwner={isOwner} />
     </div>
   )
 }

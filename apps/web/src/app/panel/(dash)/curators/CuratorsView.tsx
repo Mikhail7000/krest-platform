@@ -18,9 +18,11 @@ const ROLE_BADGE: Record<string, { cls: string; label: string }> = {
 export function CuratorsView({
   curators,
   isSuperAdmin,
+  isOwner = false,
 }: {
   curators: CuratorRow[]
   isSuperAdmin: boolean
+  isOwner?: boolean
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
   const [attachTarget, setAttachTarget] = useState<CuratorRow | null>(null)
@@ -53,7 +55,7 @@ export function CuratorsView({
                     isOpen={isOpen}
                     hasStudents={hasStudents}
                     canChangeRole={!cu.isProtected && (isSuperAdmin || cu.role !== 'admin')}
-                    canViewAs={isSuperAdmin && !cu.isProtected}
+                    canViewAs={isOwner && !cu.isProtected}
                     onToggle={() => setOpenId(isOpen ? null : cu.id)}
                     onAttach={() => setAttachTarget(cu)}
                     onRole={() => setRoleTarget(cu)}

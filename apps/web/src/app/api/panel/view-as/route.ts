@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { resolveIsOwner } from '@/lib/admin/owner'
 import {
   ADMIN_COOKIE,
   VIEW_AS_COOKIE,
@@ -27,6 +28,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Только для супер-админа' }, { status: 403 })
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createServiceSupabase() as any
+
+  // Только владелец платформы (is_protected = Михаил). «Только я».
+  if (!(await resolveIsOwner(supabase, real.uid))) {
+    return NextResponse.json({ ok: false, error: 'Только для владельца платформы' }, { status: 403 })
+  }
+
   const body = (await req.json().catch(() => ({}))) as { userId?: string }
   const userId = (body.userId ?? '').trim()
   if (!userId) return NextResponse.json({ ok: false, error: 'userId обязателен' }, { status: 400 })
@@ -34,8 +43,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Это вы сами' }, { status: 400 })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = createServiceSupabase() as any
   const { data: target } = await supabase
     .from('profiles')
     .select('id, full_name, role, is_protected')
