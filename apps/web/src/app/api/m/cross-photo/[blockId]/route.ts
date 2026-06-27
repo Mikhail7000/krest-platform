@@ -172,8 +172,11 @@ export async function POST(req: NextRequest, { params }: Params) {
       date: nextState === 'today' ? gate.localToday : null,
       photo_url: null,
     })
-    // заполняем оставшиеся слоты до 7 как future (без дат — открываются по одному)
-    while (days.length < DAY_TARGET) {
+    // Будущие слоты — столько, чтобы (закрытые дни + сегодня + будущие) = 7 ЗАКРЫВАЕМЫХ.
+    // Незакрытые прошлые дни (фото без остального) идут «сверх» и НЕ занимают эти 7 —
+    // поэтому до 7 закрытых всегда можно добраться, даже если есть пропущенные дни.
+    const futureCount = Math.max(0, DAY_TARGET - gate.closedDays - 1)
+    for (let i = 0; i < futureCount; i++) {
       days.push({ index: days.length + 1, state: 'future', date: null, photo_url: null })
     }
   }
