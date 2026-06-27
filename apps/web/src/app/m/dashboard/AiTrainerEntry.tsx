@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 /**
  * Вход в ИИ-тренажёр с главного экрана — компактная карточка под прогрессом курса.
- * Ведёт в чат «Учиться вместе с ИИ» для текущего блока.
+ * Ведёт в чат «Учиться вместе с ИИ» — накопительный квиз по всем открытым блокам.
  */
 export function AiTrainerEntry({ blockId }: { blockId: number }) {
   return (
@@ -12,7 +12,7 @@ export function AiTrainerEntry({ blockId }: { blockId: number }) {
       <span className="db-ai-entry__spark">✨</span>
       <span className="db-ai-entry__text">
         <span className="db-ai-entry__title">Учиться вместе с ИИ</span>
-        <span className="db-ai-entry__sub">Чат-квиз по местописаниям — текст, голос или кружок</span>
+        <span className="db-ai-entry__sub">ИИ прогонит по открытым блокам — смысл и стихи</span>
       </span>
       <span className="db-ai-entry__arrow">›</span>
     </Link>
