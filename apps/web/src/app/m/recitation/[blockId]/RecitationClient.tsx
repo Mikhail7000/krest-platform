@@ -16,6 +16,9 @@ interface RecitationApiResponse {
   videos: VideoEntry[]
   audio_passed_at: string | null
   videos_passed_at: string | null
+  audio_today_done: boolean
+  audio_days_passed: number
+  days_required: number
 }
 
 interface UploadResult {
@@ -202,7 +205,10 @@ interface Props { blockId: number }
 export function RecitationClient({ blockId }: Props) {
   const [view, setView] = useState<'loading' | 'error' | 'idle'>('loading')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [audioPassed, setAudioPassed] = useState(false)
+  // Пересказ — ежедневная практика: «сдано сегодня» сбрасывается каждый день.
+  const [todayDone, setTodayDone] = useState(false)
+  const [daysPassed, setDaysPassed] = useState(0)
+  const [daysRequired, setDaysRequired] = useState(7)
   const [audioComment, setAudioComment] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -216,7 +222,9 @@ export function RecitationClient({ blockId }: Props) {
       })
       if (!res.ok) { setErrorMsg(`Ошибка ${res.status}`); setView('error'); return }
       const data = await res.json() as RecitationApiResponse
-      setAudioPassed(!!data.audio?.passed)
+      setTodayDone(!!data.audio_today_done)
+      setDaysPassed(data.audio_days_passed ?? 0)
+      setDaysRequired(data.days_required ?? 7)
       setAudioComment(data.audio?.ai_comment ?? null)
       setView('idle')
     } catch {
@@ -228,7 +236,10 @@ export function RecitationClient({ blockId }: Props) {
   useEffect(() => { load() }, [load])
 
   function handleAudioResult(res: UploadResult) {
-    if (res.passed) setAudioPassed(true)
+    if (res.passed && !todayDone) {
+      setTodayDone(true)
+      setDaysPassed((d) => Math.min(d + 1, daysRequired))
+    }
     if (res.ai_comment) setAudioComment(res.ai_comment)
   }
 
@@ -254,8 +265,8 @@ export function RecitationClient({ blockId }: Props) {
   return (
     <div>
       <div className="recitation-progress">
-        <span className={`recitation-progress__item${audioPassed ? ' recitation-progress__item--pass' : ''}`}>
-          {audioPassed ? '✓' : '—'} Аудио-пересказ
+        <span className={`recitation-progress__item${todayDone ? ' recitation-progress__item--pass' : ''}`}>
+          {todayDone ? '✓' : '—'} Закрыто дней: {daysPassed} / {daysRequired}
         </span>
       </div>
 
@@ -264,11 +275,14 @@ export function RecitationClient({ blockId }: Props) {
         <p className="recitation-card__title">Аудио-пересказ</p>
         <p className="recitation-card__desc">
           Расскажи своими словами, что понял из блока — что узнал нового, что вдохновило, что берёшь в практику. До 10 минут.
+          Это нужно сдавать каждый день.
         </p>
-        {audioPassed ? (
+        {todayDone ? (
           <div className="recitation-status-row">
             <span className="recitation-status-dot recitation-status-dot--pass" />
-            <span style={{ color: '#4ADE80', fontWeight: 700, fontSize: '0.875rem' }}>Аудио принято</span>
+            <span style={{ color: '#4ADE80', fontWeight: 700, fontSize: '0.875rem' }}>
+              Сегодня сдано. Возвращайся завтра.
+            </span>
           </div>
         ) : (
           <RecordBlock

@@ -16,6 +16,8 @@ export interface LocationItem {
   practice_mode: PracticeMode
   audio_passed: boolean
   video_passed: boolean
+  audio_passed_today: boolean
+  video_passed_today: boolean
   audio_attempts: number
   video_attempts: number
   daily_days_passed: number
@@ -368,7 +370,9 @@ export function LocationCard({ item }: Props) {
   const audioHint = AUDIO_HINTS[item.order_index % 4]
   const videoHint = VIDEO_HINTS[item.order_index % 4]
   const [audioPassed, setAudioPassed] = useState(item.audio_passed)
-  const [videoPassed, setVideoPassed] = useState(item.video_passed)
+  // Режим стихов наизусть (practice_mode=null) — ЕЖЕДНЕВНЫЙ: статус за сегодня.
+  const [audioPassedToday, setAudioPassedToday] = useState(item.audio_passed_today)
+  const [videoPassedToday, setVideoPassedToday] = useState(item.video_passed_today)
   const [audioAttempts, setAudioAttempts] = useState(item.audio_attempts)
   const [videoAttempts, setVideoAttempts] = useState(item.video_attempts)
   const [lastAudioFeedback, setLastAudioFeedback] = useState<string | null>(null)
@@ -387,6 +391,7 @@ export function LocationCard({ item }: Props) {
     setVideoAttempts(res.attempts.video)
     if (res.passed) {
       setAudioPassed(true)
+      setAudioPassedToday(true)
       if (isDaily && !todayDone) {
         setDailyDaysPassed((d) => Math.min(d + 1, daysRequired))
         setTodayDone(true)
@@ -398,26 +403,30 @@ export function LocationCard({ item }: Props) {
   const handleVideoResult = useCallback((res: UploadResult) => {
     setAudioAttempts(res.attempts.audio)
     setVideoAttempts(res.attempts.video)
-    if (res.passed) setVideoPassed(true)
+    if (res.passed) setVideoPassedToday(true)
     if (res.ai_comment) setLastVideoFeedback(res.ai_comment)
   }, [])
 
-  // Класс карточки: для recurring/single — отдельная логика «complete»
+  // Класс карточки: для recurring/single — отдельная логика «complete».
+  // Для режима стихов наизусть (default) — статус ЗА СЕГОДНЯ (ежедневная практика).
   const dailyComplete = isDaily && dailyDaysPassed >= daysRequired
   const singleComplete = isSingle && audioPassed
-  const cardClass =
-    dailyComplete || singleComplete || (videoPassed && !isDaily && !isSingle)
-      ? 'location-card location-card--complete'
-      : audioPassed
-      ? 'location-card location-card--audio-done'
-      : 'location-card'
+  const isDefault = !isDaily && !isSingle
+  const defaultDoneToday = isDefault && videoPassedToday
+  const defaultAudioMid = isDefault && audioPassedToday && !videoPassedToday
+  const completeNow = dailyComplete || singleComplete || defaultDoneToday
+  const audioMid = defaultAudioMid || ((isDaily || isSingle) && audioPassed && !completeNow)
+  const cardClass = completeNow
+    ? 'location-card location-card--complete'
+    : audioMid
+    ? 'location-card location-card--audio-done'
+    : 'location-card'
 
-  const headerIcon =
-    dailyComplete || singleComplete || (videoPassed && !isDaily && !isSingle)
-      ? <span className="location-card__status-icon">✅</span>
-      : audioPassed
-      ? <span className="location-card__status-icon" style={{ color: 'var(--tg-button, #C9A961)' }}>🎤</span>
-      : null
+  const headerIcon = completeNow
+    ? <span className="location-card__status-icon">✅</span>
+    : audioMid
+    ? <span className="location-card__status-icon" style={{ color: 'var(--tg-button, #C9A961)' }}>🎤</span>
+    : null
 
   return (
     <div className={cardClass}>
@@ -524,10 +533,10 @@ export function LocationCard({ item }: Props) {
         </div>
       )}
 
-      {/* Default — двухэтапная сдача наизусть (короткие стихи) */}
-      {!isDaily && !isSingle && (
+      {/* Default — двухэтапная сдача наизусть, ЕЖЕДНЕВНО (статус за сегодня) */}
+      {isDefault && (
         <>
-          {!audioPassed && (
+          {!audioPassedToday && (
             <div>
               <p className="location-stage-label location-stage-label--active">Этап А — Аудио</p>
               <p className="location-card__hint">{audioHint}</p>
@@ -551,11 +560,11 @@ export function LocationCard({ item }: Props) {
             </div>
           )}
 
-          {audioPassed && !videoPassed && (
+          {audioPassedToday && !videoPassedToday && (
             <div>
               <div className="location-pass-row">
                 <span className="location-pass-row__icon">✓</span>
-                <span className="location-pass-row__text">Аудио сдано</span>
+                <span className="location-pass-row__text">Аудио сдано сегодня</span>
               </div>
               <p className="location-stage-label location-stage-label--active" style={{ marginTop: '0.875rem' }}>
                 Этап Б — Видеокружок
@@ -581,10 +590,10 @@ export function LocationCard({ item }: Props) {
             </div>
           )}
 
-          {audioPassed && videoPassed && (
+          {audioPassedToday && videoPassedToday && (
             <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
               <span className="location-pass-row__icon">✓</span>
-              <span className="location-pass-row__text">Видеокружок сдан — местописание закрыто</span>
+              <span className="location-pass-row__text">Сегодня сдано. Возвращайся завтра.</span>
             </div>
           )}
         </>

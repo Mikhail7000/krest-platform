@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +40,7 @@ interface RecitationRow {
   ai_comment: string | null
   transcript: string | null
   created_at: string
+  effective_date: string | null
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -56,6 +58,8 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const supabase = createServiceSupabase()
+  // «Сегодня» — по локальному поясу ученика (день закрывается в 00:00 его пояса)
+  const todayKey = await studentLocalToday(supabase, userId)
 
   // 3. Загружаем последние попытки по каждому medium
   // cast через unknown — таблица не в сгенерированных типах
@@ -73,7 +77,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
   })
     .from('student_block_recitations')
-    .select('id, medium, passed, ai_score, ai_comment, transcript, created_at')
+    .select('id, medium, passed, ai_score, ai_comment, transcript, created_at, effective_date')
     .eq('user_id', userId)
     .eq('block_id', blockId)
     .order('created_at', { ascending: false })
@@ -98,6 +102,14 @@ export async function POST(req: NextRequest, { params }: Params) {
     .reverse()
     .find((r) => r.medium === 'video_note' && r.passed)
 
+  // Пересказ — ЕЖЕДНЕВНАЯ практика: считаем по локальной дате (как в гейте).
+  // «Сегодня сдано» = есть passed-аудио с датой = сегодня; иначе экран снова даёт запись.
+  const recDate = (r: RecitationRow): string =>
+    r.effective_date ?? new Date(r.created_at).toISOString().slice(0, 10)
+  const audioPassedRows = rows.filter((r) => r.medium === 'audio' && r.passed)
+  const audioTodayDone = audioPassedRows.some((r) => recDate(r) === todayKey)
+  const audioDaysPassed = new Set(audioPassedRows.map(recDate)).size
+
   return NextResponse.json({
     ok: true,
     audio: lastAudio
@@ -118,5 +130,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     })),
     audio_passed_at: audioPassedRow?.created_at ?? null,
     video_passed_at: videoPassedRow?.created_at ?? null,
+    // Ежедневная модель: статус за сегодня + счётчик закрытых дней пересказа
+    audio_today_done: audioTodayDone,
+    audio_days_passed: audioDaysPassed,
+    days_required: 7,
   })
 }

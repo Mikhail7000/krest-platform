@@ -11,6 +11,8 @@ interface LocationsApiResponse {
   unlock_at?: string
   locked_reason?: string
   locations: LocationItem[]
+  loc_days_passed: number
+  loc_days_required: number
 }
 
 type ViewState = 'loading' | 'error' | 'locked' | 'idle'
@@ -37,6 +39,8 @@ export function LocationsClient({ blockId }: Props) {
   const [unlockAt, setUnlockAt] = useState<string | null>(null)
   const [lockedReason, setLockedReason] = useState<string | null>(null)
   const [locations, setLocations] = useState<LocationItem[]>([])
+  const [locDaysPassed, setLocDaysPassed] = useState(0)
+  const [locDaysRequired, setLocDaysRequired] = useState(7)
 
   const load = useCallback(async () => {
     setView('loading')
@@ -61,6 +65,8 @@ export function LocationsClient({ blockId }: Props) {
         return
       }
       setLocations(data.locations)
+      setLocDaysPassed(data.loc_days_passed ?? 0)
+      setLocDaysRequired(data.loc_days_required ?? 7)
       setView('idle')
     } catch {
       setErrorMsg('Не удалось загрузить данные. Проверьте соединение.')
@@ -104,25 +110,32 @@ export function LocationsClient({ blockId }: Props) {
     )
   }
 
-  const isLocationDone = (l: LocationItem): boolean => {
+  // «Сдано сегодня» — стихи наизусть (default) ежедневные → по статусу за сегодня.
+  const isLocationDoneToday = (l: LocationItem): boolean => {
     if (l.practice_mode === 'daily_understanding') {
-      return l.daily_days_passed >= (l.daily_days_required ?? 7)
+      return l.today_done
     }
     if (l.practice_mode === 'single_understanding') {
       return l.audio_passed
     }
-    return l.video_passed
+    return l.video_passed_today
   }
-  const passedCount = locations.filter(isLocationDone).length
+  const doneTodayCount = locations.filter(isLocationDoneToday).length
+  const hasDefault = locations.some((l) => (l.practice_mode ?? null) === null)
 
   return (
     <div>
       {canSkip && (
         <span className="locations-skip-badge">✓ Тестовый режим — блок доступен</span>
       )}
-      <p style={{ color: 'var(--tg-hint, #9CA3AF)', fontSize: '0.8125rem', marginBottom: '1rem' }}>
-        Сдано: {passedCount} / {locations.length}
+      <p style={{ color: 'var(--tg-hint, #9CA3AF)', fontSize: '0.8125rem', marginBottom: '0.25rem' }}>
+        Сдано сегодня: {doneTodayCount} / {locations.length}
       </p>
+      {hasDefault && (
+        <p style={{ color: 'var(--tg-hint, #9CA3AF)', fontSize: '0.8125rem', marginBottom: '1rem' }}>
+          Закрыто дней: {locDaysPassed} / {locDaysRequired} · сдавай наизусть каждый день
+        </p>
+      )}
       {locations.map((loc) => (
         <LocationCard key={loc.id} item={loc} />
       ))}

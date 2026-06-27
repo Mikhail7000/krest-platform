@@ -137,6 +137,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     videoAttempts: number
     audioPassedDays: Set<string>
     todayHasPassedAudio: boolean
+    // Статус ЗА СЕГОДНЯ (режим стихов наизусть — ежедневный, сбрасывается по дням)
+    audioPassedToday: boolean
+    videoPassedToday: boolean
   }
   const progressMap = new Map<string, LocProgress>()
   const todayKey = await studentLocalToday(supabase, userId)
@@ -150,6 +153,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       videoAttempts: 0,
       audioPassedDays: new Set<string>(),
       todayHasPassedAudio: false,
+      audioPassedToday: false,
+      videoPassedToday: false,
     }
 
     if (attempt.medium === 'audio') {
@@ -158,11 +163,17 @@ export async function POST(req: NextRequest, { params }: Params) {
         cur.audioPassed = true
         const d = attemptDate(attempt)
         cur.audioPassedDays.add(d)
-        if (d === todayKey) cur.todayHasPassedAudio = true
+        if (d === todayKey) {
+          cur.todayHasPassedAudio = true
+          cur.audioPassedToday = true
+        }
       }
     } else if (attempt.medium === 'video_note') {
       cur.videoAttempts += 1
-      if (attempt.passed) cur.videoPassed = true
+      if (attempt.passed) {
+        cur.videoPassed = true
+        if (attemptDate(attempt) === todayKey) cur.videoPassedToday = true
+      }
     }
 
     progressMap.set(key, cur)
@@ -177,6 +188,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       videoAttempts: 0,
       audioPassedDays: new Set<string>(),
       todayHasPassedAudio: false,
+      audioPassedToday: false,
+      videoPassedToday: false,
     }
 
     // cast через unknown — max_record_seconds + practice_mode добавлены миграциями,
@@ -197,6 +210,8 @@ export async function POST(req: NextRequest, { params }: Params) {
       practice_mode: practiceMode,
       audio_passed: prog.audioPassed,
       video_passed: prog.videoPassed,
+      audio_passed_today: prog.audioPassedToday,
+      video_passed_today: prog.videoPassedToday,
       audio_attempts: prog.audioAttempts,
       video_attempts: prog.videoAttempts,
       // recurring-режим: число уникальных дней с passed=true, цель и отметка сегодня
@@ -211,6 +226,32 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
   })
 
+  // Счётчик закрытых дней местописаний (как в гейте 'loc'): даты, в которые СДАНЫ
+  // видеокружки ВСЕХ обязательных стихов-наизусть (practice_mode IS NULL).
+  const defaultLocIds = new Set(
+    locations
+      .filter((l) => ((l as unknown as { practice_mode?: string | null }).practice_mode ?? null) === null)
+      .map((l) => l.id),
+  )
+  const videoByDate = new Map<string, Set<string>>()
+  for (const a of attempts) {
+    if (a.medium === 'video_note' && a.passed && defaultLocIds.has(a.location_id)) {
+      const d = attemptDate(a)
+      let s = videoByDate.get(d)
+      if (!s) {
+        s = new Set<string>()
+        videoByDate.set(d, s)
+      }
+      s.add(a.location_id)
+    }
+  }
+  let locDaysPassed = 0
+  if (defaultLocIds.size > 0) {
+    for (const s of videoByDate.values()) {
+      if (s.size >= defaultLocIds.size) locDaysPassed += 1
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     block_unlocked: locationsUnlocked,
@@ -218,5 +259,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     ...(unlockAt ? { unlock_at: unlockAt } : {}),
     can_skip: canSkip,
     locations: locationsWithProgress,
+    // Ежедневная модель стихов наизусть: закрыто дней / нужно
+    loc_days_passed: canSkip && locDaysPassed >= 1 ? DAILY_DAYS_REQUIRED : locDaysPassed,
+    loc_days_required: DAILY_DAYS_REQUIRED,
   })
 }
