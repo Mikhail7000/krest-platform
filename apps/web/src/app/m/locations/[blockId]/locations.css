@@ -131,9 +131,12 @@
 }
 .location-card__status-icon {
   flex-shrink: 0;
-  font-size: 1.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
   line-height: 1;
 }
+.location-card__status-icon--done { color: #22c55e; }
+.location-card__status-icon--audio { color: var(--tg-button, #C9A961); }
 
 /* ── Exact text blockquote ───────────────────────────────────────── */
 .location-card__text {
@@ -307,7 +310,12 @@
   border: 1px solid rgba(74, 222, 128, 0.2);
   margin-top: 0.5rem;
 }
-.location-pass-row__icon { font-size: 1rem; color: #4ADE80; }
+.location-pass-row__icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  color: #16a34a;
+}
 .location-pass-row__text {
   font-size: 0.875rem;
   font-weight: 600;

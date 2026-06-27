@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback, useEffect } from 'react'
+import { IconCheck, IconMic } from '@/app/m/_components/icons'
 
 // TODO: replace with import from @/types when database-architect adds these tables
 export type PracticeMode = 'daily_understanding' | 'single_understanding' | null
@@ -423,9 +424,9 @@ export function LocationCard({ item }: Props) {
     : 'location-card'
 
   const headerIcon = completeNow
-    ? <span className="location-card__status-icon">✅</span>
+    ? <IconCheck className="location-card__status-icon location-card__status-icon--done" />
     : audioMid
-    ? <span className="location-card__status-icon" style={{ color: 'var(--tg-button, #C9A961)' }}>🎤</span>
+    ? <IconMic className="location-card__status-icon location-card__status-icon--audio" />
     : null
 
   return (
@@ -468,12 +469,12 @@ export function LocationCard({ item }: Props) {
 
           {dailyComplete ? (
             <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
-              <span className="location-pass-row__icon">✓</span>
+              <IconCheck className="location-pass-row__icon" />
               <span className="location-pass-row__text">Пересказ закрыт — все 7 дней сданы</span>
             </div>
           ) : todayDone ? (
             <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
-              <span className="location-pass-row__icon">✓</span>
+              <IconCheck className="location-pass-row__icon" />
               <span className="location-pass-row__text">Сегодня сдано. Возвращайся завтра.</span>
             </div>
           ) : (
@@ -508,7 +509,7 @@ export function LocationCard({ item }: Props) {
           </p>
           {audioPassed ? (
             <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
-              <span className="location-pass-row__icon">✓</span>
+              <IconCheck className="location-pass-row__icon" />
               <span className="location-pass-row__text">Пересказ сдан</span>
             </div>
           ) : (
@@ -563,7 +564,7 @@ export function LocationCard({ item }: Props) {
           {audioPassedToday && !videoPassedToday && (
             <div>
               <div className="location-pass-row">
-                <span className="location-pass-row__icon">✓</span>
+                <IconCheck className="location-pass-row__icon" />
                 <span className="location-pass-row__text">Аудио сдано сегодня</span>
               </div>
               <p className="location-stage-label location-stage-label--active" style={{ marginTop: '0.875rem' }}>
@@ -592,7 +593,7 @@ export function LocationCard({ item }: Props) {
 
           {audioPassedToday && videoPassedToday && (
             <div className="location-pass-row" style={{ marginTop: '0.5rem' }}>
-              <span className="location-pass-row__icon">✓</span>
+              <IconCheck className="location-pass-row__icon" />
               <span className="location-pass-row__text">Сегодня сдано. Возвращайся завтра.</span>
             </div>
           )}

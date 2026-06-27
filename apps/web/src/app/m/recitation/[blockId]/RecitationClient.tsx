@@ -210,6 +210,9 @@ export function RecitationClient({ blockId }: Props) {
   const [daysPassed, setDaysPassed] = useState(0)
   const [daysRequired, setDaysRequired] = useState(7)
   const [audioComment, setAudioComment] = useState<string | null>(null)
+  // Комментарий AI показываем только за СЕГОДНЯ (после сдачи сегодня), иначе на новый
+  // день висел бы комментарий с прошлого дня.
+  const [showComment, setShowComment] = useState(false)
 
   const load = useCallback(async () => {
     setView('loading')
@@ -225,7 +228,9 @@ export function RecitationClient({ blockId }: Props) {
       setTodayDone(!!data.audio_today_done)
       setDaysPassed(data.audio_days_passed ?? 0)
       setDaysRequired(data.days_required ?? 7)
-      setAudioComment(data.audio?.ai_comment ?? null)
+      // Комментарий держим/показываем только если сдано сегодня (иначе он с прошлого дня)
+      setAudioComment(data.audio_today_done ? data.audio?.ai_comment ?? null : null)
+      setShowComment(!!data.audio_today_done)
       setView('idle')
     } catch {
       setErrorMsg('Не удалось загрузить данные.')
@@ -240,7 +245,10 @@ export function RecitationClient({ blockId }: Props) {
       setTodayDone(true)
       setDaysPassed((d) => Math.min(d + 1, daysRequired))
     }
-    if (res.ai_comment) setAudioComment(res.ai_comment)
+    if (res.ai_comment) {
+      setAudioComment(res.ai_comment)
+      setShowComment(true)
+    }
   }
 
   if (view === 'loading') {
@@ -294,7 +302,7 @@ export function RecitationClient({ blockId }: Props) {
             accept="audio/*"
           />
         )}
-        {audioComment && (
+        {showComment && audioComment && (
           <div className="recitation-feedback">
             <span className="recitation-feedback__label">Комментарий AI</span>
             <p>{audioComment}</p>
