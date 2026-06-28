@@ -11,6 +11,7 @@ interface DayEntry {
   index: number
   state: DayState
   date: string | null
+  closed?: boolean
 }
 
 interface PrayerApiResponse {
@@ -97,14 +98,17 @@ export function PrayerClient({ blockId }: Props) {
     )
   }
 
-  const progressPct = Math.min(100, Math.round((data.prayed_days / data.target) * 100))
+  const progressPct = Math.min(100, Math.round((data.closed_days / data.target) * 100))
 
   return (
     <div>
-      <div className="prayer-progress-label">{data.prayed_days} / {data.target} дней</div>
+      <div className="prayer-progress-label">Закрыто дней: {data.closed_days} / {data.target}</div>
       <div className="prayer-progress-bar">
         <div className="prayer-progress-bar__fill" style={{ width: `${progressPct}%` }} />
       </div>
+      <p className="prayer-hint">
+        Молитва — 1 из 4 заданий дня. День закрывается, когда за дату сделаны все 4 (фото, молитва, местописания, пересказ).
+      </p>
 
       {data.test_mode && (
         <div className="prayer-test-banner">
@@ -113,28 +117,43 @@ export function PrayerClient({ blockId }: Props) {
       )}
 
       <div className="prayer-days">
-        {data.days.map((d) => (
-          <div
-            key={d.index}
-            className={`prayer-day${d.state === 'done' ? ' prayer-day--done' : ''}`}
-          >
-            <span className="prayer-day__num">День {d.index}</span>
-            <span className="prayer-day__date">{d.date ? formatRuDate(d.date) : ''}</span>
-            <span className="prayer-day__status">
-              {d.state === 'done' ? (
-                <>
-                  <IconCheck className="prayer-status-icon prayer-status-icon--done" /> Помолился
-                </>
-              ) : d.state === 'today' ? (
-                'сегодня'
-              ) : d.state === 'waiting' ? (
-                <IconLock className="prayer-status-icon prayer-status-icon--lock" />
-              ) : (
-                '—'
-              )}
-            </span>
-          </div>
-        ))}
+        {data.days.map((d) => {
+          // «День не закрыт» — только для ПРОШЛЫХ дней (сутки кончились, не всё сдано).
+          // Сегодняшняя молитва — обычная галочка (день ещё идёт).
+          const pastUnclosed =
+            d.state === 'done' && !d.closed && d.date != null && d.date < data.today
+          const cls =
+            d.state === 'done'
+              ? pastUnclosed
+                ? ' prayer-day--unclosed'
+                : ' prayer-day--done'
+              : ''
+          return (
+            <div key={d.index} className={`prayer-day${cls}`}>
+              <span className="prayer-day__num">День {d.index}</span>
+              <span className="prayer-day__date">{d.date ? formatRuDate(d.date) : ''}</span>
+              <span className="prayer-day__status">
+                {d.state === 'done' ? (
+                  pastUnclosed ? (
+                    <>
+                      <IconCheck className="prayer-status-icon prayer-status-icon--partial" /> Молитва есть · день не закрыт
+                    </>
+                  ) : (
+                    <>
+                      <IconCheck className="prayer-status-icon prayer-status-icon--done" /> {d.closed ? 'День закрыт' : 'Помолился'}
+                    </>
+                  )
+                ) : d.state === 'today' ? (
+                  'сегодня'
+                ) : d.state === 'waiting' ? (
+                  <IconLock className="prayer-status-icon prayer-status-icon--lock" />
+                ) : (
+                  '—'
+                )}
+              </span>
+            </div>
+          )
+        })}
       </div>
 
       {data.block_complete ? (

@@ -127,13 +127,36 @@ export async function POST(req: NextRequest, { params }: Params) {
   // Уникальные даты молитвы (по возрастанию)
   const prayedDates = [...prayedSet].sort()
 
+  // Закрыт ли ВЕСЬ день (все 4 практики за эту дату) — для статуса карточки молитвы.
+  // Считаем по той же логике, что и «Закрыто дней» (rpc is_day_closed).
+  const closedByDate = new Map<string, boolean>()
+  if (prayedDates.length > 0) {
+    const checks = await Promise.all(
+      prayedDates.map((d) =>
+        (
+          supabase as unknown as {
+            rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown }>
+          }
+        )
+          .rpc('is_day_closed', { p_user_id: userId, p_d: d })
+          .then((r) => [d, r.data === true] as [string, boolean]),
+      ),
+    )
+    for (const [d, c] of checks) closedByDate.set(d, c)
+  }
+
   // Виртуальные даты ускоренного тест-режима (якорь 2000-01-..) не показываем.
   const isVirtual = (d: string) => d.startsWith('2000-')
 
-  // Строим список дней: [done…] + [today | waiting] + [future…] до 7.
-  const days: Array<{ index: number; state: DayState; date: string | null }> = []
+  // Строим список дней: [done…] + [today | waiting] + [future…].
+  const days: Array<{ index: number; state: DayState; date: string | null; closed?: boolean }> = []
   for (let i = 0; i < prayedDates.length; i++) {
-    days.push({ index: i + 1, state: 'done', date: isVirtual(prayedDates[i]) ? null : prayedDates[i] })
+    days.push({
+      index: i + 1,
+      state: 'done',
+      date: isVirtual(prayedDates[i]) ? null : prayedDates[i],
+      closed: closedByDate.get(prayedDates[i]) ?? false,
+    })
   }
   if (!gate2.blockComplete) {
     // Следующий слот: сегодня (можно отметить) ИЛИ ожидание (молитва за сегодня уже
@@ -144,7 +167,11 @@ export async function POST(req: NextRequest, { params }: Params) {
       state: nextState,
       date: nextState === 'today' ? gate2.localToday : null,
     })
-    while (days.length < DAY_TARGET) {
+    // Будущие слоты — столько, чтобы (закрытые дни + сегодня + будущие) = 7 ЗАКРЫВАЕМЫХ.
+    // Незакрытые прошлые дни (молитва без остального) идут «сверх» и НЕ занимают эти 7 —
+    // поэтому до 7 закрытых всегда можно добраться, даже если есть пропущенные дни.
+    const futureCount = Math.max(0, DAY_TARGET - gate2.closedDays - 1)
+    for (let i = 0; i < futureCount; i++) {
       days.push({ index: days.length + 1, state: 'future', date: null })
     }
   }

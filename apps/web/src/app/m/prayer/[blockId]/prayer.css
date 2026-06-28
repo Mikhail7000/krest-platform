@@ -40,12 +40,18 @@
   background: var(--tg-section-bg, rgba(255, 255, 255, 0.08));
   border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 .prayer-progress-bar__fill {
   height: 100%;
   background: var(--accent-solid);
   transition: width 0.4s ease;
+}
+.prayer-hint {
+  font-size: 0.8125rem;
+  color: var(--tg-hint, #9CA3AF);
+  line-height: 1.45;
+  margin-bottom: 1rem;
 }
 
 .prayer-test-banner {
@@ -81,8 +87,14 @@
 .prayer-day__date { font-size: 0.8125rem; color: var(--tg-hint, #9CA3AF); }
 .prayer-day__status { font-size: 0.875rem; color: var(--tg-hint, #9CA3AF); display: inline-flex; align-items: center; gap: 0.25rem; }
 .prayer-day--done .prayer-day__status { color: #4ADE80; font-weight: 600; }
+.prayer-day--unclosed {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.06);
+}
+.prayer-day--unclosed .prayer-day__status { color: #b45309; font-weight: 600; }
 .prayer-status-icon { width: 1rem; height: 1rem; }
 .prayer-status-icon--done { color: #22c55e; }
+.prayer-status-icon--partial { color: #f59e0b; }
 .prayer-status-icon--lock { color: var(--tg-hint, #9CA3AF); }
 .prayer-mark-error { color: var(--tg-destructive, #EF4444); font-size: 0.8125rem; margin-top: 0.5rem; text-align: center; }
 
