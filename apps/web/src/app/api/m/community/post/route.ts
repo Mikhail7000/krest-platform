@@ -112,7 +112,10 @@ export async function POST(req: NextRequest) {
       return err('Файл обязателен для медиа-поста', 'NO_FILE', 400)
     }
 
-    const mime = file.type || 'application/octet-stream'
+    // iOS MediaRecorder отдаёт mime «video/mp4;codecs=avc1», а бакет community-media
+    // сравнивает строку строго и разрешает только «video/mp4» → upload падает.
+    // Отбрасываем ;codecs — это и была причина «Не удалось отправить» на iPhone.
+    const mime = (file.type || 'application/octet-stream').split(';')[0].trim()
     const ext = extFromMime(mime)
     const storagePath = `${auth.userId}/${randomUUID()}.${ext}`
 

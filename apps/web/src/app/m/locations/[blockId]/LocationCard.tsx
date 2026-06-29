@@ -135,14 +135,18 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: Sta
     }
     try {
       const constraints: MediaStreamConstraints = isVideo
-        ? { audio: true, video: { width: { ideal: 480 }, height: { ideal: 480 }, facingMode: 'user' } }
+        ? {
+            audio: true,
+            // frameRate ограничиваем — иначе на iOS видео-дорожка стопорится на ~15с.
+            video: { width: { ideal: 480 }, height: { ideal: 480 }, frameRate: { ideal: 24, max: 30 }, facingMode: 'user' },
+          }
         : { audio: true }
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
       const mimeType = pickMimeType(isVideo)
       setRecordedMime(mimeType)
-      // Лимит body на Vercel serverless — 4.5 MB. Считаем: 60 сек * (500+64) kbps / 8 ≈ 4.2 MB → c запасом.
+      // Битрейт занижен (360к видео + 48к аудио ≈ 3 МБ за 60с) — c запасом под лимит body Vercel 4.5 МБ.
       const recorderOptions: MediaRecorderOptions = isVideo
-        ? { videoBitsPerSecond: 500_000, audioBitsPerSecond: 64_000, ...(mimeType ? { mimeType } : {}) }
+        ? { videoBitsPerSecond: 360_000, audioBitsPerSecond: 48_000, ...(mimeType ? { mimeType } : {}) }
         : { audioBitsPerSecond: 64_000, ...(mimeType ? { mimeType } : {}) }
       const recorder = new MediaRecorder(stream, recorderOptions)
       chunksRef.current = []
@@ -156,7 +160,7 @@ function RecordStage({ locationId, medium, maxRecordSecs, onResult, label }: Sta
         setBlobUrl(URL.createObjectURL(newBlob))
         setState('idle')
       }
-      recorder.start()
+      recorder.start(1000)
       mediaRef.current = recorder
       if (isVideo) setActiveStream(stream)
       setState('recording')

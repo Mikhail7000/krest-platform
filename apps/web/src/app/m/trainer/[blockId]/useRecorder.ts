@@ -89,8 +89,11 @@ export function useRecorder(video: boolean, maxSecs: number) {
       const s = await navigator.mediaDevices.getUserMedia(constraints)
       const mt = pickMimeType(video)
       setMime(mt)
+      // Битрейт видео занижен (360к видео + 48к аудио ≈ 3 МБ за 60с), чтобы кружок
+      // гарантированно влезал в лимит тела Vercel (4.5 МБ). Раньше 500к давали ~4+ МБ
+      // на полные 60с → «Не удалось отправить».
       const opts: MediaRecorderOptions = video
-        ? { videoBitsPerSecond: 500_000, audioBitsPerSecond: 64_000, ...(mt ? { mimeType: mt } : {}) }
+        ? { videoBitsPerSecond: 360_000, audioBitsPerSecond: 48_000, ...(mt ? { mimeType: mt } : {}) }
         : { audioBitsPerSecond: 64_000, ...(mt ? { mimeType: mt } : {}) }
       const recorder = new MediaRecorder(s, opts)
       chunksRef.current = []

@@ -98,6 +98,13 @@ export function PostComposer({ onPosted }: Props) {
   }
 
   const postMedia = async (kind: 'audio' | 'video_note', blob: Blob, mime: string) => {
+    // Лимит тела Vercel — 4.5 МБ. Останавливаем заранее с понятным текстом,
+    // иначе запрос отвалится сетью и пользователь увидит общее «Не удалось отправить».
+    if (blob.size > 4_300_000) {
+      const mb = (blob.size / 1024 / 1024).toFixed(1)
+      setError(`Запись тяжёлая (${mb} МБ). Перезапиши покороче — так она точно отправится.`)
+      return
+    }
     setBusy(true)
     setError(null)
     try {
