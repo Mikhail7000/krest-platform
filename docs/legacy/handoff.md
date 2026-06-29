@@ -47,7 +47,7 @@
 
 ## Telegram Bot — настройка
 
-**Bot Token:** `8348590676:AAFc2U8sAZTEAHq_xFFbi0cQEoTeugDkx70`
+**Bot Token:** `[removed-rotated-2026-06-30]`
 
 | Что | Статус | Как настроено |
 |-----|--------|---------------|
@@ -124,7 +124,7 @@ public/
 NEXT_PUBLIC_SUPABASE_URL=https://aejhlmoydnhgedgfndql.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_SERVICE_ROLE_KEY=sb_publishable_...  ← НУЖНО ЗАМЕНИТЬ на настоящий service_role JWT
-TELEGRAM_BOT_TOKEN=8348590676:AAFc2U8sAZTEAHq_xFFbi0cQEoTeugDkx70
+TELEGRAM_BOT_TOKEN=[removed-rotated-2026-06-30]
 TELEGRAM_LEADER_CHAT_ID=255214568
 NEXT_PUBLIC_APP_URL=https://krest.vercel.app
 ```

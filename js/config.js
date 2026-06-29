@@ -10,7 +10,9 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 // ============================================================
 // Telegram Bot — уведомления
 // ============================================================
-const TELEGRAM_BOT_TOKEN   = '8348590676:AAFc2U8sAZTEAHq_xFFbi0cQEoTeugDkx70';
+// Токен удалён из клиента 2026-06-30 (был утечкой) и ротирован в BotFather.
+// Bot token НИКОГДА не должен быть в браузерном коде — только server-side (Vercel env).
+const TELEGRAM_BOT_TOKEN   = '';
 const TELEGRAM_LEADER_CHAT = 255214568; // Миша Моряк (@Rogue02)
 
 // ============================================================
