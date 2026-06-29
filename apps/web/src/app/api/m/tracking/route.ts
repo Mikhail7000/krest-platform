@@ -66,6 +66,7 @@ interface ProfileRow {
   full_name: string | null
   contact_info: string | null
   avatar_path: string | null
+  leaderboard_bg_path: string | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   cities: { name_ru: string } | null | any
 }
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profsRaw, error: profsErr } = await (supabase as any)
     .from('profiles')
-    .select('id, full_name, contact_info, avatar_path, cities(name_ru)')
+    .select('id, full_name, contact_info, avatar_path, leaderboard_bg_path, cities(name_ru)')
     .eq('role', 'student')
     .eq('hidden_from_tracking', false)
 
@@ -209,6 +210,7 @@ export async function POST(request: NextRequest) {
       telegram: p.contact_info ? p.contact_info.replace(/^@+/, '') : null,
       city,
       avatar_url: avatarUrl(p.avatar_path ?? null),
+      bg_url: avatarUrl(p.leaderboard_bg_path ?? null),
       is_self: p.id === auth.userId,
       closedDays,
       points,

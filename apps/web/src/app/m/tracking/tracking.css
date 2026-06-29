@@ -41,6 +41,7 @@
 
 /* ── Карточка ───────────────────────────────────────────────────────── */
 .lb-card {
+  position: relative;
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 20px;
@@ -145,6 +146,42 @@
 /* Большая карточка топ-1 */
 .lb-card--big {
   padding: 1.125rem 1.1rem;
+}
+
+/* ── Своя картинка-фон карточки (загружается в профиле) ─────────────── */
+.lb-card__bg {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  pointer-events: none;
+}
+/* Контент — поверх картинки */
+.lb-card--has-bg .lb-card__head,
+.lb-card--has-bg .lb-card__meta,
+.lb-card--has-bg .lb-card__achievements {
+  position: relative;
+  z-index: 1;
+}
+/* На тёмной картинке текст — светлый (читаемость поверх затемнения). */
+.lb-card--has-bg .lb-card__name,
+.lb-card--has-bg .lb-points-num { color: #fff; }
+.lb-card--has-bg .lb-card__city,
+.lb-card--has-bg .lb-points-cap,
+.lb-card--has-bg .lb-card__telegram { color: rgba(255, 255, 255, 0.82); }
+.lb-card--has-bg .lb-card__telegram--link { color: #bcd4ff; }
+.lb-card--has-bg .lb-you { color: #cdd9ff; }
+.lb-card--has-bg .lb-chip {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+.lb-card--has-bg .lb-badge {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
 }
 
 /* ── Шапка карточки ─────────────────────────────────────────────────── */

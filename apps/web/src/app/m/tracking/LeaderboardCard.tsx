@@ -61,6 +61,7 @@ function openTelegram(e: MouseEvent<HTMLAnchorElement>, username: string) {
 
 export function LeaderboardCard({ row, index = 0 }: Props) {
   const isBig = row.tier === 'gold'
+  const hasBg = !!row.bg_url
 
   return (
     <div
@@ -69,11 +70,21 @@ export function LeaderboardCard({ row, index = 0 }: Props) {
         `lb-card--${row.tier}`,
         row.is_self ? 'lb-card--self' : '',
         isBig ? 'lb-card--big' : '',
+        hasBg ? 'lb-card--has-bg' : '',
       ]
         .filter(Boolean)
         .join(' ')}
       style={{ ['--lb-i' as string]: index }}
     >
+      {hasBg && (
+        <div
+          className="lb-card__bg"
+          style={{
+            backgroundImage: `linear-gradient(rgba(12,14,22,0.5), rgba(12,14,22,0.68)), url(${row.bg_url})`,
+          }}
+          aria-hidden="true"
+        />
+      )}
       {/* Шапка: ранг + аватар + имя + баллы */}
       <div className="lb-card__head">
         <RankBadge rank={row.rank} tier={row.tier} outOfRanking={row.outOfRanking} />

@@ -9,6 +9,8 @@ export interface LeaderRow {
   telegram: string | null
   city: string | null
   avatar_url: string | null
+  /** Своя картинка-фон карточки (загружается в профиле). */
+  bg_url: string | null
   points: number
   closedDays: number
   currentStreak: number

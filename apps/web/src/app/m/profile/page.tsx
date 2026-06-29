@@ -6,6 +6,7 @@ import { BottomNav } from '../_components/BottomNav'
 import { ProfileActivity } from './ProfileActivity'
 import { AddToHomeScreenButton } from './AddToHomeScreenButton'
 import { AvatarUpload } from './AvatarUpload'
+import { LeaderboardCardSettings } from './LeaderboardCardSettings'
 import { LocationSettings } from './LocationSettings'
 import { ThemeSettings } from './ThemeSettings'
 import '../dashboard/dashboard.css'
@@ -27,6 +28,9 @@ export default function ProfilePage() {
         <div className="pf-card">
           <AvatarUpload name={name} initialUrl={null} />
         </div>
+
+        <p className="pf-section">Моя карточка в рейтинге</p>
+        <LeaderboardCardSettings name={name} />
 
         <p className="pf-section">Активность</p>
         <ProfileActivity />
