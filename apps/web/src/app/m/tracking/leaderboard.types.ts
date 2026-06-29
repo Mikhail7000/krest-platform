@@ -1,4 +1,4 @@
-export type Tier = 'gold' | 'silver' | 'bronze' | 'normal'
+export type Tier = 'gold' | 'silver' | 'bronze' | 'blue' | 'green' | 'normal'
 
 export interface LeaderRow {
   rank: number

@@ -8,6 +8,16 @@ interface Props {
   row: LeaderRow
 }
 
+/** Правильное склонение: 1 очко, 2-4 очка, 5-20 очков (и по последней цифре). */
+function pointsWord(n: number): string {
+  const mod100 = Math.abs(n) % 100
+  const mod10 = n % 10
+  if (mod100 >= 11 && mod100 <= 14) return 'очков'
+  if (mod10 === 1) return 'очко'
+  if (mod10 >= 2 && mod10 <= 4) return 'очка'
+  return 'очков'
+}
+
 function TierCrown() {
   return (
     <span className="lb-crown" aria-label="Первое место" role="img">
@@ -91,7 +101,7 @@ export function LeaderboardCard({ row }: Props) {
 
         <div className="lb-card__points">
           <span className="lb-points-num">{row.points}</span>
-          <span className="lb-points-cap">очков</span>
+          <span className="lb-points-cap">{pointsWord(row.points)}</span>
         </div>
       </div>
 

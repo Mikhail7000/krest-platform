@@ -70,7 +70,7 @@ interface ProfileRow {
   cities: { name_ru: string } | null | any
 }
 
-type Tier = 'gold' | 'silver' | 'bronze' | 'normal'
+type Tier = 'gold' | 'silver' | 'bronze' | 'blue' | 'green' | 'normal'
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as { initData?: string }
@@ -229,10 +229,13 @@ export async function POST(request: NextRequest) {
 
   const ranked = competitors.map((entry, i) => {
     const rank = i + 1
+    // Призовые: 1 золото, 2 серебро, 3 бронза; 4-6 — небесно-голубой, 7-10 — зелёный.
     let tier: Tier
     if (rank === 1) tier = 'gold'
-    else if (rank <= 3) tier = 'silver'
-    else if (rank <= 10) tier = 'bronze'
+    else if (rank === 2) tier = 'silver'
+    else if (rank === 3) tier = 'bronze'
+    else if (rank <= 6) tier = 'blue'
+    else if (rank <= 10) tier = 'green'
     else tier = 'normal'
 
     const { id: _id, ...rest } = entry

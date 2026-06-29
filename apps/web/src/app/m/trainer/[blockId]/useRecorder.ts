@@ -74,7 +74,17 @@ export function useRecorder(video: boolean, maxSecs: number) {
     }
     try {
       const constraints: MediaStreamConstraints = video
-        ? { audio: true, video: { width: { ideal: 480 }, height: { ideal: 480 }, facingMode: 'user' } }
+        ? {
+            audio: true,
+            // frameRate ограничиваем — на слабых/iOS-устройствах высокий fps стопорит
+            // видео-энкодер на ~10-15с (видео «виснет», аудио продолжается). 24 fps стабильно.
+            video: {
+              width: { ideal: 480 },
+              height: { ideal: 480 },
+              frameRate: { ideal: 24, max: 30 },
+              facingMode: 'user',
+            },
+          }
         : { audio: true }
       const s = await navigator.mediaDevices.getUserMedia(constraints)
       const mt = pickMimeType(video)
@@ -96,7 +106,10 @@ export function useRecorder(video: boolean, maxSecs: number) {
         setBlobUrl(URL.createObjectURL(b))
         setState('recorded')
       }
-      recorder.start()
+      // timeslice 1000мс — рекордер сбрасывает данные каждую секунду, а не копит до
+      // stop(). Это предотвращает «зависание» видео-дорожки на длинной записи (частый
+      // баг iOS Safari: видео встаёт, аудио идёт) и не теряет уже снятые секунды.
+      recorder.start(1000)
       recorderRef.current = recorder
       if (video) setStream(s)
       setState('recording')

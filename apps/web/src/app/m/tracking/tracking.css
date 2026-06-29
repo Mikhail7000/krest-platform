@@ -56,37 +56,83 @@
     0 8px 24px color-mix(in srgb, var(--accent-solid, #6d5dfc) 18%, transparent);
 }
 
-/* ── Tier-акценты ───────────────────────────────────────────────────── */
-/* Gold — 1 место */
+/* ── Tier-акценты (призовые места — перелив + свечение) ─────────────── */
+/* Перелив: медленно «течёт» многоступенчатый градиент (background-position). */
+@keyframes lb-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+/* Мягкая пульсация цветного свечения вокруг карточки. */
+@keyframes lb-glow {
+  0%, 100% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 22px var(--lb-glow, transparent); }
+  50% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 14px 40px var(--lb-glow-strong, transparent); }
+}
+
+/* Gold — 1 место: «дорогое» переливающееся золото */
 .lb-card--gold {
-  border-color: rgba(245, 158, 11, 0.45);
-  background: linear-gradient(135deg, #fffdf4 0%, #fff9e6 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04),
-    0 10px 28px rgba(245, 158, 11, 0.18);
+  border-color: rgba(234, 179, 8, 0.6);
+  background: linear-gradient(110deg, #fffdf2 0%, #fdedb0 25%, #fff6d6 45%, #f6d469 65%, #fffbe9 100%);
+  background-size: 220% 100%;
+  --lb-glow: rgba(234, 179, 8, 0.22);
+  --lb-glow-strong: rgba(234, 179, 8, 0.42);
+  animation: lb-flow 6s ease-in-out infinite alternate, lb-glow 4s ease-in-out infinite;
 }
-.lb-card--gold.lb-card--self {
-  border-color: #f59e0b;
-}
+.lb-card--gold.lb-card--self { border-color: #eab308; }
 
-/* Silver — 2-3 места */
+/* Silver — 2 место */
 .lb-card--silver {
-  border-color: rgba(148, 163, 184, 0.45);
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04),
-    0 8px 22px rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.6);
+  background: linear-gradient(110deg, #fbfcfe 0%, #e6edf5 40%, #f5f8fc 60%, #dde6ef 100%);
+  background-size: 220% 100%;
+  --lb-glow: rgba(148, 163, 184, 0.22);
+  --lb-glow-strong: rgba(148, 163, 184, 0.36);
+  animation: lb-flow 7s ease-in-out infinite alternate, lb-glow 5s ease-in-out infinite;
 }
 
-/* Bronze — 4-10 места */
+/* Bronze — 3 место */
 .lb-card--bronze {
-  border-color: rgba(180, 120, 80, 0.35);
-  background: linear-gradient(135deg, #fdf8f3 0%, #faf0e6 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04),
-    0 8px 20px rgba(180, 120, 80, 0.14);
+  border-color: rgba(194, 120, 74, 0.55);
+  background: linear-gradient(110deg, #fdf6ef 0%, #f1d6bb 42%, #fbeada 60%, #e9c6a2 100%);
+  background-size: 220% 100%;
+  --lb-glow: rgba(194, 120, 74, 0.2);
+  --lb-glow-strong: rgba(194, 120, 74, 0.32);
+  animation: lb-flow 7.5s ease-in-out infinite alternate, lb-glow 5.5s ease-in-out infinite;
+}
+
+/* Blue — 4-6 места: небесно-голубой перелив со свечением */
+.lb-card--blue {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: linear-gradient(110deg, #f5fbff 0%, #d2edff 35%, #eaf7ff 55%, #bbe4fd 100%);
+  background-size: 220% 100%;
+  --lb-glow: rgba(56, 189, 248, 0.2);
+  --lb-glow-strong: rgba(56, 189, 248, 0.34);
+  animation: lb-flow 6.5s ease-in-out infinite alternate, lb-glow 5s ease-in-out infinite;
+}
+
+/* Green — 7-10 места: зелёный перелив */
+.lb-card--green {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: linear-gradient(110deg, #f4fdf6 0%, #d2f4dd 38%, #ecfbf1 56%, #bdecca 100%);
+  background-size: 220% 100%;
+  --lb-glow: rgba(34, 197, 94, 0.18);
+  --lb-glow-strong: rgba(34, 197, 94, 0.3);
+  animation: lb-flow 7s ease-in-out infinite alternate, lb-glow 5.5s ease-in-out infinite;
 }
 
 /* Normal — остальные: белая карточка по умолчанию */
 .lb-card--normal {
   /* baseline */
+}
+
+/* Уважаем системную настройку «меньше движения» — отключаем анимации. */
+@media (prefers-reduced-motion: reduce) {
+  .lb-card--gold,
+  .lb-card--silver,
+  .lb-card--bronze,
+  .lb-card--blue,
+  .lb-card--green {
+    animation: none;
+  }
 }
 
 /* Большая карточка топ-1 */
@@ -123,6 +169,14 @@
 .lb-rank--bronze {
   background: rgba(180, 120, 80, 0.15);
   color: #7c4a1e;
+}
+.lb-rank--blue {
+  background: rgba(56, 189, 248, 0.16);
+  color: #0369a1;
+}
+.lb-rank--green {
+  background: rgba(34, 197, 94, 0.16);
+  color: #15803d;
 }
 .lb-rank--normal {
   background: rgba(0, 0, 0, 0.06);
@@ -323,6 +377,16 @@
   background: color-mix(in srgb, #b47850 10%, transparent);
   border-color: rgba(180, 120, 80, 0.3);
 }
+[data-theme="dark"] .lb-card--blue,
+[data-theme="stars"] .lb-card--blue {
+  background: color-mix(in srgb, #38bdf8 13%, transparent);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+[data-theme="dark"] .lb-card--green,
+[data-theme="stars"] .lb-card--green {
+  background: color-mix(in srgb, #22c55e 13%, transparent);
+  border-color: rgba(34, 197, 94, 0.4);
+}
 [data-theme="dark"] .lb-card--self,
 [data-theme="stars"] .lb-card--self {
   border-color: var(--accent-solid);
@@ -354,10 +418,14 @@
 [data-theme="dark"] .lb-rank--gold { color: #fbbf24; background: rgba(245,158,11,0.2); }
 [data-theme="dark"] .lb-rank--silver { color: #94a3b8; background: rgba(148,163,184,0.15); }
 [data-theme="dark"] .lb-rank--bronze { color: #c97c4a; background: rgba(180,120,80,0.18); }
+[data-theme="dark"] .lb-rank--blue { color: #7dd3fc; background: rgba(56,189,248,0.2); }
+[data-theme="dark"] .lb-rank--green { color: #86efac; background: rgba(34,197,94,0.2); }
 [data-theme="dark"] .lb-rank--normal { color: var(--d-muted); background: rgba(255,255,255,0.07); }
 [data-theme="stars"] .lb-rank--gold { color: #fbbf24; background: rgba(245,158,11,0.2); }
 [data-theme="stars"] .lb-rank--silver { color: #94a3b8; background: rgba(148,163,184,0.15); }
 [data-theme="stars"] .lb-rank--bronze { color: #c97c4a; background: rgba(180,120,80,0.18); }
+[data-theme="stars"] .lb-rank--blue { color: #7dd3fc; background: rgba(56,189,248,0.2); }
+[data-theme="stars"] .lb-rank--green { color: #86efac; background: rgba(34,197,94,0.2); }
 [data-theme="stars"] .lb-rank--normal { color: var(--d-muted); background: rgba(255,255,255,0.07); }
 [data-theme="dark"] .lb-chip,
 [data-theme="stars"] .lb-chip {
