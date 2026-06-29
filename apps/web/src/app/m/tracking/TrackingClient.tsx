@@ -91,8 +91,8 @@ export function TrackingClient() {
         </div>
       ) : (
         <div className="lb-list">
-          {filtered.map((row) => (
-            <LeaderboardCard key={`${row.rank}-${row.name}`} row={row} />
+          {filtered.map((row, i) => (
+            <LeaderboardCard key={`${row.rank}-${row.name}`} row={row} index={i} />
           ))}
         </div>
       )}

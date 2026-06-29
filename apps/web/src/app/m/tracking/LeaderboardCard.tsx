@@ -6,6 +6,8 @@ import type { LeaderRow } from './leaderboard.types'
 
 interface Props {
   row: LeaderRow
+  /** Позиция в видимом списке — для каскадной анимации появления (1 место → 2 → 3…). */
+  index?: number
 }
 
 /** Правильное склонение: 1 очко, 2-4 очка, 5-20 очков (и по последней цифре). */
@@ -57,7 +59,7 @@ function openTelegram(e: MouseEvent<HTMLAnchorElement>, username: string) {
   }
 }
 
-export function LeaderboardCard({ row }: Props) {
+export function LeaderboardCard({ row, index = 0 }: Props) {
   const isBig = row.tier === 'gold'
 
   return (
@@ -70,6 +72,7 @@ export function LeaderboardCard({ row }: Props) {
       ]
         .filter(Boolean)
         .join(' ')}
+      style={{ ['--lb-i' as string]: index }}
     >
       {/* Шапка: ранг + аватар + имя + баллы */}
       <div className="lb-card__head">

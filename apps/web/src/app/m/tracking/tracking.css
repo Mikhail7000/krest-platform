@@ -47,6 +47,13 @@
   padding: 0.875rem 1rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 20px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.15s;
+  /* Каскадное появление: 1 место → 2 → 3 … (задержка по позиции --lb-i). */
+  animation: lb-reveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--lb-i, 0) * 0.07s);
+}
+@keyframes lb-reveal {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }
 
 /* «Вы» — фиолетовая рамка */
@@ -68,55 +75,59 @@
   50% { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 14px 40px var(--lb-glow-strong, transparent); }
 }
 
-/* Gold — 1 место: «дорогое» переливающееся золото */
+/* Общая «лента света» — каскад появления + яркий перелив + пульс свечения. */
+.lb-card--gold,
+.lb-card--silver,
+.lb-card--bronze,
+.lb-card--blue,
+.lb-card--green {
+  background-size: 260% 100%;
+  animation:
+    lb-reveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both,
+    lb-flow 5s ease-in-out infinite alternate,
+    lb-glow 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--lb-i, 0) * 0.07s);
+}
+
+/* Gold — 1 место: яркое «дорогое» переливающееся золото */
 .lb-card--gold {
-  border-color: rgba(234, 179, 8, 0.6);
-  background: linear-gradient(110deg, #fffdf2 0%, #fdedb0 25%, #fff6d6 45%, #f6d469 65%, #fffbe9 100%);
-  background-size: 220% 100%;
-  --lb-glow: rgba(234, 179, 8, 0.22);
-  --lb-glow-strong: rgba(234, 179, 8, 0.42);
-  animation: lb-flow 6s ease-in-out infinite alternate, lb-glow 4s ease-in-out infinite;
+  border-color: rgba(234, 179, 8, 0.75);
+  background-image: linear-gradient(110deg, #fff7d1 0%, #ffe071 20%, #fffdf2 40%, #ffcf2e 58%, #fff3b0 78%, #ffe071 100%);
+  --lb-glow: rgba(234, 179, 8, 0.35);
+  --lb-glow-strong: rgba(245, 200, 30, 0.6);
 }
 .lb-card--gold.lb-card--self { border-color: #eab308; }
 
 /* Silver — 2 место */
 .lb-card--silver {
-  border-color: rgba(148, 163, 184, 0.6);
-  background: linear-gradient(110deg, #fbfcfe 0%, #e6edf5 40%, #f5f8fc 60%, #dde6ef 100%);
-  background-size: 220% 100%;
-  --lb-glow: rgba(148, 163, 184, 0.22);
-  --lb-glow-strong: rgba(148, 163, 184, 0.36);
-  animation: lb-flow 7s ease-in-out infinite alternate, lb-glow 5s ease-in-out infinite;
+  border-color: rgba(148, 163, 184, 0.75);
+  background-image: linear-gradient(110deg, #ffffff 0%, #dde6f0 35%, #f7fafe 55%, #cbd6e4 78%, #eef3f9 100%);
+  --lb-glow: rgba(148, 163, 184, 0.34);
+  --lb-glow-strong: rgba(148, 163, 184, 0.55);
 }
 
 /* Bronze — 3 место */
 .lb-card--bronze {
-  border-color: rgba(194, 120, 74, 0.55);
-  background: linear-gradient(110deg, #fdf6ef 0%, #f1d6bb 42%, #fbeada 60%, #e9c6a2 100%);
-  background-size: 220% 100%;
-  --lb-glow: rgba(194, 120, 74, 0.2);
-  --lb-glow-strong: rgba(194, 120, 74, 0.32);
-  animation: lb-flow 7.5s ease-in-out infinite alternate, lb-glow 5.5s ease-in-out infinite;
+  border-color: rgba(194, 120, 74, 0.7);
+  background-image: linear-gradient(110deg, #fdeede 0%, #e6b988 38%, #fff3e6 58%, #d99a64 80%, #f3d6b8 100%);
+  --lb-glow: rgba(194, 120, 74, 0.32);
+  --lb-glow-strong: rgba(204, 130, 80, 0.52);
 }
 
-/* Blue — 4-6 места: небесно-голубой перелив со свечением */
+/* Blue — 4-6 места: яркий небесно-голубой перелив со свечением */
 .lb-card--blue {
-  border-color: rgba(56, 189, 248, 0.55);
-  background: linear-gradient(110deg, #f5fbff 0%, #d2edff 35%, #eaf7ff 55%, #bbe4fd 100%);
-  background-size: 220% 100%;
-  --lb-glow: rgba(56, 189, 248, 0.2);
-  --lb-glow-strong: rgba(56, 189, 248, 0.34);
-  animation: lb-flow 6.5s ease-in-out infinite alternate, lb-glow 5s ease-in-out infinite;
+  border-color: rgba(56, 189, 248, 0.7);
+  background-image: linear-gradient(110deg, #eaf8ff 0%, #9fdcff 35%, #f2fbff 55%, #7cccfb 78%, #d3f0ff 100%);
+  --lb-glow: rgba(56, 189, 248, 0.34);
+  --lb-glow-strong: rgba(56, 189, 248, 0.55);
 }
 
-/* Green — 7-10 места: зелёный перелив */
+/* Green — 7-10 места: яркий зелёный перелив */
 .lb-card--green {
-  border-color: rgba(34, 197, 94, 0.5);
-  background: linear-gradient(110deg, #f4fdf6 0%, #d2f4dd 38%, #ecfbf1 56%, #bdecca 100%);
-  background-size: 220% 100%;
-  --lb-glow: rgba(34, 197, 94, 0.18);
-  --lb-glow-strong: rgba(34, 197, 94, 0.3);
-  animation: lb-flow 7s ease-in-out infinite alternate, lb-glow 5.5s ease-in-out infinite;
+  border-color: rgba(34, 197, 94, 0.65);
+  background-image: linear-gradient(110deg, #e9fcef 0%, #9eecb8 38%, #f1fdf4 58%, #79e29c 80%, #cdf5d8 100%);
+  --lb-glow: rgba(34, 197, 94, 0.3);
+  --lb-glow-strong: rgba(34, 197, 94, 0.5);
 }
 
 /* Normal — остальные: белая карточка по умолчанию */
@@ -126,11 +137,7 @@
 
 /* Уважаем системную настройку «меньше движения» — отключаем анимации. */
 @media (prefers-reduced-motion: reduce) {
-  .lb-card--gold,
-  .lb-card--silver,
-  .lb-card--bronze,
-  .lb-card--blue,
-  .lb-card--green {
+  .lb-card {
     animation: none;
   }
 }
