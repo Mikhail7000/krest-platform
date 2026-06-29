@@ -169,8 +169,12 @@ export function BlockList({ onProgress }: BlockListProps) {
     const main = data.blocks.filter((b) => (b.order_num ?? 0) >= 1)
     const total = main.length || 10
     const passed = main.filter((b) => data.progressByBlockId[b.id]?.block_passed_at).length
-    const pct = Math.round((passed / total) * 100)
     const cur = main.find((b) => !data.progressByBlockId[b.id]?.block_passed_at)?.id ?? null
+    // % курса = сданные блоки + прогресс ТЕКУЩЕГО блока (закрытыеДни/7, капнуто на 1).
+    // Раньше считались только полностью сданные блоки → пока идёт блок 1 показывалось
+    // демотивирующее 0% даже при 5/7 закрытых днях.
+    const curDays = cur != null ? data.completionByBlockId[cur]?.closedDays ?? 0 : 0
+    const pct = Math.round(((passed + Math.min(curDays / 7, 1)) / total) * 100)
     onProgress?.(pct, cur)
     // onProgress стабилен (сеттер useState) — не включаем в deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
