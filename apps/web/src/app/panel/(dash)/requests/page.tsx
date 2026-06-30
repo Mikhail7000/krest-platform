@@ -49,7 +49,14 @@ export default async function RequestsPage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
-  const { pending, decided } = await getAccessRequests(supabase)
+  const [{ pending, decided }, citiesRes] = await Promise.all([
+    getAccessRequests(supabase),
+    supabase.from('cities').select('id, name_ru').order('name_ru'),
+  ])
+  const cities = ((citiesRes.data ?? []) as { id: number; name_ru: string }[]).map((c) => ({
+    id: c.id,
+    name: c.name_ru,
+  }))
 
   return (
     <div>
@@ -85,7 +92,7 @@ export default async function RequestsPage() {
                   {r.username ? `@${r.username}` : 'без username'} · chat id {r.telegramChatId}
                 </div>
               </div>
-              <RequestActions requestId={r.id} />
+              <RequestActions requestId={r.id} cities={cities} />
             </div>
           ))}
         </div>
@@ -116,7 +123,13 @@ export default async function RequestsPage() {
                       <td>
                         {b ? <span className={b.cls}>{b.label}</span> : r.status}
                         {r.approvedRole
-                          ? ` · ${r.approvedRole === 'curator' ? 'куратор' : 'ученик'}`
+                          ? ` · ${
+                              r.approvedRole === 'curator'
+                                ? 'куратор'
+                                : r.approvedRole === 'city_leader'
+                                  ? 'лидер города'
+                                  : 'ученик'
+                            }`
                           : ''}
                       </td>
                       <td>

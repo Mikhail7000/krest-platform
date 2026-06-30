@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CuratorRow } from './types'
 import { RoleModal } from './RoleModal'
+import { AddStaffBar } from './AddStaffBar'
 
 const ROLE_BADGE: Record<string, { cls: string; label: string }> = {
   curator: { cls: 'panel-badge panel-badge--acc', label: 'Куратор' },
@@ -31,12 +32,14 @@ export function CuratorsView({
   isSuperAdmin,
   canViewAs = false,
   isOwner = false,
+  cities = [],
 }: {
   curators: CuratorRow[]
   canManage: boolean
   isSuperAdmin: boolean
   canViewAs?: boolean
   isOwner?: boolean
+  cities?: { id: number; name: string }[]
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
   const [attachTarget, setAttachTarget] = useState<CuratorRow | null>(null)
@@ -44,7 +47,7 @@ export function CuratorsView({
 
   return (
     <>
-      <AddCuratorBar />
+      <AddStaffBar canManage={canManage} cities={cities} />
       {curators.length === 0 ? (
         <div className="panel-empty">Кураторов пока нет</div>
       ) : (
@@ -97,73 +100,6 @@ export function CuratorsView({
         />
       ) : null}
     </>
-  )
-}
-
-/** Добавление куратора по нику (зеркало «Добавить ученика»). */
-function AddCuratorBar() {
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [nick, setNick] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
-
-  const submit = async () => {
-    const v = nick.trim().replace(/^@+/, '')
-    if (!/^[a-z0-9_]{4,32}$/i.test(v)) {
-      setNotice('Ник: 4–32 символа, латиница, цифры, _')
-      return
-    }
-    setBusy(true)
-    setNotice(null)
-    try {
-      const res = await fetch('/api/panel/actions/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: v, role: 'curator' }),
-      })
-      const b = await res.json().catch(() => ({}))
-      if (res.ok && b.ok) {
-        setNotice(`✓ @${v} добавлен как куратор`)
-        setNick('')
-        setOpen(false)
-        router.refresh()
-      } else {
-        setNotice(b.error || 'Не удалось добавить')
-      }
-    } catch {
-      setNotice('Сеть недоступна')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button type="button" className="panel-btn panel-btn--primary" onClick={() => setOpen((o) => !o)}>
-          + Добавить куратора
-        </button>
-        {notice ? <span className="panel-muted">{notice}</span> : null}
-      </div>
-      {open ? (
-        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', maxWidth: 440 }}>
-          <input
-            className="panel-input"
-            placeholder="@ник куратора в Telegram"
-            value={nick}
-            onChange={(e) => setNick(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submit()
-            }}
-            style={{ flex: 1, minWidth: 200 }}
-          />
-          <button type="button" className="panel-btn panel-btn--primary" onClick={submit} disabled={busy}>
-            {busy ? '…' : 'Добавить'}
-          </button>
-        </div>
-      ) : null}
-    </div>
   )
 }
 

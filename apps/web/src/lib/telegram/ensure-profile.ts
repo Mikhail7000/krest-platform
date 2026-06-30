@@ -31,7 +31,8 @@ interface AccessRequest {
   first_name: string | null
   last_name: string | null
   status: 'pending' | 'approved' | 'rejected'
-  approved_role: 'student' | 'curator' | null
+  approved_role: 'student' | 'curator' | 'city_leader' | null
+  approved_city_id?: number | null
 }
 
 // ─── Переиспользуемое создание Telegram-профиля ───────────────────────────
@@ -42,7 +43,9 @@ export interface CreateTelegramProfileParams {
   firstName: string | null
   lastName: string | null
   /** Если передан — после создания ставится этот role (ПОСЛЕ триггера, отдельным update). */
-  role?: 'student' | 'curator'
+  role?: 'student' | 'curator' | 'city_leader'
+  /** Город (для куратора/лидера, если задан при одобрении заявки). */
+  cityId?: number | null
   /** Скрыть из общего трекинга (скрытые тестировщики, напр. единичка). */
   hidden?: boolean
 }
@@ -55,7 +58,7 @@ export interface CreateTelegramProfileParams {
 export async function createTelegramProfile(
   params: CreateTelegramProfileParams,
 ): Promise<EnsureProfileResult> {
-  const { chatId, username, firstName, lastName, role, hidden } = params
+  const { chatId, username, firstName, lastName, role, cityId, hidden } = params
   const service = createServiceSupabase()
 
   const botToken = process.env.TELEGRAM_BOT_TOKEN
@@ -100,11 +103,25 @@ export async function createTelegramProfile(
     ...(hidden ? { hidden_from_tracking: true } : {}),
   }).eq('id', userId)
 
-  // Если нужна конкретная роль — ставим отдельным update ПОСЛЕ триггера,
+  // Если нужна конкретная роль/город — ставим отдельным update ПОСЛЕ триггера,
   // чтобы триггер apply_whitelist_role не перезаписал curator → student и т.п.
-  if (role) {
+  if (role || cityId != null) {
+    const patch: Record<string, unknown> = {}
+    if (role) patch.role = role
+    if (cityId != null) patch.city_id = cityId
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (service as any).from('profiles').update({ role }).eq('id', userId)
+    const { error: patchErr } = await (service as any).from('profiles').update(patch).eq('id', userId)
+    // Не глушим: невалидный city_id (FK) иначе оставил бы профиль без роли/города,
+    // а вызывающий счёл бы создание успешным.
+    if (patchErr) {
+      console.error('[ensure-profile] role/city patch failed:', patchErr)
+      return {
+        ok: false,
+        status: 400,
+        code: 'PROFILE_PATCH_FAILED',
+        message: 'Не удалось задать роль/город (проверьте город)',
+      }
+    }
   }
 
   return { ok: true, userId }
@@ -246,11 +263,12 @@ export async function ensureWhitelistedProfile(params: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: existingReq } = await (service as any)
     .from('access_requests')
-    .select('id, status, approved_role, first_name, last_name, username')
+    .select('id, status, approved_role, approved_city_id, first_name, last_name, username')
     .eq('telegram_chat_id', chatId)
     .maybeSingle() as { data: AccessRequest | null }
 
   // Если заявка уже одобрена и профиль не создан — создаём профиль сейчас
+  // (роль + город из заявки, чтобы лидер/куратор получил свой город).
   if (existingReq?.status === 'approved' && existingReq.approved_role && !existing) {
     return createTelegramProfile({
       chatId,
@@ -258,6 +276,7 @@ export async function ensureWhitelistedProfile(params: {
       firstName,
       lastName,
       role: existingReq.approved_role,
+      cityId: existingReq.approved_city_id ?? null,
     })
   }
 

@@ -75,7 +75,12 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { error } = await supabase.from('profiles').update({ role }).eq('id', userId)
+  const patch: Record<string, unknown> = { role }
+  // Демоушен из штатной роли в ученика — снимаем can_skip_block_lock, иначе бывший
+  // куратор/лидер/админ остался бы учеником с открытыми всеми блоками, видео без
+  // no-skip и безлимитным квизом (флаг персонала ставит триггер, но не снимает).
+  if (role === 'student' && target.role !== 'student') patch.can_skip_block_lock = false
+  const { error } = await supabase.from('profiles').update(patch).eq('id', userId)
   if (error) {
     console.error('[panel/actions/role]', error)
     return NextResponse.json({ ok: false, error: 'Не удалось сменить роль' }, { status: 500 })

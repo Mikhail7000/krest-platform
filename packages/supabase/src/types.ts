@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          approved_city_id: number | null
+          approved_role: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: number | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          status: string
+          telegram_chat_id: number
+          username: string | null
+        }
+        Insert: {
+          approved_city_id?: number | null
+          approved_role?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: number | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          status?: string
+          telegram_chat_id: number
+          username?: string | null
+        }
+        Update: {
+          approved_city_id?: number | null
+          approved_role?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: number | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          status?: string
+          telegram_chat_id?: number
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_approved_city_id_fkey"
+            columns: ["approved_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_call_log: {
         Row: {
           created_at: string
@@ -370,6 +420,24 @@ export type Database = {
           },
         ]
       }
+      bot_pending_action: {
+        Row: {
+          action: string
+          created_at: string
+          telegram_chat_id: number
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          telegram_chat_id: number
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          telegram_chat_id?: number
+        }
+        Relationships: []
+      }
       cities: {
         Row: {
           country_id: number
@@ -404,6 +472,54 @@ export type Database = {
             columns: ["country_id"]
             isOneToOne: false
             referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts: {
+        Row: {
+          author_id: string
+          content_text: string | null
+          created_at: string
+          deleted_by: string | null
+          id: string
+          is_deleted: boolean
+          kind: string
+          storage_path: string | null
+        }
+        Insert: {
+          author_id: string
+          content_text?: string | null
+          created_at?: string
+          deleted_by?: string | null
+          id?: string
+          is_deleted?: boolean
+          kind: string
+          storage_path?: string | null
+        }
+        Update: {
+          author_id?: string
+          content_text?: string | null
+          created_at?: string
+          deleted_by?: string | null
+          id?: string
+          is_deleted?: boolean
+          kind?: string
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_posts_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -564,6 +680,38 @@ export type Database = {
             columns: ["unlock_after_course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curator_notify_state: {
+        Row: {
+          created_at: string
+          event_key: string
+          event_type: string
+          id: number
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_key?: string
+          event_type: string
+          id?: never
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          event_key?: string
+          event_type?: string
+          id?: never
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curator_notify_state_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -791,21 +939,26 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_path: string | null
           avatar_url: string | null
           can_skip_block_lock: boolean
           city_id: number | null
           contact_info: string | null
           country_id: number | null
+          course_started_at: string | null
           created_at: string | null
           curator_id: string | null
           email: string | null
           full_name: string | null
+          gender: string | null
+          hidden_from_tracking: boolean
           id: string
           interests: string | null
           is_protected: boolean | null
           is_whitelisted: boolean
           lang: string | null
           latitude: number | null
+          leaderboard_bg_path: string | null
           location_name: string | null
           longitude: number | null
           onboarding_done: boolean | null
@@ -813,24 +966,31 @@ export type Database = {
           referral_source: string | null
           role: string | null
           telegram_chat_id: number | null
+          test_daily_accel: boolean
+          theme_pref: string | null
           updated_at: string | null
         }
         Insert: {
+          avatar_path?: string | null
           avatar_url?: string | null
           can_skip_block_lock?: boolean
           city_id?: number | null
           contact_info?: string | null
           country_id?: number | null
+          course_started_at?: string | null
           created_at?: string | null
           curator_id?: string | null
           email?: string | null
           full_name?: string | null
+          gender?: string | null
+          hidden_from_tracking?: boolean
           id: string
           interests?: string | null
           is_protected?: boolean | null
           is_whitelisted?: boolean
           lang?: string | null
           latitude?: number | null
+          leaderboard_bg_path?: string | null
           location_name?: string | null
           longitude?: number | null
           onboarding_done?: boolean | null
@@ -838,24 +998,31 @@ export type Database = {
           referral_source?: string | null
           role?: string | null
           telegram_chat_id?: number | null
+          test_daily_accel?: boolean
+          theme_pref?: string | null
           updated_at?: string | null
         }
         Update: {
+          avatar_path?: string | null
           avatar_url?: string | null
           can_skip_block_lock?: boolean
           city_id?: number | null
           contact_info?: string | null
           country_id?: number | null
+          course_started_at?: string | null
           created_at?: string | null
           curator_id?: string | null
           email?: string | null
           full_name?: string | null
+          gender?: string | null
+          hidden_from_tracking?: boolean
           id?: string
           interests?: string | null
           is_protected?: boolean | null
           is_whitelisted?: boolean
           lang?: string | null
           latitude?: number | null
+          leaderboard_bg_path?: string | null
           location_name?: string | null
           longitude?: number | null
           onboarding_done?: boolean | null
@@ -863,6 +1030,8 @@ export type Database = {
           referral_source?: string | null
           role?: string | null
           telegram_chat_id?: number | null
+          test_daily_accel?: boolean
+          theme_pref?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -976,6 +1145,164 @@ export type Database = {
           },
         ]
       }
+      student_block_daily_prayer: {
+        Row: {
+          block_id: number
+          created_at: string
+          id: string
+          prayed_date: string
+          user_id: string
+        }
+        Insert: {
+          block_id: number
+          created_at?: string
+          id?: string
+          prayed_date: string
+          user_id: string
+        }
+        Update: {
+          block_id?: number
+          created_at?: string
+          id?: string
+          prayed_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_block_daily_prayer_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_block_daily_prayer_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_block_daily_trainer: {
+        Row: {
+          block_id: number
+          created_at: string
+          id: string
+          trained_date: string
+          user_id: string
+        }
+        Insert: {
+          block_id: number
+          created_at?: string
+          id?: string
+          trained_date: string
+          user_id: string
+        }
+        Update: {
+          block_id?: number
+          created_at?: string
+          id?: string
+          trained_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_block_daily_trainer_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_block_emotions: {
+        Row: {
+          block_id: number
+          content_text: string | null
+          created_at: string
+          id: string
+          kind: string
+          storage_path: string | null
+          user_id: string
+        }
+        Insert: {
+          block_id: number
+          content_text?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          storage_path?: string | null
+          user_id: string
+        }
+        Update: {
+          block_id?: number
+          content_text?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          storage_path?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_block_emotions_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_block_emotions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_block_friday_practice: {
+        Row: {
+          block_id: number
+          created_at: string
+          id: string
+          impressions: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          block_id: number
+          created_at?: string
+          id?: string
+          impressions: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          block_id?: number
+          created_at?: string
+          id?: string
+          impressions?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_block_friday_practice_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_block_friday_practice_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_block_progress: {
         Row: {
           block_completed_at: string | null
@@ -998,6 +1325,7 @@ export type Database = {
           recitation_videos_passed_at: string | null
           status: string
           summary_acknowledged_at: string | null
+          trainer_passed_at: string | null
           updated_at: string
           user_id: string
           videos_completed_at: string | null
@@ -1023,6 +1351,7 @@ export type Database = {
           recitation_videos_passed_at?: string | null
           status?: string
           summary_acknowledged_at?: string | null
+          trainer_passed_at?: string | null
           updated_at?: string
           user_id: string
           videos_completed_at?: string | null
@@ -1048,6 +1377,7 @@ export type Database = {
           recitation_videos_passed_at?: string | null
           status?: string
           summary_acknowledged_at?: string | null
+          trainer_passed_at?: string | null
           updated_at?: string
           user_id?: string
           videos_completed_at?: string | null
@@ -1077,6 +1407,7 @@ export type Database = {
           block_id: number
           created_at: string
           duration_seconds: number | null
+          effective_date: string | null
           id: string
           medium: string
           passed: boolean
@@ -1091,6 +1422,7 @@ export type Database = {
           block_id: number
           created_at?: string
           duration_seconds?: number | null
+          effective_date?: string | null
           id?: string
           medium: string
           passed: boolean
@@ -1105,6 +1437,7 @@ export type Database = {
           block_id?: number
           created_at?: string
           duration_seconds?: number | null
+          effective_date?: string | null
           id?: string
           medium?: string
           passed?: boolean
@@ -1129,6 +1462,50 @@ export type Database = {
           },
           {
             foreignKeyName: "student_block_recitations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_daily_activity: {
+        Row: {
+          activity_date: string
+          opened: boolean
+          opened_at: string | null
+          reminded_18: boolean
+          reminded_20: boolean
+          reminded_21: boolean
+          reminded_evening: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_date: string
+          opened?: boolean
+          opened_at?: string | null
+          reminded_18?: boolean
+          reminded_20?: boolean
+          reminded_21?: boolean
+          reminded_evening?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_date?: string
+          opened?: boolean
+          opened_at?: string | null
+          reminded_18?: boolean
+          reminded_20?: boolean
+          reminded_21?: boolean
+          reminded_evening?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_daily_activity_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1237,6 +1614,7 @@ export type Database = {
           ai_comment: string | null
           created_at: string
           duration_seconds: number | null
+          effective_date: string | null
           file_size_bytes: number | null
           id: string
           location_id: string
@@ -1254,6 +1632,7 @@ export type Database = {
           ai_comment?: string | null
           created_at?: string
           duration_seconds?: number | null
+          effective_date?: string | null
           file_size_bytes?: number | null
           id?: string
           location_id: string
@@ -1271,6 +1650,7 @@ export type Database = {
           ai_comment?: string | null
           created_at?: string
           duration_seconds?: number | null
+          effective_date?: string | null
           file_size_bytes?: number | null
           id?: string
           location_id?: string
@@ -1436,11 +1816,46 @@ export type Database = {
           },
         ]
       }
+      support_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string
+          status: string
+          telegram_user_id: number | null
+          telegram_username: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message: string
+          status?: string
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string
+          status?: string
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       testing_whitelist: {
         Row: {
           added_at: string | null
           added_by: string
+          assign_role: string | null
+          assigned_city_id: number | null
+          assigned_curator_id: string | null
+          claimed_chat_id: number | null
           display_name: string | null
+          hidden: boolean
           id: number
           telegram_username: string
           updated_at: string | null
@@ -1448,7 +1863,12 @@ export type Database = {
         Insert: {
           added_at?: string | null
           added_by: string
+          assign_role?: string | null
+          assigned_city_id?: number | null
+          assigned_curator_id?: string | null
+          claimed_chat_id?: number | null
           display_name?: string | null
+          hidden?: boolean
           id?: number
           telegram_username: string
           updated_at?: string | null
@@ -1456,7 +1876,12 @@ export type Database = {
         Update: {
           added_at?: string | null
           added_by?: string
+          assign_role?: string | null
+          assigned_city_id?: number | null
+          assigned_curator_id?: string | null
+          claimed_chat_id?: number | null
           display_name?: string | null
+          hidden?: boolean
           id?: number
           telegram_username?: string
           updated_at?: string | null
@@ -1465,6 +1890,13 @@ export type Database = {
           {
             foreignKeyName: "testing_whitelist_added_by_fkey"
             columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "testing_whitelist_assigned_curator_id_fkey"
+            columns: ["assigned_curator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1561,6 +1993,45 @@ export type Database = {
           },
         ]
       }
+      view_as_log: {
+        Row: {
+          actor_id: string
+          created_at: string
+          id: string
+          target_id: string
+          target_role: string | null
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          id?: string
+          target_id: string
+          target_role?: string | null
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          id?: string
+          target_id?: string
+          target_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "view_as_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "view_as_log_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       weekly_submissions: {
         Row: {
           block_id: number | null
@@ -1614,15 +2085,70 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      closed_dates_all: {
+        Args: never
+        Returns: {
+          d: string
+          user_id: string
+        }[]
+      }
       get_leader_chat_id: { Args: { student_id: string }; Returns: number }
       is_admin: { Args: never; Returns: boolean }
       is_block_unlocked: {
         Args: { p_block_id: number; p_user_id: string }
         Returns: boolean
       }
+      is_day_closed: {
+        Args: { p_d: string; p_user_id: string }
+        Returns: boolean
+      }
       is_visible_to: {
         Args: { target_id: string; viewer_id: string }
         Returns: boolean
+      }
+      locations_complete: {
+        Args: { p_block_id: number; p_user_id: string }
+        Returns: boolean
+      }
+      passed_blocks_all: {
+        Args: never
+        Returns: {
+          blocks_passed: number
+          user_id: string
+        }[]
+      }
+      student_days: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          closed: boolean
+          cross_done: boolean
+          d: string
+          loc_done: boolean
+          opened: boolean
+          prayer_done: boolean
+          quiz_done: boolean
+          recit_done: boolean
+          user_id: string
+        }[]
+      }
+      user_closed_days: {
+        Args: { p_user_id: string }
+        Returns: {
+          block_id: number
+          days: number
+        }[]
+      }
+      user_max_closed_date: { Args: { p_user_id: string }; Returns: string }
+      user_practice_day_counts: {
+        Args: { p_user_id: string }
+        Returns: {
+          block_id: number
+          cross_days: number
+          loc_days: number
+          loc_required: boolean
+          prayer_days: number
+          recv_days: number
+        }[]
       }
     }
     Enums: {
@@ -1756,4 +2282,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

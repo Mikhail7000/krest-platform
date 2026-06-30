@@ -14,7 +14,7 @@ export interface AccessRequestRow {
   firstName: string | null
   lastName: string | null
   status: 'pending' | 'approved' | 'rejected'
-  approvedRole: 'student' | 'curator' | null
+  approvedRole: 'student' | 'curator' | 'city_leader' | null
   decidedAt: string | null
   /** Telegram chat_id решавшего админа (для аудита). */
   decidedBy: number | null
@@ -23,7 +23,7 @@ export interface AccessRequestRow {
   createdAt: string
 }
 
-export type DecideAction = 'approve_student' | 'approve_curator' | 'reject'
+export type DecideAction = 'approve_student' | 'approve_curator' | 'approve_leader' | 'reject'
 
 interface RawRow {
   id: string
@@ -32,7 +32,7 @@ interface RawRow {
   first_name: string | null
   last_name: string | null
   status: 'pending' | 'approved' | 'rejected'
-  approved_role: 'student' | 'curator' | null
+  approved_role: 'student' | 'curator' | 'city_leader' | null
   decided_at: string | null
   decided_by: number | string | null
   created_at: string
@@ -124,9 +124,15 @@ export type DecideResult =
 export async function decideAccessRequest(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
-  params: { requestId: string; action: DecideAction; deciderChatId: number | null },
+  params: {
+    requestId: string
+    action: DecideAction
+    deciderChatId: number | null
+    /** Город для куратора/лидера (для лидера обязателен — проверяет вызывающий роут). */
+    cityId?: number | null
+  },
 ): Promise<DecideResult> {
-  const { requestId, action, deciderChatId } = params
+  const { requestId, action, deciderChatId, cityId } = params
 
   const { data: req, error: fetchErr } = await supabase
     .from('access_requests')
@@ -142,8 +148,11 @@ export async function decideAccessRequest(
     [r.first_name, r.last_name].filter(Boolean).join(' ') ||
     (r.username ? `@${r.username}` : `id ${r.telegram_chat_id}`)
 
-  if (action === 'approve_student' || action === 'approve_curator') {
-    const role: 'student' | 'curator' = action === 'approve_student' ? 'student' : 'curator'
+  if (action === 'approve_student' || action === 'approve_curator' || action === 'approve_leader') {
+    const role: 'student' | 'curator' | 'city_leader' =
+      action === 'approve_student' ? 'student' : action === 'approve_curator' ? 'curator' : 'city_leader'
+    // Город применяем только к куратору/лидеру (ученику не нужен).
+    const approvedCity = role === 'student' ? null : cityId ?? null
 
     const result = await createTelegramProfile({
       chatId: Number(r.telegram_chat_id),
@@ -151,22 +160,29 @@ export async function decideAccessRequest(
       firstName: r.first_name,
       lastName: r.last_name,
       role,
+      cityId: approvedCity,
     })
     if (!result.ok) return { ok: false, error: result.message || 'Ошибка создания профиля' }
 
     // Условный UPDATE + .select(): победитель гонки = тот, чей флип реально прошёл.
     // Так уведомление заявителю уходит ровно один раз (а не из бота и панели сразу).
-    const { data: flipped } = await supabase
+    const { data: flipped, error: flipErr } = await supabase
       .from('access_requests')
       .update({
         status: 'approved',
         approved_role: role,
+        approved_city_id: approvedCity,
         decided_by: deciderChatId,
         decided_at: new Date().toISOString(),
       })
       .eq('id', requestId)
       .eq('status', 'pending')
       .select('id')
+    // Ошибку не глушим: иначе сбой записи выглядел бы как «уже обработана».
+    if (flipErr) {
+      console.error('[access-requests] approve flip error:', flipErr)
+      return { ok: false, error: 'Не удалось сохранить решение' }
+    }
     if (!flipped || flipped.length === 0) {
       return { ok: false, error: 'Заявка уже обработана' }
     }

@@ -132,6 +132,19 @@ export default async function CuratorsPage() {
     cityId: session?.city ?? null,
   })
 
+  // Города нужны админу для выбора при добавлении куратора/лидера.
+  let cities: { id: number; name: string }[] = []
+  if (canManage) {
+    const { data } = await createServiceSupabase()
+      .from('cities')
+      .select('id, name_ru')
+      .order('name_ru')
+    cities = ((data ?? []) as { id: number; name_ru: string }[]).map((c) => ({
+      id: c.id,
+      name: c.name_ru,
+    }))
+  }
+
   return (
     <div>
       <div
@@ -189,6 +202,7 @@ export default async function CuratorsPage() {
         isSuperAdmin={isSuperAdmin}
         canViewAs={realCanViewAs}
         isOwner={isOwner}
+        cities={cities}
       />
     </div>
   )

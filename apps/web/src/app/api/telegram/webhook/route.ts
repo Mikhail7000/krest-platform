@@ -245,13 +245,19 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
       return
     }
 
-    // Обновляем заявку
-    await service.from('access_requests').update({
+    // Обновляем заявку условным флипом (.eq status pending + .select): победитель
+    // гонки бот↔панель ровно один → заявителя не уведомим дважды, статусы не разойдутся.
+    const { data: flipped } = await service.from('access_requests').update({
       status: 'approved',
       approved_role: role,
       decided_by: cq.from.id,
       decided_at: new Date().toISOString(),
-    }).eq('id', requestId)
+    }).eq('id', requestId).eq('status', 'pending').select('id')
+
+    if (!flipped || flipped.length === 0) {
+      await answerCallbackQuery(cq.id, 'Заявка уже обработана')
+      return
+    }
 
     await answerCallbackQuery(cq.id, 'Одобрено')
 
@@ -273,11 +279,16 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
   }
 
   if (action === 'reject') {
-    await service.from('access_requests').update({
+    const { data: rejected } = await service.from('access_requests').update({
       status: 'rejected',
       decided_by: cq.from.id,
       decided_at: new Date().toISOString(),
-    }).eq('id', requestId)
+    }).eq('id', requestId).eq('status', 'pending').select('id')
+
+    if (!rejected || rejected.length === 0) {
+      await answerCallbackQuery(cq.id, 'Заявка уже обработана')
+      return
+    }
 
     await answerCallbackQuery(cq.id, 'Отклонено')
 
