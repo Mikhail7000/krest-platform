@@ -13,6 +13,8 @@ export interface CuratorRow {
   /** Защищён от изменения роли (владелец) — действия скрыты. */
   isProtected: boolean
   city: string | null
+  /** id города (для смены роли на лидера города — дефолт селекта). */
+  cityId: number | null
   country: string | null
   studentsCount: number
   students: CuratorStudent[]

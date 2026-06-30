@@ -26,8 +26,9 @@ async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null
   const supabase = createServiceSupabase()
   const empty = { curators: [], totalCurators: 0, totalLeaders: 0, totalAdmins: 0, totalStudents: 0 }
 
-  // Лидер города видит только кураторов своего города; админ — кураторов, лидеров и админов.
-  const wantedRoles = opts.leaderScoped ? ['curator'] : ['curator', 'admin', 'city_leader']
+  // Лидер города видит только кураторов своего города; админ — кураторов и админов
+  // (лидеры городов — на отдельной странице /panel/leaders).
+  const wantedRoles = opts.leaderScoped ? ['curator'] : ['curator', 'admin']
   let curatorsQuery = supabase
     .from('profiles')
     .select('id, full_name, contact_info, city_id, role, is_protected')
@@ -86,6 +87,7 @@ async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null
       role: (cu as { role: string }).role,
       isProtected: !!(cu as { is_protected: boolean | null }).is_protected,
       city: city?.name ?? null,
+      cityId: cu.city_id ?? null,
       country: city?.country ?? null,
       studentsCount: students.length,
       students,
@@ -127,7 +129,7 @@ export default async function CuratorsPage() {
   const isOwner =
     realCanViewAs && session ? await resolveIsOwner(createServiceSupabase(), session.uid) : false
 
-  const { curators, totalCurators, totalLeaders, totalAdmins, totalStudents } = await loadCurators({
+  const { curators, totalCurators, totalAdmins, totalStudents } = await loadCurators({
     leaderScoped: isLeader,
     cityId: session?.city ?? null,
   })
@@ -161,7 +163,7 @@ export default async function CuratorsPage() {
           <p className="panel-page__subtitle">
             {isLeader
               ? 'Кураторы вашего города и их ученики.'
-              : 'Кураторы, лидеры городов и администраторы — города, ученики, смена роли и доступ.'}
+              : 'Кураторы и администраторы — города, ученики, смена роли и доступ. Лидеры городов — на отдельной странице.'}
           </p>
         </div>
         {canManage ? (
@@ -176,12 +178,6 @@ export default async function CuratorsPage() {
           <span className="panel-stat__label">Всего кураторов</span>
           <span className="panel-stat__value">{totalCurators}</span>
         </div>
-        {!isLeader ? (
-          <div className="panel-stat">
-            <span className="panel-stat__label">Лидеров городов</span>
-            <span className="panel-stat__value">{totalLeaders}</span>
-          </div>
-        ) : null}
         {!isLeader ? (
           <div className="panel-stat">
             <span className="panel-stat__label">Администраторов</span>

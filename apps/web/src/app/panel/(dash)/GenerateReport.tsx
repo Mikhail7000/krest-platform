@@ -20,6 +20,7 @@ function buildReport(s: PanelStats): string {
   L.push('━━ ОБЩЕЕ ━━')
   L.push(`Учеников: ${s.totals.students}`)
   L.push(`Кураторов: ${s.totals.curators}`)
+  L.push(`Лидеров городов: ${s.totals.cityLeaders}`)
   L.push(`Администраторов: ${s.totals.admins}`)
   L.push(`Сдали курс (10 блоков): ${s.totals.passedCourse}`)
   L.push(`Активных городов: ${s.totals.cities}`)

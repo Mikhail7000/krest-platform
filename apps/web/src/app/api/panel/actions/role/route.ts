@@ -6,12 +6,13 @@ import { escapeHtml } from '@/lib/telegram/send'
 
 export const dynamic = 'force-dynamic'
 
-const ALLOWED_ROLES = ['student', 'curator', 'admin'] as const
+const ALLOWED_ROLES = ['student', 'curator', 'city_leader', 'admin'] as const
 type Role = (typeof ALLOWED_ROLES)[number]
 
 /**
- * POST /api/panel/actions/role  { userId, role }
- * Смена роли: student | curator | admin.
+ * POST /api/panel/actions/role  { userId, role, cityId? }
+ * Смена роли: student | curator | city_leader | admin.
+ * Для city_leader город обязателен (берётся из cityId или текущего города цели).
  *  - is_protected и super_admin менять нельзя → 403.
  *  - Свою роль менять нельзя → 400 (защита от самоблокировки).
  *  - Управлять админ-уровнем (target=admin ИЛИ role=admin) — только super_admin → 403.
@@ -29,7 +30,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Недостаточно прав' }, { status: 403 })
   }
 
-  const body = (await req.json().catch(() => ({}))) as { userId?: string; role?: string }
+  const body = (await req.json().catch(() => ({}))) as {
+    userId?: string
+    role?: string
+    cityId?: number | string
+  }
   const userId = body.userId?.trim()
   const role = body.role?.trim() as Role | undefined
 
@@ -48,7 +53,7 @@ export async function POST(req: NextRequest) {
 
   const { data: target } = await supabase
     .from('profiles')
-    .select('id, is_protected, role, full_name, contact_info')
+    .select('id, is_protected, role, full_name, contact_info, city_id')
     .eq('id', userId)
     .maybeSingle()
 
@@ -75,11 +80,34 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Лидеру города нужен город: из cityId или текущего города цели. Без города — 400.
+  let cityIdNum: number | null = null
+  if (role === 'city_leader') {
+    const raw = body.cityId
+    if (raw != null && raw !== '') cityIdNum = Number(raw)
+    else if (target.city_id != null) cityIdNum = target.city_id
+    if (cityIdNum == null || !Number.isInteger(cityIdNum)) {
+      return NextResponse.json(
+        { ok: false, error: 'Для лидера города укажите город' },
+        { status: 400 },
+      )
+    }
+    // Синхронизируем whitelist ДО update профиля: триггер apply_whitelist_role при
+    // обновлении читает assigned_city_id и иначе мог бы вернуть старый город.
+    if (target.contact_info) {
+      await supabase
+        .from('testing_whitelist')
+        .update({ assign_role: 'city_leader', assigned_city_id: cityIdNum })
+        .ilike('telegram_username', target.contact_info)
+    }
+  }
+
   const patch: Record<string, unknown> = { role }
   // Демоушен из штатной роли в ученика — снимаем can_skip_block_lock, иначе бывший
   // куратор/лидер/админ остался бы учеником с открытыми всеми блоками, видео без
   // no-skip и безлимитным квизом (флаг персонала ставит триггер, но не снимает).
   if (role === 'student' && target.role !== 'student') patch.can_skip_block_lock = false
+  if (role === 'city_leader' && cityIdNum != null) patch.city_id = cityIdNum
   const { error } = await supabase.from('profiles').update(patch).eq('id', userId)
   if (error) {
     console.error('[panel/actions/role]', error)
@@ -107,7 +135,14 @@ export async function POST(req: NextRequest) {
     if (logErr) console.error('[panel/actions/role] audit', logErr)
   }
 
-  const roleLabel = role === 'curator' ? 'куратор' : role === 'admin' ? 'админ' : 'ученик'
+  const roleLabel =
+    role === 'curator'
+      ? 'куратор'
+      : role === 'city_leader'
+        ? 'лидер города'
+        : role === 'admin'
+          ? 'админ'
+          : 'ученик'
   const who = target.full_name || target.contact_info || 'пользователь'
   await notifyAdmins(supabase, `🔧 ${escapeHtml(session.name ?? 'Админ')} сменил роль: ${escapeHtml(who)} → ${roleLabel}`)
 

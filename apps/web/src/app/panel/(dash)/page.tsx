@@ -119,6 +119,12 @@ export default async function PanelOverviewPage() {
         )}
         {isAdminLevel && (
           <div className="panel-stat">
+            <div className="panel-stat__label">Лидеров городов</div>
+            <div className="panel-stat__value">{totals.cityLeaders}</div>
+          </div>
+        )}
+        {isAdminLevel && (
+          <div className="panel-stat">
             <div className="panel-stat__label">Администраторов</div>
             <div className="panel-stat__value">{totals.admins}</div>
           </div>

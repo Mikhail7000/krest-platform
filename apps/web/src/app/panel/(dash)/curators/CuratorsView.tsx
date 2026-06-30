@@ -96,6 +96,7 @@ export function CuratorsView({
         <RoleModal
           curator={roleTarget}
           isSuperAdmin={isSuperAdmin}
+          cities={cities}
           onClose={() => setRoleTarget(null)}
         />
       ) : null}

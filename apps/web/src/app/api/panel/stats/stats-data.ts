@@ -10,6 +10,7 @@ import { createServiceSupabase } from '@/lib/supabase-service'
 export interface StatTotals {
   students: number
   curators: number
+  cityLeaders: number
   admins: number
   passedCourse: number
   cities: number
@@ -176,6 +177,7 @@ export async function getPanelStats(
   const totals: StatTotals = {
     students: 0,
     curators: 0,
+    cityLeaders: 0,
     admins: 0,
     passedCourse: 0,
     cities: 0,
@@ -186,6 +188,7 @@ export async function getPanelStats(
   if (!isScoped && !scopeCuratorId && scopeCityId == null) {
     for (const p of profiles) {
       if (p.role === 'curator') totals.curators++
+      else if (p.role === 'city_leader') totals.cityLeaders++
       else if (p.role === 'admin' || p.role === 'super_admin') totals.admins++
     }
   }
