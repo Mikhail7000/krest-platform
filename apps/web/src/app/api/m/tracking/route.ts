@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { localTodayStr, DEFAULT_TZ } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,16 +40,20 @@ function avatarUrl(path: string | null): string | null {
   return `${SUPABASE_URL}/storage/v1/object/public/${AVATARS_BUCKET}/${path}`
 }
 
-/** Утро UTC вчера. */
-function utcYesterday(): string {
-  const d = new Date()
+/** День назад от YYYY-MM-DD (для «вчера» в локальном поясе ученика). */
+function prevDay(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00Z')
   d.setUTCDate(d.getUTCDate() - 1)
   return d.toISOString().slice(0, 10)
 }
 
-/** Сегодня UTC. */
-function utcToday(): string {
-  return new Date().toISOString().slice(0, 10)
+/** Часовой пояс ученика из join cities(timezone); по умолчанию — Бали. */
+function profileTz(cities: ProfileRow['cities']): string {
+  const c = cities
+  const tz = Array.isArray(c)
+    ? (c[0] as { timezone?: string | null } | undefined)?.timezone
+    : (c as { timezone?: string | null } | null)?.timezone
+  return tz || DEFAULT_TZ
 }
 
 /** Разница в днях между двумя YYYY-MM-DD (b - a). */
@@ -68,7 +73,7 @@ interface ProfileRow {
   avatar_path: string | null
   leaderboard_bg_path: string | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  cities: { name_ru: string } | null | any
+  cities: { name_ru: string; timezone?: string | null } | null | any
 }
 
 type Tier = 'gold' | 'silver' | 'bronze' | 'blue' | 'green' | 'normal'
@@ -86,7 +91,7 @@ export async function POST(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profsRaw, error: profsErr } = await (supabase as any)
     .from('profiles')
-    .select('id, full_name, contact_info, avatar_path, leaderboard_bg_path, cities(name_ru)')
+    .select('id, full_name, contact_info, avatar_path, leaderboard_bg_path, cities(name_ru, timezone)')
     .eq('role', 'student')
     .eq('hidden_from_tracking', false)
 
@@ -133,9 +138,10 @@ export async function POST(request: NextRequest) {
     passedCountByUser.set(row.user_id, row.blocks_passed)
   }
 
-  // 4. Считаем очки и стрики по закрытым датам (в TS, без доп. запросов)
-  const today = utcToday()
-  const yesterday = utcYesterday()
+  // 4. Считаем очки и стрики по закрытым датам (в TS, без доп. запросов).
+  // ВАЖНО: «сегодня/вчера» — по локальному поясу города ученика, как и закрытие
+  // дня. Иначе у учеников из поясов впереди UTC (Бали UTC+8) последняя закрытая
+  // дата = их локальное «сегодня» = UTC-завтра, и огонёк ошибочно гас (стрик 0).
 
   interface Entry {
     id: string
@@ -170,11 +176,13 @@ export async function POST(request: NextRequest) {
       prevDate = d
     }
 
-    // currentStreak — длина серии, заканчивающейся сегодня или вчера
+    // currentStreak — длина серии, заканчивающейся сегодня/вчера в поясе ученика
+    const localToday = localTodayStr(profileTz(p.cities))
+    const localYesterday = prevDay(localToday)
     let currentStreak = 0
     if (dates.length > 0) {
       const last = dates[dates.length - 1]
-      if (last === today || last === yesterday) {
+      if (last === localToday || last === localYesterday) {
         // Идём с конца назад пока серия не прерывается
         currentStreak = 1
         for (let i = dates.length - 2; i >= 0; i--) {
