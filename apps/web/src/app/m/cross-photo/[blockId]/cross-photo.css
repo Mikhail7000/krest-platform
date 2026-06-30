@@ -192,6 +192,42 @@
   margin-top: 0.25rem;
 }
 
+/* ── Удаление фото последнего дня ────────────────────────────────────── */
+.cp-del-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.625rem;
+}
+.cp-del-confirm {
+  font-size: 0.8125rem;
+  color: var(--tg-text, #E5E7EB);
+  margin-right: auto;
+}
+.cp-del-btn {
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--tg-section-separator, rgba(0, 0, 0, 0.12));
+  background: transparent;
+  color: var(--tg-hint, #9CA3AF);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cp-del-btn:active { opacity: 0.7; }
+.cp-del-btn:disabled { opacity: 0.5; }
+.cp-del-btn--danger {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: var(--tg-destructive, #ef4444);
+}
+.cp-del-link {
+  border: 0;
+  padding: 0.25rem 0;
+  color: var(--tg-destructive, #ef4444);
+  background: transparent;
+}
+
 /* ── Uploaded photo thumbnail ────────────────────────────────────── */
 .cp-photo-thumb {
   width: 100%;

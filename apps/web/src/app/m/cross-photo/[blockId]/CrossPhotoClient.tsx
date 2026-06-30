@@ -51,6 +51,8 @@ export function CrossPhotoClient({ blockId }: Props) {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [confirmDate, setConfirmDate] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
@@ -102,6 +104,31 @@ export function CrossPhotoClient({ blockId }: Props) {
     }
   }
 
+  async function handleDelete(date: string) {
+    setDeleting(true)
+    setUploadError(null)
+    try {
+      const res = await fetch('/api/m/cross-photo/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: getInitData(), blockId, date }),
+      })
+      if (!res.ok) {
+        const r = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
+        setUploadError(r?.error?.message ?? `Ошибка ${res.status}`)
+        return
+      }
+      setConfirmDate(null)
+      setFeedback(null)
+      invalidateBlockStatus(blockId)
+      await load()
+    } catch {
+      setUploadError('Не удалось удалить. Попробуй ещё раз.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (view === 'loading') {
     return (
       <>
@@ -122,6 +149,9 @@ export function CrossPhotoClient({ blockId }: Props) {
   }
 
   const progressPct = Math.min(100, Math.round((data.closed_days / data.target) * 100))
+  // Последний день с фото (реальная дата) — на нём показываем кнопку удаления.
+  const doneDates = data.days.filter((d) => d.state === 'done' && d.date).map((d) => d.date as string)
+  const lastDoneDate = doneDates.length ? doneDates[doneDates.length - 1] : null
 
   return (
     <div>
@@ -198,6 +228,40 @@ export function CrossPhotoClient({ blockId }: Props) {
               <p className="cp-photo-only-note">
                 Фото есть · день не закрыт — осталось: молитва, местописания, пересказ
               </p>
+            )}
+
+            {day.state === 'done' && day.date && day.date === lastDoneDate && (
+              <div className="cp-del-row">
+                {confirmDate === day.date ? (
+                  <>
+                    <span className="cp-del-confirm">Удалить фото за этот день?</span>
+                    <button
+                      type="button"
+                      className="cp-del-btn cp-del-btn--danger"
+                      onClick={() => handleDelete(day.date as string)}
+                      disabled={deleting}
+                    >
+                      {deleting ? 'Удаляем…' : 'Да, удалить'}
+                    </button>
+                    <button
+                      type="button"
+                      className="cp-del-btn"
+                      onClick={() => setConfirmDate(null)}
+                      disabled={deleting}
+                    >
+                      Отмена
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="cp-del-btn cp-del-link"
+                    onClick={() => setConfirmDate(day.date as string)}
+                  >
+                    Удалить фото
+                  </button>
+                )}
+              </div>
             )}
 
             {day.state === 'today' && feedback && (
