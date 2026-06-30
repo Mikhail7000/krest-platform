@@ -191,6 +191,17 @@ export async function POST(req: NextRequest) {
   const order = (blk as { order_num?: number } | null)?.order_num ?? blockId
   const title = (blk as { title_ru?: string } | null)?.title_ru ?? `Блок ${blockId}`
 
+  // Формат, который ИИ-зрение НЕ читает (HEIC/HEIF), не принимаем — иначе фото прошло
+  // бы мимо проверки. Просим JPEG/PNG, чтобы ИИ обязательно проверял каждое фото.
+  // accel-тестировщиков не трогаем.
+  if (!testAccel && !VISION_MIMES.has(mimeType)) {
+    return err(
+      'Не можем проверить это фото — формат не поддерживается. Пришли, пожалуйста, в JPEG или PNG. На iPhone: Настройки → Камера → Форматы → «Наиболее совместимый», либо просто выбери фото заново — оно загрузится как JPEG.',
+      'UNSUPPORTED_FORMAT',
+      415,
+    )
+  }
+
   if (!testAccel && VISION_MIMES.has(mimeType)) {
     try {
       const reference = await loadCrossReference(supabase, order)
