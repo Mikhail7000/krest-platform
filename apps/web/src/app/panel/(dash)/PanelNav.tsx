@@ -5,16 +5,17 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 const ALL_LINKS = [
-  { href: '/panel', label: 'Обзор', icon: '📊', curatorVisible: true },
-  { href: '/panel/requests', label: 'Заявки', icon: '📥', curatorVisible: false },
-  { href: '/panel/students', label: 'Ученики', icon: '🎓', curatorVisible: true },
-  { href: '/panel/activity', label: 'Активность', icon: '📈', curatorVisible: true },
-  { href: '/panel/curators', label: 'Кураторы', icon: '🧭', curatorVisible: false },
-  { href: '/panel/cities', label: 'Города', icon: '🌍', curatorVisible: false },
+  { href: '/panel', label: 'Обзор', icon: '📊', curatorVisible: true, leaderVisible: true },
+  { href: '/panel/requests', label: 'Заявки', icon: '📥', curatorVisible: false, leaderVisible: false },
+  { href: '/panel/students', label: 'Ученики', icon: '🎓', curatorVisible: true, leaderVisible: true },
+  { href: '/panel/activity', label: 'Активность', icon: '📈', curatorVisible: true, leaderVisible: true },
+  { href: '/panel/curators', label: 'Кураторы', icon: '🧭', curatorVisible: false, leaderVisible: false },
+  { href: '/panel/cities', label: 'Города', icon: '🌍', curatorVisible: false, leaderVisible: false },
 ]
 
 function roleLabel(role: string): string {
   if (role === 'super_admin') return 'Супер-админ'
+  if (role === 'city_leader') return 'Лидер города'
   if (role === 'curator') return 'Куратор'
   return 'Админ'
 }
@@ -33,7 +34,9 @@ export function PanelNav({
   const [open, setOpen] = useState(false)
 
   const isCurator = role === 'curator'
-  const links = ALL_LINKS.filter((l) => !isCurator || l.curatorVisible)
+  const links = ALL_LINKS.filter((l) =>
+    role === 'curator' ? l.curatorVisible : role === 'city_leader' ? l.leaderVisible : true,
+  )
 
   const isActive = (href: string) =>
     href === '/panel' ? pathname === '/panel' : pathname.startsWith(href)

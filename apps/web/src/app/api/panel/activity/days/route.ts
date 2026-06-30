@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
-import { resolveIsOwner } from '@/lib/admin/owner'
+import { resolvePanelScope, studentInScope } from '@/lib/admin/scope'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,21 +37,29 @@ export async function POST(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
-  const scopeCuratorId: string | null = session.role === 'curator' ? session.uid : null
-  const isOwner = scopeCuratorId ? false : await resolveIsOwner(supabase, session.uid)
+  const scope = await resolvePanelScope(supabase, session)
 
   // Оставляем только видимых вызывающему учеников.
   const { data: profs } = await supabase
     .from('profiles')
-    .select('id, full_name, role, curator_id, hidden_from_tracking')
+    .select('id, full_name, role, curator_id, city_id, hidden_from_tracking')
     .in('id', ids)
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const visible = ((profs ?? []) as any[]).filter(
-    (p) =>
-      p.role === 'student' &&
-      (scopeCuratorId ? p.curator_id === scopeCuratorId : isOwner || !p.hidden_from_tracking),
-  )
+  const profList = (profs ?? []) as any[]
+
+  // Для scope лидера города — какие кураторы этих учеников относятся к его городу.
+  let cityCurators: Set<string> | null = null
+  if (scope.scopeCityId != null) {
+    cityCurators = new Set<string>()
+    const curIds = [...new Set(profList.map((p) => p.curator_id).filter(Boolean))] as string[]
+    if (curIds.length) {
+      const { data: curs } = await supabase.from('profiles').select('id, city_id').in('id', curIds)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const c of (curs ?? []) as any[]) if (c.city_id === scope.scopeCityId) cityCurators.add(c.id)
+    }
+  }
+
+  const visible = profList.filter((p) => p.role === 'student' && studentInScope(p, scope, cityCurators))
   if (visible.length === 0) return NextResponse.json({ ok: true, students: [] })
 
   const visibleIds: string[] = visible.map((p) => p.id)

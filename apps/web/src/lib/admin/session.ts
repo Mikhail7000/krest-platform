@@ -15,16 +15,26 @@ export const ADMIN_COOKIE_MAXAGE = 60 * 60 * 24 * 7 // 7 дней
 export const VIEW_AS_COOKIE = 'krest_view_as'
 export const VIEW_AS_MAXAGE = 60 * 60 * 2 // 2 часа
 
-export type AdminRole = 'admin' | 'super_admin' | 'curator'
+export type AdminRole = 'admin' | 'super_admin' | 'curator' | 'city_leader'
 
 export function isCuratorRole(r: AdminRole): boolean {
   return r === 'curator'
+}
+/** Админ-уровень: видит всех, управляет ролями/городами. */
+export function isAdminRole(r: AdminRole): boolean {
+  return r === 'admin' || r === 'super_admin'
+}
+/** Роль со scope (не админ): куратор (по своим ученикам) или лидер города (по городу). */
+export function isScopedRole(r: AdminRole): boolean {
+  return r === 'curator' || r === 'city_leader'
 }
 
 export interface AdminSession {
   uid: string
   role: AdminRole
   name: string | null
+  /** Город (для лидера города — его город; иначе null). */
+  city?: number | null
   exp: number
   /** Если задан — это режим view-as: реальный (super_admin) uid, смотрящий «как» uid. */
   via?: string
@@ -36,6 +46,8 @@ export interface ViewAsToken {
   tuid: string
   trole: AdminRole
   tname: string | null
+  /** Город цели (для view-as как лидер города). */
+  tcity?: number | null
   by: string
   byName: string | null
   exp: number
@@ -49,11 +61,17 @@ function sign(body: string): string {
   return createHmac('sha256', secret()).update(body).digest('base64url')
 }
 
-export function signSession(s: { uid: string; role: AdminRole; name: string | null }): string {
+export function signSession(s: {
+  uid: string
+  role: AdminRole
+  name: string | null
+  city?: number | null
+}): string {
   const payload: AdminSession = {
     uid: s.uid,
     role: s.role,
     name: s.name,
+    city: s.city ?? null,
     exp: Math.floor(Date.now() / 1000) + ADMIN_COOKIE_MAXAGE,
   }
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
@@ -64,11 +82,17 @@ export function signSession(s: { uid: string; role: AdminRole; name: string | nu
  * Короткоживущий токен (10 мин) для входа по ссылке из Telegram-бота.
  * Формат тот же, что у сессии → проверяется тем же verifySession.
  */
-export function signLoginToken(s: { uid: string; role: AdminRole; name: string | null }): string {
+export function signLoginToken(s: {
+  uid: string
+  role: AdminRole
+  name: string | null
+  city?: number | null
+}): string {
   const payload: AdminSession = {
     uid: s.uid,
     role: s.role,
     name: s.name,
+    city: s.city ?? null,
     exp: Math.floor(Date.now() / 1000) + 600,
   }
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
@@ -80,6 +104,7 @@ export function signViewAs(s: {
   tuid: string
   trole: AdminRole
   tname: string | null
+  tcity?: number | null
   by: string
   byName: string | null
 }): string {
@@ -87,6 +112,7 @@ export function signViewAs(s: {
     tuid: s.tuid,
     trole: s.trole,
     tname: s.tname,
+    tcity: s.tcity ?? null,
     by: s.by,
     byName: s.byName,
     exp: Math.floor(Date.now() / 1000) + VIEW_AS_MAXAGE,

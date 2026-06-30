@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { getPanelStats } from '@/app/api/panel/stats/stats-data'
 import { getPanelSession } from '@/lib/admin/guard'
-import { resolveIsOwner } from '@/lib/admin/owner'
+import { resolvePanelScope } from '@/lib/admin/scope'
+import { isAdminRole } from '@/lib/admin/session'
 import { countPendingRequests } from '@/lib/admin/access-requests'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { findSilentStudents } from '@/lib/activity/silence'
@@ -22,16 +23,14 @@ export default async function PanelOverviewPage() {
   const supabase = createServiceSupabase() as any
 
   const isCurator = session?.role === 'curator'
+  const isAdminLevel = session ? isAdminRole(session.role) : false
+  // Видимость по роли: куратор → свои; лидер города → его город; админ → все.
+  const ps = session ? await resolvePanelScope(supabase, session) : null
 
-  // Куратор видит только своих учеников; isOwner всегда false для куратора.
-  const isOwner = isCurator ? false : (session ? await resolveIsOwner(supabase, session.uid) : false)
-  const scope = isCurator ? session?.uid : undefined
-
-  // Кураторы не видят заявки на доступ — не делаем лишний запрос.
-  // Молчащие ученики (3+ дня без активности) — алерт ТОЛЬКО куратору (не админам).
+  // Заявки на доступ — только admin/super_admin. Молчащие 3+ дня — алерт только куратору.
   const [stats, pendingRequests, silent] = await Promise.all([
-    getPanelStats(isOwner, scope),
-    isCurator ? Promise.resolve(0) : countPendingRequests(supabase),
+    getPanelStats(ps?.isOwner ?? false, ps?.scopeCuratorId ?? undefined, ps?.scopeCityId),
+    isAdminLevel ? countPendingRequests(supabase) : Promise.resolve(0),
     isCurator && session ? findSilentStudents(supabase, { curatorId: session.uid }) : Promise.resolve([]),
   ])
   const { totals, byCity, byCountry, progress, streaks, stuck } = stats
@@ -66,7 +65,7 @@ export default async function PanelOverviewPage() {
         </div>
       )}
 
-      {!isCurator && pendingRequests > 0 && (
+      {isAdminLevel && pendingRequests > 0 && (
         <Link
           href="/panel/requests"
           className="panel-card"
@@ -94,7 +93,7 @@ export default async function PanelOverviewPage() {
         <div>
           <h1 className="panel-page__title">Обзор</h1>
           <p className="panel-page__subtitle" style={{ marginBottom: 0 }}>
-            {isCurator ? 'Статистика вашей группы' : 'Сводная статистика платформы'}
+            {isAdminLevel ? 'Сводная статистика платформы' : 'Статистика вашего охвата'}
           </p>
         </div>
         <GenerateReport stats={stats} />
@@ -107,13 +106,13 @@ export default async function PanelOverviewPage() {
           <div className="panel-stat__value">{totals.students}</div>
           <div className="panel-stat__hint">в {totals.cities} городах</div>
         </div>
-        {!isCurator && (
+        {isAdminLevel && (
           <div className="panel-stat">
             <div className="panel-stat__label">Кураторов</div>
             <div className="panel-stat__value">{totals.curators}</div>
           </div>
         )}
-        {!isCurator && (
+        {isAdminLevel && (
           <div className="panel-stat">
             <div className="panel-stat__label">Администраторов</div>
             <div className="panel-stat__value">{totals.admins}</div>

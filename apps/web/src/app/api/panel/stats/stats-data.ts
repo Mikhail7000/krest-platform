@@ -80,6 +80,7 @@ function visibleStudents(
   profiles: ProfileRow[],
   isOwner: boolean,
   scopeCuratorId?: string,
+  scopeCityId?: number | null,
 ): ProfileRow[] {
   let base: ProfileRow[]
   if (isOwner) {
@@ -89,6 +90,16 @@ function visibleStudents(
   }
   if (scopeCuratorId) {
     base = base.filter((p) => (p as any).curator_id === scopeCuratorId)
+  } else if (scopeCityId != null) {
+    // Лидер города: ученики его города (по city_id ученика ИЛИ по городу его куратора).
+    const cityCur = new Set(
+      profiles
+        .filter((p) => (p.role === 'curator' || p.role === 'city_leader') && (p as any).city_id === scopeCityId)
+        .map((p) => p.id),
+    )
+    base = base.filter(
+      (p) => (p as any).city_id === scopeCityId || ((p as any).curator_id && cityCur.has((p as any).curator_id)),
+    )
   }
   return base
 }
@@ -113,7 +124,11 @@ function longestStreak(dates: string[]): number {
 
 const todayIndex = () => Math.floor(Date.now() / 86_400_000)
 
-export async function getPanelStats(isOwner = false, scopeCuratorId?: string): Promise<PanelStats> {
+export async function getPanelStats(
+  isOwner = false,
+  scopeCuratorId?: string,
+  scopeCityId?: number | null,
+): Promise<PanelStats> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
 
@@ -161,9 +176,9 @@ export async function getPanelStats(isOwner = false, scopeCuratorId?: string): P
     cities: 0,
   }
   // Ученики с учётом видимости (скрытые исключаются, если запрашивающий не владелец)
-  const students = visibleStudents(profiles, isOwner, scopeCuratorId)
-  // Куратор видит только агрегаты своей группы, не платформенные счётчики персонала
-  if (!scopeCuratorId) {
+  const students = visibleStudents(profiles, isOwner, scopeCuratorId, scopeCityId)
+  // Куратор/лидер города видят только агрегаты своей группы, не платформенные счётчики
+  if (!scopeCuratorId && scopeCityId == null) {
     for (const p of profiles) {
       if (p.role === 'curator') totals.curators++
       else if (p.role === 'admin' || p.role === 'super_admin') totals.admins++

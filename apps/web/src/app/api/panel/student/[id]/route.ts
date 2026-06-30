@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { resolvePanelScope } from '@/lib/admin/scope'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,9 +76,28 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     return NextResponse.json({ ok: false, error: 'Ученик не найден' }, { status: 404 })
   }
 
-  // Куратор видит только своих учеников. Возвращаем 404 (не 403), чтобы не раскрывать
-  // факт существования ученика другого куратора.
-  if (session.role === 'curator' && profile.curator_id !== session.uid) {
+  // Доступ к карточке по роли: куратор — только свои; лидер города — только свой город
+  // (по city_id ученика или по городу его куратора); админ — все (не-владелец без скрытых).
+  // 404 (не 403), чтобы не раскрывать существование ученика чужого scope.
+  const scope = await resolvePanelScope(supabase, session)
+  let allowed = false
+  if (scope.isAdmin) {
+    allowed = scope.isOwner || !profile.hidden_from_tracking
+  } else if (scope.scopeCuratorId) {
+    allowed = profile.curator_id === scope.scopeCuratorId
+  } else if (scope.scopeCityId != null) {
+    if (profile.city_id === scope.scopeCityId) {
+      allowed = true
+    } else if (profile.curator_id) {
+      const { data: cur } = await supabase
+        .from('profiles')
+        .select('city_id')
+        .eq('id', profile.curator_id)
+        .maybeSingle()
+      allowed = cur?.city_id === scope.scopeCityId
+    }
+  }
+  if (!allowed) {
     return NextResponse.json({ ok: false, error: 'Ученик не найден' }, { status: 404 })
   }
 

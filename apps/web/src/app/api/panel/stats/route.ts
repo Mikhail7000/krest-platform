@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { getPanelStats } from './stats-data'
-import { resolveIsOwner } from '@/lib/admin/owner'
+import { resolvePanelScope } from '@/lib/admin/scope'
 import { createServiceSupabase } from '@/lib/supabase-service'
 
 export const dynamic = 'force-dynamic'
@@ -20,10 +20,9 @@ async function handle(req: NextRequest) {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServiceSupabase() as any
-    // Куратор видит только свою группу, не является владельцем.
-    const scopeCuratorId = session.role === 'curator' ? session.uid : undefined
-    const isOwner = scopeCuratorId ? false : await resolveIsOwner(supabase, session.uid)
-    const stats = await getPanelStats(isOwner, scopeCuratorId)
+    // Куратор → своя группа; лидер города → свой город; админ → все.
+    const scope = await resolvePanelScope(supabase, session)
+    const stats = await getPanelStats(scope.isOwner, scope.scopeCuratorId ?? undefined, scope.scopeCityId)
     return NextResponse.json({ ok: true, ...stats })
   } catch (e) {
     console.error('[panel/stats]', e)

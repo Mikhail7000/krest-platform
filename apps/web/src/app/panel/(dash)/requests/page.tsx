@@ -44,7 +44,8 @@ function fmtWhen(iso: string | null): string {
 
 export default async function RequestsPage() {
   const session = await getPanelSession()
-  if (session?.role === 'curator') notFound()
+  // Только admin/super_admin (куратор и лидер города сюда не допускаются).
+  if (session?.role !== 'admin' && session?.role !== 'super_admin') notFound()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any

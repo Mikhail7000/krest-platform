@@ -93,7 +93,9 @@ export default async function CuratorsPage() {
     loadCurators(),
     getPanelSession(),
   ])
-  if (session?.role === 'curator') notFound()
+  // Фаза 2: страница кураторов — только admin/super_admin. Лидеру города отдельный
+  // экран кураторов его города добавим в Фазе 3 (вместе с добавлением кураторов).
+  if (session?.role !== 'admin' && session?.role !== 'super_admin') notFound()
 
   const totalAdmins = curators.filter((c) => c.role === 'admin').length
   const isSuperAdmin = session?.role === 'super_admin'

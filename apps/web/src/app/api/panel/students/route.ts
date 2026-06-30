@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
-import { resolveIsOwner } from '@/lib/admin/owner'
+import { resolvePanelScope, cityCuratorIds, studentInScope } from '@/lib/admin/scope'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,11 +62,8 @@ export async function POST(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
 
-  // Куратор видит только своих учеников (scope по curator_id). Не является владельцем.
-  const scopeCuratorId: string | null = session.role === 'curator' ? session.uid : null
-
-  // Владелец (is_protected) видит всех; остальные — без скрытых учеников. Куратор никогда не владелец.
-  const isOwner = scopeCuratorId ? false : await resolveIsOwner(supabase, session.uid)
+  // Видимость по роли: куратор → свои ученики; лидер города → весь город; admin → все.
+  const scope = await resolvePanelScope(supabase, session)
 
   // 1. Все профили (нужны и кураторы — для карты имён).
   const { data: profilesRaw, error: profErr } = await supabase
@@ -84,6 +81,8 @@ export async function POST(req: NextRequest) {
   const profiles = (profilesRaw ?? []) as ProfileRow[]
   const nameById = new Map<string, string | null>()
   for (const p of profiles) nameById.set(p.id, p.full_name)
+  // Для scope лидера города — id кураторов его города.
+  const cityCurators = scope.scopeCityId != null ? cityCuratorIds(profiles, scope.scopeCityId) : null
 
   // 2. Сданные блоки всех учеников одним запросом.
   const passedById = new Map<string, number>()
@@ -102,12 +101,7 @@ export async function POST(req: NextRequest) {
   }
 
   const rows: PanelStudentRow[] = profiles
-    .filter(
-      (p) =>
-        p.role === 'student' &&
-        (isOwner || !(p as any).hidden_from_tracking) &&
-        (!scopeCuratorId || p.curator_id === scopeCuratorId),
-    )
+    .filter((p) => p.role === 'student' && studentInScope(p as ProfileRow, scope, cityCurators))
     .map((p) => {
       const passed = passedById.get(p.id) ?? 0
       return {
@@ -128,13 +122,17 @@ export async function POST(req: NextRequest) {
       }
     })
 
-  // Список кураторов для выпадашки «Куратор» (только для admin/super_admin).
-  // Куратор не может переназначать учеников → пустой массив.
-  const curators = scopeCuratorId
-    ? []
-    : profiles
+  // Список кураторов для выпадашки «Куратор». admin → все; лидер города → кураторы его
+  // города; куратор → пустой (переназначать не может).
+  const curators = scope.isAdmin
+    ? profiles
         .filter((p) => p.role === 'curator' || p.role === 'admin' || p.role === 'super_admin')
         .map((p) => ({ id: p.id, name: p.full_name, role: p.role }))
+    : scope.scopeCityId != null
+      ? profiles
+          .filter((p) => p.role === 'curator' && p.city_id === scope.scopeCityId)
+          .map((p) => ({ id: p.id, name: p.full_name, role: p.role }))
+      : []
 
   return NextResponse.json({ ok: true, students: rows, curators })
 }

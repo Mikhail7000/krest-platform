@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getPanelSession } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { countPendingRequests } from '@/lib/admin/access-requests'
+import { isAdminRole } from '@/lib/admin/session'
 import { PanelNav } from './PanelNav'
 import { ViewAsBanner } from './ViewAsBanner'
 
@@ -13,9 +14,9 @@ export default async function DashLayout({ children }: { children: React.ReactNo
   const session = await getPanelSession()
   if (!session) redirect('/panel/login')
 
-  // Кураторы не видят заявки на доступ — не делаем лишний запрос.
+  // Заявки на доступ — только admin/super_admin (куратор и лидер города не видят).
   let pendingCount = 0
-  if (session.role !== 'curator') {
+  if (isAdminRole(session.role)) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServiceSupabase() as any
     pendingCount = await countPendingRequests(supabase)

@@ -14,7 +14,8 @@ function normStatus(raw: string | null): CityStatus {
 /** /panel/cities — города и страны, проходящие Крест. Кураторы не имеют доступа → 404. */
 export default async function CitiesPage() {
   const session = await getPanelSession()
-  if (session?.role === 'curator') notFound()
+  // Только admin/super_admin (куратор и лидер города сюда не допускаются).
+  if (session?.role !== 'admin' && session?.role !== 'super_admin') notFound()
 
   const supabase = createServiceSupabase()
 

@@ -28,6 +28,7 @@ function applyViewAs(real: AdminSession, vaToken: string | undefined): AdminSess
     uid: va.tuid,
     role: va.trole,
     name: va.tname,
+    city: va.tcity ?? null,
     exp: real.exp,
     via: real.uid,
     viaName: real.name,

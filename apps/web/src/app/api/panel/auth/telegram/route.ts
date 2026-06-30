@@ -32,13 +32,13 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceSupabase() as any
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, role, full_name')
+    .select('id, role, full_name, city_id')
     .eq('telegram_chat_id', verified.id)
     .maybeSingle()
 
-  if (!profile || !['admin', 'super_admin', 'curator'].includes(profile.role)) {
+  if (!profile || !['admin', 'super_admin', 'curator', 'city_leader'].includes(profile.role)) {
     return NextResponse.json(
-      { ok: false, error: 'Нет доступа: только администраторы и кураторы' },
+      { ok: false, error: 'Нет доступа: только админы, лидеры городов и кураторы' },
       { status: 403 },
     )
   }
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
     uid: profile.id,
     role: profile.role,
     name: profile.full_name ?? verified.firstName,
+    city: profile.city_id ?? null,
   })
 
   const res = NextResponse.json({ ok: true })

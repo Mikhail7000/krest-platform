@@ -1221,12 +1221,17 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceSupabase() as any
     const { data: prof } = (await supabase
       .from('profiles')
-      .select('id, role, full_name')
+      .select('id, role, full_name, city_id')
       .eq('telegram_chat_id', chatId)
-      .maybeSingle()) as { data: { id: string; role: string; full_name: string | null } | null }
+      .maybeSingle()) as {
+      data: { id: string; role: string; full_name: string | null; city_id: number | null } | null
+    }
 
-    if (!prof || !['admin', 'super_admin', 'curator'].includes(prof.role)) {
-      await sendTelegramMessage(chatId, 'Веб-дашборд доступен только администраторам и кураторам.')
+    if (!prof || !['admin', 'super_admin', 'curator', 'city_leader'].includes(prof.role)) {
+      await sendTelegramMessage(
+        chatId,
+        'Веб-дашборд доступен только админам, лидерам городов и кураторам.',
+      )
       return NextResponse.json({ ok: true })
     }
 
@@ -1234,6 +1239,7 @@ export async function POST(request: NextRequest) {
       uid: prof.id,
       role: prof.role as AdminRole,
       name: prof.full_name,
+      city: prof.city_id ?? null,
     })
     const url = `${SITE_URL}/panel/enter?token=${encodeURIComponent(token)}`
     await sendTelegramMessage(
