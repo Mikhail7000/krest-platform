@@ -19,14 +19,13 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }
-  if (session.role === 'curator') {
-    return NextResponse.json({ ok: false, error: 'Недостаточно прав' }, { status: 403 })
+  const body = (await req.json().catch(() => ({}))) as {
+    username?: string
+    role?: string
+    cityId?: number | string
+    curatorId?: string
   }
-
-  const body = (await req.json().catch(() => ({}))) as { username?: string; role?: string }
   const raw = (body.username ?? '').trim().replace(/^@+/, '').toLowerCase()
-  const assignRole = body.role === 'curator' ? 'curator' : null
-
   if (!/^[a-z0-9_]{4,32}$/.test(raw)) {
     return NextResponse.json(
       { ok: false, error: 'Ник: 4–32 символа, латиница, цифры, _' },
@@ -35,8 +34,72 @@ export async function POST(req: NextRequest) {
   }
   const handle = `@${raw}`
 
+  // Целевая роль добавляемого.
+  const reqRole = body.role
+  const assignRole: 'student' | 'curator' | 'city_leader' =
+    reqRole === 'curator' || reqRole === 'city_leader' ? reqRole : 'student'
+
+  // Кто кого может добавлять: admin/super_admin — любого; лидер города — куратора и
+  // ученика (не лидера); куратор — только ученика.
+  const r = session.role
+  const canAdd =
+    r === 'admin' || r === 'super_admin'
+      ? true
+      : r === 'city_leader'
+        ? assignRole === 'student' || assignRole === 'curator'
+        : r === 'curator'
+          ? assignRole === 'student'
+          : false
+  if (!canAdd) {
+    return NextResponse.json(
+      { ok: false, error: 'Недостаточно прав для добавления этой роли' },
+      { status: 403 },
+    )
+  }
+
+  // Город и куратор по роли добавляющего.
+  let assignedCity: number | null = null
+  let assignedCurator: string | null = null
+  if (r === 'curator') {
+    assignedCurator = session.uid // ученик куратора — сразу к нему
+    assignedCity = session.city ?? null
+  } else if (r === 'city_leader') {
+    assignedCity = session.city ?? null // в город лидера
+    if (assignRole === 'student' && body.curatorId) assignedCurator = body.curatorId
+  } else {
+    // admin/super_admin — задают город/куратора явно
+    if (body.cityId != null && body.cityId !== '') assignedCity = Number(body.cityId)
+    if (assignRole === 'student' && body.curatorId) assignedCurator = body.curatorId
+  }
+  if (assignRole === 'city_leader' && assignedCity == null) {
+    return NextResponse.json(
+      { ok: false, error: 'Для лидера города укажите город' },
+      { status: 400 },
+    )
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
+
+  // Если профиль уже есть и это ученик — повышаем сразу + ставим город/куратора.
+  const profUpdate: Record<string, unknown> = { role: assignRole }
+  if (assignedCity != null) profUpdate.city_id = assignedCity
+  if (assignedCurator) profUpdate.curator_id = assignedCurator
+  await supabase.from('profiles').update(profUpdate).ilike('contact_info', handle).eq('role', 'student')
+
+  // Whitelist: assign_role null=ученик (как было); город/куратор — для применения при входе.
+  const wl = {
+    assign_role: assignRole === 'student' ? null : assignRole,
+    assigned_city_id: assignedCity,
+    assigned_curator_id: assignedCurator,
+  }
+  const roleWord =
+    assignRole === 'city_leader' ? 'лидера города' : assignRole === 'curator' ? 'куратора' : 'ученика'
+  const notify = () =>
+    notifyAdmins(
+      supabase,
+      `👤 ${escapeHtml(session.name ?? 'Админ')} добавил ${roleWord} ${escapeHtml(handle)} (дашборд)`,
+    )
 
   const { data: existing } = await supabase
     .from('testing_whitelist')
@@ -44,19 +107,10 @@ export async function POST(req: NextRequest) {
     .ilike('telegram_username', handle)
     .maybeSingle()
 
-  // Для куратора: если профиль уже есть и он ученик — сразу повышаем до куратора
-  if (assignRole === 'curator') {
-    await supabase.from('profiles').update({ role: 'curator' }).ilike('contact_info', handle).eq('role', 'student')
-  }
-
-  const roleWord = assignRole === 'curator' ? 'куратора' : 'ученика'
-  const notify = () =>
-    notifyAdmins(supabase, `👤 ${escapeHtml(session.name ?? 'Админ')} добавил ${roleWord} ${escapeHtml(handle)} (дашборд)`)
-
   if (existing) {
     const { error } = await supabase
       .from('testing_whitelist')
-      .update({ claimed_chat_id: null, assign_role: assignRole })
+      .update({ claimed_chat_id: null, ...wl })
       .eq('id', (existing as { id: number }).id)
     if (error) {
       console.error('[panel/actions/add] update', error)
@@ -68,7 +122,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabase
     .from('testing_whitelist')
-    .insert({ telegram_username: handle, assign_role: assignRole, added_by: session.uid })
+    .insert({ telegram_username: handle, added_by: session.uid, ...wl })
   if (error) {
     console.error('[panel/actions/add] insert', error)
     return NextResponse.json({ ok: false, error: 'Не удалось добавить' }, { status: 500 })

@@ -19,7 +19,9 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }
-  if (session.role === 'curator') {
+  // Привязка пачкой к куратору — пока только admin/super_admin (лидер добавляет через
+  // форму с выбором куратора своего города).
+  if (session.role !== 'admin' && session.role !== 'super_admin') {
     return NextResponse.json({ ok: false, error: 'Недостаточно прав' }, { status: 403 })
   }
 

@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }
-  if (session.role === 'curator') {
+  // Удалять пользователей может только admin/super_admin.
+  if (session.role !== 'admin' && session.role !== 'super_admin') {
     return NextResponse.json({ ok: false, error: 'Недостаточно прав' }, { status: 403 })
   }
 
