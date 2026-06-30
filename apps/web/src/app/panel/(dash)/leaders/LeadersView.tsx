@@ -6,7 +6,9 @@ import { RoleModal } from '../curators/RoleModal'
 import type { CuratorRow } from '../curators/types'
 import { LeaderRow } from './LeaderRow'
 import { CityModal } from './CityModal'
+import { AttachCuratorsModal } from './AttachCuratorsModal'
 import type { LeaderRow as LeaderRowType } from './types'
+import type { PickCurator } from './page'
 
 /** LeaderRow → CuratorRow для переиспользования RoleModal (studentsCount=0: лидер
  *  не держит учеников напрямую, ложного предупреждения об отвязке быть не должно). */
@@ -33,12 +35,14 @@ function toCuratorRow(l: LeaderRowType): CuratorRow {
 export function LeadersView({
   leaders,
   cities,
+  allCurators,
   isSuperAdmin,
   canViewAs = false,
   isOwner = false,
 }: {
   leaders: LeaderRowType[]
   cities: { id: number; name: string }[]
+  allCurators: PickCurator[]
   isSuperAdmin: boolean
   canViewAs?: boolean
   isOwner?: boolean
@@ -46,6 +50,7 @@ export function LeadersView({
   const [openId, setOpenId] = useState<string | null>(null)
   const [roleTarget, setRoleTarget] = useState<LeaderRowType | null>(null)
   const [cityTarget, setCityTarget] = useState<LeaderRowType | null>(null)
+  const [attachTarget, setAttachTarget] = useState<LeaderRowType | null>(null)
   void isOwner // view-as для лидеров доступен любому реальному админу
 
   return (
@@ -75,6 +80,7 @@ export function LeadersView({
                   isOpen={openId === l.id}
                   canViewAs={canViewAs && !l.isProtected}
                   onToggle={() => setOpenId(openId === l.id ? null : l.id)}
+                  onAttach={() => setAttachTarget(l)}
                   onCity={() => setCityTarget(l)}
                   onRole={() => setRoleTarget(l)}
                 />
@@ -83,6 +89,16 @@ export function LeadersView({
           </table>
         </div>
       )}
+
+      {attachTarget ? (
+        <AttachCuratorsModal
+          leaderId={attachTarget.id}
+          leaderName={attachTarget.name ?? attachTarget.nick ?? attachTarget.id}
+          leaderCity={attachTarget.city}
+          curators={allCurators}
+          onClose={() => setAttachTarget(null)}
+        />
+      ) : null}
 
       {cityTarget ? (
         <CityModal

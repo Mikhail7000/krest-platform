@@ -12,9 +12,17 @@ export const dynamic = 'force-dynamic'
  * вход в их панель (view-as), добавление нового лидера. Только admin/super_admin.
  * Данные — через service-role (сервер админа, обход RLS).
  */
+export interface PickCurator {
+  id: string
+  name: string | null
+  nick: string | null
+  city: string | null
+}
+
 async function loadLeaders(): Promise<{
   leaders: LeaderRow[]
   cities: { id: number; name: string }[]
+  allCurators: PickCurator[]
 }> {
   const supabase = createServiceSupabase()
   const [leadersRes, citiesRes, countriesRes, curatorsRes] = await Promise.all([
@@ -67,7 +75,20 @@ async function loadLeaders(): Promise<{
     id: c.id,
     name: c.name_ru,
   }))
-  return { leaders, cities }
+
+  // Все кураторы — для модалки «Привязать кураторов» (с текущим городом).
+  const allCurators: PickCurator[] = (
+    (curatorsRes.data ?? []) as { id: string; full_name: string | null; contact_info: string | null; city_id: number | null }[]
+  )
+    .map((cu) => ({
+      id: cu.id,
+      name: cu.full_name,
+      nick: cu.contact_info,
+      city: cu.city_id != null ? cityById.get(cu.city_id)?.name ?? null : null,
+    }))
+    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'ru'))
+
+  return { leaders, cities, allCurators }
 }
 
 export default async function LeadersPage() {
@@ -83,7 +104,7 @@ export default async function LeadersPage() {
   const isOwner =
     realCanViewAs && session ? await resolveIsOwner(createServiceSupabase(), session.uid) : false
 
-  const { leaders, cities } = await loadLeaders()
+  const { leaders, cities, allCurators } = await loadLeaders()
 
   return (
     <div>
@@ -102,6 +123,7 @@ export default async function LeadersPage() {
       <LeadersView
         leaders={leaders}
         cities={cities}
+        allCurators={allCurators}
         isSuperAdmin={isSuperAdmin}
         canViewAs={realCanViewAs}
         isOwner={isOwner}

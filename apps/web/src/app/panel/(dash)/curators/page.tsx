@@ -4,7 +4,7 @@ import { createServiceSupabase } from '@/lib/supabase-service'
 import { getPanelSession } from '@/lib/admin/guard'
 import { resolveIsOwner } from '@/lib/admin/owner'
 import { CuratorsView } from './CuratorsView'
-import type { CuratorRow, CuratorStudent } from './types'
+import type { CuratorRow, CuratorStudent, LeaderPick } from './types'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,13 +18,14 @@ export const dynamic = 'force-dynamic'
  */
 async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null }): Promise<{
   curators: CuratorRow[]
+  leaders: LeaderPick[]
   totalCurators: number
   totalLeaders: number
   totalAdmins: number
   totalStudents: number
 }> {
   const supabase = createServiceSupabase()
-  const empty = { curators: [], totalCurators: 0, totalLeaders: 0, totalAdmins: 0, totalStudents: 0 }
+  const empty = { curators: [], leaders: [], totalCurators: 0, totalLeaders: 0, totalAdmins: 0, totalStudents: 0 }
 
   // Лидер города видит только кураторов своего города; админ — кураторов и админов
   // (лидеры городов — на отдельной странице /panel/leaders).
@@ -42,13 +43,20 @@ async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null
     curatorsQuery,
     supabase.from('cities').select('id, name_ru, country_id'),
     supabase.from('countries').select('id, name_ru'),
-    supabase.from('profiles').select('full_name, contact_info, city_id').eq('role', 'city_leader'),
+    supabase.from('profiles').select('id, full_name, contact_info, city_id').eq('role', 'city_leader'),
   ])
   if (curatorsRes.error || citiesRes.error || countriesRes.error) return empty
 
+  const leadersData = (leadersRes.data ?? []) as {
+    id: string
+    full_name: string | null
+    contact_info: string | null
+    city_id: number | null
+  }[]
+
   // Лидер города по городу (если в городе несколько — через запятую).
   const leaderByCity = new Map<number, string>()
-  for (const l of (leadersRes.data ?? []) as { full_name: string | null; contact_info: string | null; city_id: number | null }[]) {
+  for (const l of leadersData) {
     if (l.city_id == null) continue
     const nm = l.full_name || l.contact_info || 'Лидер'
     leaderByCity.set(l.city_id, leaderByCity.has(l.city_id) ? `${leaderByCity.get(l.city_id)}, ${nm}` : nm)
@@ -116,8 +124,19 @@ async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null
       (a.name ?? '').localeCompare(b.name ?? ''),
   )
 
+  // Лидеры с городом — для пикера «Назначить лидера» у куратора.
+  const leaderPicks: LeaderPick[] = leadersData
+    .filter((l) => l.city_id != null)
+    .map((l) => ({
+      id: l.id,
+      name: l.full_name || l.contact_info || 'Лидер',
+      cityId: l.city_id as number,
+      city: cityById.get(l.city_id as number)?.name ?? null,
+    }))
+
   return {
     curators,
+    leaders: leaderPicks,
     totalCurators: curators.filter((c) => c.role === 'curator').length,
     totalLeaders: curators.filter((c) => c.role === 'city_leader').length,
     totalAdmins: curators.filter((c) => c.role === 'admin').length,
@@ -142,7 +161,7 @@ export default async function CuratorsPage() {
   const isOwner =
     realCanViewAs && session ? await resolveIsOwner(createServiceSupabase(), session.uid) : false
 
-  const { curators, totalCurators, totalAdmins, totalStudents } = await loadCurators({
+  const { curators, leaders, totalCurators, totalAdmins, totalStudents } = await loadCurators({
     leaderScoped: isLeader,
     cityId: session?.city ?? null,
   })
@@ -212,6 +231,7 @@ export default async function CuratorsPage() {
         canViewAs={realCanViewAs}
         isOwner={isOwner}
         cities={cities}
+        leaders={leaders}
       />
     </div>
   )

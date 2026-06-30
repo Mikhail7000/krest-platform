@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { CuratorRow } from './types'
+import type { CuratorRow, LeaderPick } from './types'
 import { RoleModal } from './RoleModal'
 import { AddStaffBar } from './AddStaffBar'
+import { AssignLeaderModal } from './AssignLeaderModal'
 
 const ROLE_BADGE: Record<string, { cls: string; label: string }> = {
   curator: { cls: 'panel-badge panel-badge--acc', label: 'Куратор' },
@@ -33,6 +34,7 @@ export function CuratorsView({
   canViewAs = false,
   isOwner = false,
   cities = [],
+  leaders = [],
 }: {
   curators: CuratorRow[]
   canManage: boolean
@@ -40,10 +42,12 @@ export function CuratorsView({
   canViewAs?: boolean
   isOwner?: boolean
   cities?: { id: number; name: string }[]
+  leaders?: LeaderPick[]
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
   const [attachTarget, setAttachTarget] = useState<CuratorRow | null>(null)
   const [roleTarget, setRoleTarget] = useState<CuratorRow | null>(null)
+  const [leaderTarget, setLeaderTarget] = useState<CuratorRow | null>(null)
 
   return (
     <>
@@ -74,8 +78,10 @@ export function CuratorsView({
                     canManage={canManage}
                     canChangeRole={canManage && !cu.isProtected && (isSuperAdmin || cu.role !== 'admin')}
                     canViewAs={canViewAs && !cu.isProtected && rowCanViewAs(cu.role, isOwner)}
+                    canAssignLeader={canManage && cu.role === 'curator' && leaders.length > 0}
                     onToggle={() => setOpenId(isOpen ? null : cu.id)}
                     onAttach={() => setAttachTarget(cu)}
+                    onAssignLeader={() => setLeaderTarget(cu)}
                     onRole={() => setRoleTarget(cu)}
                   />
                 )
@@ -100,6 +106,15 @@ export function CuratorsView({
           onClose={() => setRoleTarget(null)}
         />
       ) : null}
+
+      {leaderTarget ? (
+        <AssignLeaderModal
+          curatorId={leaderTarget.id}
+          curatorName={leaderTarget.name ?? leaderTarget.nick ?? leaderTarget.id}
+          leaders={leaders}
+          onClose={() => setLeaderTarget(null)}
+        />
+      ) : null}
     </>
   )
 }
@@ -111,8 +126,10 @@ function CuratorRowGroup({
   canManage,
   canChangeRole,
   canViewAs,
+  canAssignLeader,
   onToggle,
   onAttach,
+  onAssignLeader,
   onRole,
 }: {
   curator: CuratorRow
@@ -121,8 +138,10 @@ function CuratorRowGroup({
   canManage: boolean
   canChangeRole: boolean
   canViewAs: boolean
+  canAssignLeader: boolean
   onToggle: () => void
   onAttach: () => void
+  onAssignLeader: () => void
   onRole: () => void
 }) {
   const [viewBusy, setViewBusy] = useState(false)
@@ -225,6 +244,18 @@ function CuratorRowGroup({
                 }}
               >
                 Привязать учеников
+              </button>
+            ) : null}
+            {canAssignLeader ? (
+              <button
+                type="button"
+                className="panel-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAssignLeader()
+                }}
+              >
+                👑 Назначить лидера
               </button>
             ) : null}
             {!canManage ? null : curator.isProtected ? (

@@ -4,6 +4,14 @@ export interface CuratorStudent {
   nick: string | null
 }
 
+/** Лидер города для пикера «Назначить лидера» (привязка по городу). */
+export interface LeaderPick {
+  id: string
+  name: string
+  cityId: number
+  city: string | null
+}
+
 export interface CuratorRow {
   id: string
   name: string | null

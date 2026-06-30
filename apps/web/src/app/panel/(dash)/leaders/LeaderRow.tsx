@@ -12,6 +12,7 @@ export function LeaderRow({
   isOpen,
   canViewAs,
   onToggle,
+  onAttach,
   onCity,
   onRole,
 }: {
@@ -19,6 +20,7 @@ export function LeaderRow({
   isOpen: boolean
   canViewAs: boolean
   onToggle: () => void
+  onAttach: () => void
   onCity: () => void
   onRole: () => void
 }) {
@@ -101,6 +103,16 @@ export function LeaderRow({
               <span className="panel-badge" style={{ alignSelf: 'center' }}>🔒 Защищён</span>
             ) : (
               <>
+                <button
+                  type="button"
+                  className="panel-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAttach()
+                  }}
+                >
+                  🔗 Привязать кураторов
+                </button>
                 <button
                   type="button"
                   className="panel-btn"
