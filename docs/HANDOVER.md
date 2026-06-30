@@ -11,24 +11,19 @@
 
 ## ОТКРЫТЫЕ ЗАДАЧИ (продолжить отсюда)
 
-### 1. Роли «лидеры городов» — ФАЗА 4 (главное, незакончено)
+### 1. Роли «лидеры городов» — ФАЗА 4 ✅ ГОТОВА (2026-06-30)
 Иерархия: **super_admin (Михаил) → admin (Эля) → city_leader → curator → student**.
-Лидер привязан к городу (`profiles.city_id`), один на город. Фазы 1-3 готовы (роль в БД,
-видимость, scoping панели по городу, добавление людей по иерархии). Осталось:
-- **Экран «мои кураторы»** для city_leader (страница `/panel/curators` сейчас admin-only;
-  для лидера — список кураторов его города + их ученики).
-- **Перепривязка кураторов** между городами/лидерами в админ-панели (у тебя и Эли) —
-  «списками-колонками»: сменить город куратора, переместить к другому лидеру.
-- **View-as для admin (Эли)** — заходить «глазиком» как куратор или лидер города.
-  Сейчас view-as доступен ТОЛЬКО владельцу (super_admin + is_protected). Нужно разрешить
-  admin делать view-as на curator/city_leader. В токене view-as уже есть поле `tcity`
-  (`signViewAs`), `guard.applyViewAs` уже пробрасывает city — осталось снять гейт
-  «только владелец» для admin и дать UI-кнопку. Файлы: `api/panel/view-as/route.ts`
-  (гейт `resolveIsOwner` / `real.role !== 'super_admin'`), `curators/CuratorsView.tsx`
-  (`canViewAs={isOwner...}`), `students/StudentRowActions.tsx`.
-
-Карта 28 точек ролевой системы — в истории сессии (разведка Explore-агентом). Хелпер
-видимости — `apps/web/src/lib/admin/scope.ts` (`resolvePanelScope`/`studentInScope`).
+Лидер привязан к городу (`profiles.city_id`), один на город. Все 4 фазы завершены:
+- Экран «мои кураторы» для city_leader (scope по городу), перепривязка кураторов по
+  городам (доска-колонки, admin-only), view-as для admin (curator/city_leader).
+- Adversarial-ревью обнажило и закрыло пред-существующие дыры scoping лидера: критичная —
+  `panel/enter` терял `city` при входе из бота → лидер видел всех; + fail-closed в
+  `scope.ts`/`stats-data.ts`; + проверка чужого куратора в `add`; + `cities` роут под
+  `isAdminRole`. Подробности — `docs/FIX_JOURNAL.md` (2026-06-30).
+- Хелпер видимости — `apps/web/src/lib/admin/scope.ts`
+  (`resolvePanelScope`/`studentInScope`/`cityCuratorIds`). Возможные доработки на будущее
+  (по желанию Михаила): drag-and-drop в доске перепривязки; перепривязка ученика лидером
+  внутри города (сейчас `transfer`/`attach` — admin-only); экран городов для лидера.
 
 ### 2. HEIC авто-конвертация (по желанию Михаила)
 Сейчас фото креста в HEIC **отклоняется** (415) с просьбой JPEG — чтобы ИИ проверял

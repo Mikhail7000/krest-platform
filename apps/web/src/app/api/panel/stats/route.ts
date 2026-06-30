@@ -22,7 +22,12 @@ async function handle(req: NextRequest) {
     const supabase = createServiceSupabase() as any
     // Куратор → своя группа; лидер города → свой город; админ → все.
     const scope = await resolvePanelScope(supabase, session)
-    const stats = await getPanelStats(scope.isOwner, scope.scopeCuratorId ?? undefined, scope.scopeCityId)
+    const stats = await getPanelStats(
+      scope.isOwner,
+      scope.scopeCuratorId ?? undefined,
+      scope.scopeCityId,
+      !scope.isAdmin,
+    )
     return NextResponse.json({ ok: true, ...stats })
   } catch (e) {
     console.error('[panel/stats]', e)

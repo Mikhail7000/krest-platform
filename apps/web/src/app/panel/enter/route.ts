@@ -23,7 +23,9 @@ export async function GET(req: NextRequest) {
   }
 
   const res = NextResponse.redirect(`${base}/panel`)
-  const fresh = signSession({ uid: sess.uid, role: sess.role, name: sess.name })
+  // Важно прокинуть city: для city_leader scope панели строится по нему. Без него
+  // постоянная cookie получала city=null → лидер видел учеников всех городов.
+  const fresh = signSession({ uid: sess.uid, role: sess.role, name: sess.name, city: sess.city ?? null })
   res.cookies.set(ADMIN_COOKIE, fresh, {
     path: '/',
     httpOnly: true,

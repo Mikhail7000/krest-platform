@@ -60,5 +60,9 @@ export function studentInScope(
       (!!p.curator_id && !!cityCurators && cityCurators.has(p.curator_id))
     )
   }
+  // Сюда доходим только без заданного scope. Для НЕ-админа (scoped роль с
+  // неразрешённым scope, напр. city_leader без city) — fail-closed, чтобы не
+  // показать всех учеников платформы. Открытая ветка — только для админа/владельца.
+  if (!scope.isAdmin) return false
   return scope.isOwner || !p.hidden_from_tracking
 }

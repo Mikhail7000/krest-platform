@@ -5,11 +5,27 @@
 
 Связанные источники: **`docs/HANDOVER.md`** (открытые задачи + точка входа для новой сессии), `CLAUDE.md` (раздел «Дневные практики — частые баги»), `CHANGELOG.md` (релизы по версиям).
 
-**ОТКРЫТО (на 2026-06-30):** Фаза 4 ролей (экран кураторов лидера, перепривязка кураторов, view-as для admin); HEIC авто-конвертация (нужна зависимость); AI-чат course-leak (латентно). Детали — в `docs/HANDOVER.md`.
+**ОТКРЫТО (на 2026-06-30):** HEIC авто-конвертация (нужна зависимость); AI-чат course-leak (латентно). Фаза 4 ролей — ГОТОВА (см. ниже). Детали — в `docs/HANDOVER.md`.
 
 ---
 
 ## 2026-06-30
+
+### Роли «лидеры городов» — ФАЗА 4 (экран кураторов лидера + перепривязка + view-as для admin)
+- **Экран «мои кураторы» для city_leader:** страница `/panel/curators` раньше была admin-only, теперь пускает и лидера города со scope по его городу (только кураторы его города + их ученики; добавление куратора доступно — роут сам относит его в город лидера). Управление (смена роли, массовая привязка) и view-as лидеру скрыты. Nav: пункт «Кураторы» теперь виден лидеру (`leaderVisible`). Файлы: `curators/page.tsx` (рефактор `loadCurators` под scope), `CuratorsView.tsx` (проп `canManage`), `PanelNav.tsx`.
+- **Перепривязка кураторов по городам (admin-only):** доска «списками-колонками» — колонки=города (с именем лидера), карточки=кураторы, перенос выпадашкой «Переместить» (без drag-and-drop, надёжно на мобильном). Смена `profiles.city_id` куратора = переход под лидера нового города; ученики остаются за куратором (видимость нового лидера — через членство куратора в городе, `studentInScope`). Новые: `api/panel/actions/curator-city` (POST смена города, admin-only, только curator, не protected), `api/panel/curators/reassign` (GET данные доски), страница `curators/reassign/page.tsx` + клиент `ReassignBoard.tsx`; ссылка «⇄ Перепривязка по городам» на странице кураторов.
+- **View-as для admin (Эли):** раньше view-as мог только владелец (super_admin+is_protected). Теперь admin может «войти как» curator/city_leader (НЕ как admin/super_admin — защита от эскалации, двойная проверка в `view-as/route.ts` и `guard.applyViewAs`); super_admin — как curator/city_leader/admin. В токен view-as прокидывается `tcity` (для наложения роли лидера). Кнопки view-as в `CuratorsView` показываются по роли цели и только реальному админу вне режима view-as. `ViewAsBanner` знает метку «лидер города».
+
+### Фаза 4 — adversarial-ревью нашло пред-существующие дыры scoping лидера (закрыты)
+Мульти-агентное ревью диффа (5 измерений × 2 скептика) подтвердило 5 находок (все 2/0), исправлены:
+- **CRITICAL — `panel/enter/route.ts`:** вход лидера по ссылке из бота пересоздавал сессию БЕЗ `city` → постоянная cookie с `city=null` → `resolvePanelScope` давал `scopeCityId=null` → лидер видел учеников ВСЕХ городов (на `/panel`, `/panel/students`). Фикс: `signSession(... city: sess.city ?? null)`. (Sibling-роут `auth/telegram` city прокидывал корректно — отсюда и расхождение.)
+- **HIGH — `lib/admin/scope.ts` `studentInScope`:** при scoped-роли без разрешённого scope (лидер с `city=null`) финальная ветка `return isOwner || !hidden` падала «открыто». Фикс: для не-админа без scope → `return false` (fail-closed). Затрагивало `students`, `activity/days`.
+- **HIGH — `stats/stats-data.ts` `visibleStudents`/`getPanelStats`:** тот же fail-open в обзоре. Добавлен параметр `isScoped`: при `scopeCityId==null && isScoped` → `[]`; платформенные счётчики кураторов/админов — только при `!isScoped`. Оба вызова (`page.tsx`, `stats/route.ts`) передают `isScoped = !scope.isAdmin`.
+- **MEDIUM — `actions/add/route.ts`:** лидер города мог прямым API привязать ученика к куратору ЧУЖОГО города (`body.curatorId` не проверялся). Фикс: если лидер задаёт `curatorId` — проверяем, что это куратор его города, иначе 403.
+- **LOW — `curators/page.tsx`:** стат лидера переименован «Учеников в городе» → «Учеников у кураторов» (считается именно это; «в городе» расходилось со scope дашборда для учеников без куратора).
+- **Заодно (defense-in-depth):** `api/panel/cities/route.ts` — гейт сменён с «не куратор» на `isAdminRole`, чтобы лидер не получал агрегаты по всем городам прямым вызовом (страница `/panel/cities` и nav и так admin-only).
+
+### 🔒 БЕЗОПАСНОСТЬ — bot token ротирован и убран из репозитория (закрыто)
 
 ### 🔒 БЕЗОПАСНОСТЬ — bot token ротирован и убран из репозитория (закрыто)
 - **Что сделали:** Михаил ротировал Telegram bot token в @BotFather (старый считается скомпрометированным), обновил `TELEGRAM_BOT_TOKEN` в Vercel, передеплой.

@@ -81,6 +81,7 @@ function visibleStudents(
   isOwner: boolean,
   scopeCuratorId?: string,
   scopeCityId?: number | null,
+  isScoped = false,
 ): ProfileRow[] {
   let base: ProfileRow[]
   if (isOwner) {
@@ -90,6 +91,9 @@ function visibleStudents(
   }
   if (scopeCuratorId) {
     base = base.filter((p) => (p as any).curator_id === scopeCuratorId)
+  } else if (scopeCityId == null && isScoped) {
+    // Scoped роль (куратор/лидер) без разрешённого scope — fail-closed (никого).
+    return []
   } else if (scopeCityId != null) {
     // Лидер города: ученики его города (по city_id ученика ИЛИ по городу его куратора).
     const cityCur = new Set(
@@ -128,6 +132,7 @@ export async function getPanelStats(
   isOwner = false,
   scopeCuratorId?: string,
   scopeCityId?: number | null,
+  isScoped = false,
 ): Promise<PanelStats> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
@@ -176,9 +181,9 @@ export async function getPanelStats(
     cities: 0,
   }
   // Ученики с учётом видимости (скрытые исключаются, если запрашивающий не владелец)
-  const students = visibleStudents(profiles, isOwner, scopeCuratorId, scopeCityId)
-  // Куратор/лидер города видят только агрегаты своей группы, не платформенные счётчики
-  if (!scopeCuratorId && scopeCityId == null) {
+  const students = visibleStudents(profiles, isOwner, scopeCuratorId, scopeCityId, isScoped)
+  // Платформенные счётчики кураторов/админов — только админам (не scoped-роли).
+  if (!isScoped && !scopeCuratorId && scopeCityId == null) {
     for (const p of profiles) {
       if (p.role === 'curator') totals.curators++
       else if (p.role === 'admin' || p.role === 'super_admin') totals.admins++

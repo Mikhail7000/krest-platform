@@ -29,7 +29,12 @@ export default async function PanelOverviewPage() {
 
   // Заявки на доступ — только admin/super_admin. Молчащие 3+ дня — алерт только куратору.
   const [stats, pendingRequests, silent] = await Promise.all([
-    getPanelStats(ps?.isOwner ?? false, ps?.scopeCuratorId ?? undefined, ps?.scopeCityId),
+    getPanelStats(
+      ps?.isOwner ?? false,
+      ps?.scopeCuratorId ?? undefined,
+      ps?.scopeCityId,
+      ps ? !ps.isAdmin : false,
+    ),
     isAdminLevel ? countPendingRequests(supabase) : Promise.resolve(0),
     isCurator && session ? findSilentStudents(supabase, { curatorId: session.uid }) : Promise.resolve([]),
   ])

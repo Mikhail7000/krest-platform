@@ -9,7 +9,7 @@ const ALL_LINKS = [
   { href: '/panel/requests', label: 'Заявки', icon: '📥', curatorVisible: false, leaderVisible: false },
   { href: '/panel/students', label: 'Ученики', icon: '🎓', curatorVisible: true, leaderVisible: true },
   { href: '/panel/activity', label: 'Активность', icon: '📈', curatorVisible: true, leaderVisible: true },
-  { href: '/panel/curators', label: 'Кураторы', icon: '🧭', curatorVisible: false, leaderVisible: false },
+  { href: '/panel/curators', label: 'Кураторы', icon: '🧭', curatorVisible: false, leaderVisible: true },
   { href: '/panel/cities', label: 'Города', icon: '🌍', curatorVisible: false, leaderVisible: false },
 ]
 

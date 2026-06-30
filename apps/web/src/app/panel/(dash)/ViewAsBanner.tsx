@@ -9,7 +9,14 @@ import { useState } from 'react'
 export function ViewAsBanner({ name, role }: { name: string | null; role: string }) {
   const [busy, setBusy] = useState(false)
 
-  const roleLabel = role === 'curator' ? 'куратор' : role === 'admin' ? 'админ' : role
+  const roleLabel =
+    role === 'curator'
+      ? 'куратор'
+      : role === 'city_leader'
+        ? 'лидер города'
+        : role === 'admin'
+          ? 'админ'
+          : role
 
   const exit = async () => {
     setBusy(true)

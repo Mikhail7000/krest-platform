@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceSupabase } from '@/lib/supabase-service'
-import { resolveIsOwner } from '@/lib/admin/owner'
 import {
   ADMIN_COOKIE,
   VIEW_AS_COOKIE,
@@ -14,27 +13,26 @@ export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/panel/view-as  { userId }
- * Включает режим «смотреть как» (view-as): super_admin открывает панель куратора
- * или админа и видит ровно то, что видят они. Реальная сессия (krest_admin) НЕ
- * трогается — ставим отдельную подписанную cookie krest_view_as. Гард применит её
- * только если реальная роль super_admin и `by` совпадает (см. lib/admin/guard.ts).
- * Доступно ТОЛЬКО super_admin. Цель — роль curator/admin, не защищённый владелец.
+ * Включает режим «смотреть как» (view-as): admin/super_admin открывает панель
+ * куратора/лидера города (super_admin — также админа) и видит ровно то, что видят
+ * они. Реальная сессия (krest_admin) НЕ трогается — ставим отдельную подписанную
+ * cookie krest_view_as. Гард применит её только если реальная роль admin/super_admin
+ * и `by` совпадает (см. lib/admin/guard.ts).
+ *
+ * Правила цели (защищённого владельца нельзя открыть никому):
+ *  - super_admin → curator / city_leader / admin;
+ *  - admin       → curator / city_leader (не админа и не супер-админа — без эскалации).
  */
 export async function POST(req: NextRequest) {
   // Реальная сессия (НЕ эффективная) — читаем напрямую из krest_admin.
   const real = verifySession(req.cookies.get(ADMIN_COOKIE)?.value)
   if (!real) return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
-  if (real.role !== 'super_admin') {
-    return NextResponse.json({ ok: false, error: 'Только для супер-админа' }, { status: 403 })
+  if (real.role !== 'super_admin' && real.role !== 'admin') {
+    return NextResponse.json({ ok: false, error: 'Только для админа' }, { status: 403 })
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
-
-  // Только владелец платформы (is_protected = Михаил). «Только я».
-  if (!(await resolveIsOwner(supabase, real.uid))) {
-    return NextResponse.json({ ok: false, error: 'Только для владельца платформы' }, { status: 403 })
-  }
 
   const body = (await req.json().catch(() => ({}))) as { userId?: string }
   const userId = (body.userId ?? '').trim()
@@ -45,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   const { data: target } = await supabase
     .from('profiles')
-    .select('id, full_name, role, is_protected')
+    .select('id, full_name, role, is_protected, city_id')
     .eq('id', userId)
     .maybeSingle()
 
@@ -53,9 +51,21 @@ export async function POST(req: NextRequest) {
   if (target.is_protected) {
     return NextResponse.json({ ok: false, error: 'Защищённого пользователя нельзя открыть' }, { status: 403 })
   }
-  if (target.role !== 'curator' && target.role !== 'admin') {
+  // Кого можно открыть: super_admin — куратора/лидера/админа; admin — только
+  // куратора/лидера (никогда другого админа или супер-админа — защита от эскалации).
+  const allowedTargets =
+    real.role === 'super_admin'
+      ? ['curator', 'city_leader', 'admin']
+      : ['curator', 'city_leader']
+  if (!allowedTargets.includes(target.role)) {
     return NextResponse.json(
-      { ok: false, error: 'Открыть можно только панель куратора или админа' },
+      {
+        ok: false,
+        error:
+          real.role === 'super_admin'
+            ? 'Открыть можно панель куратора, лидера города или админа'
+            : 'Открыть можно только панель куратора или лидера города',
+      },
       { status: 400 },
     )
   }
@@ -64,6 +74,7 @@ export async function POST(req: NextRequest) {
     tuid: target.id,
     trole: target.role as AdminRole,
     tname: target.full_name ?? null,
+    tcity: target.city_id ?? null,
     by: real.uid,
     byName: real.name ?? null,
   })

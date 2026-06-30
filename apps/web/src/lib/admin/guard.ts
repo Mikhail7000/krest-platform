@@ -17,13 +17,19 @@ import {
 
 /**
  * Накладывает view-as поверх реальной сессии. Применяется ТОЛЬКО если реальная
- * роль = super_admin И view-as токен подписан и его `by` совпадает с реальным uid.
- * Иначе возвращает реальную сессию без изменений (защита от подделки cookie).
+ * роль = super_admin или admin, view-as токен подписан и его `by` совпадает с
+ * реальным uid. Иначе возвращает реальную сессию без изменений (защита от подделки).
+ *
+ * Эскалация прав исключена: admin может «смотреть как» только scoped-роли
+ * (curator/city_leader) — никогда как admin/super_admin. super_admin — как любого,
+ * кого выдал роут view-as (curator/city_leader/admin). Токен подписан сервером, но
+ * проверку дублируем здесь (defense in depth).
  */
 function applyViewAs(real: AdminSession, vaToken: string | undefined): AdminSession {
-  if (real.role !== 'super_admin' || !vaToken) return real
+  if ((real.role !== 'super_admin' && real.role !== 'admin') || !vaToken) return real
   const va = verifyViewAs(vaToken)
   if (!va || va.by !== real.uid) return real
+  if (real.role === 'admin' && va.trole !== 'curator' && va.trole !== 'city_leader') return real
   return {
     uid: va.tuid,
     role: va.trole,

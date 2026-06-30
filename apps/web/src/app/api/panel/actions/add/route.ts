@@ -12,7 +12,8 @@ export const dynamic = 'force-dynamic'
  * assign_role=null) или как куратора (role='curator', assign_role='curator').
  * Если уже есть — обновляем assign_role и освобождаем слот.
  * Для куратора: если профиль с этим ником уже есть и он ученик — сразу повышаем.
- * Гард: только admin/super_admin, иначе 401.
+ * Права (canAdd): admin/super_admin → любую роль; city_leader → куратора/ученика
+ * (в свой город; ученик — только к куратору своего города); curator → ученика (к себе).
  */
 export async function POST(req: NextRequest) {
   const session = getPanelSessionFromReq(req)
@@ -80,6 +81,22 @@ export async function POST(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
+
+  // Лидер города не может привязать ученика к куратору ЧУЖОГО города (scope-эскалация
+  // через прямой API: body.curatorId не ограничен UI). Куратор обязан быть из его города.
+  if (r === 'city_leader' && assignedCurator) {
+    const { data: cur } = await supabase
+      .from('profiles')
+      .select('id, role, city_id')
+      .eq('id', assignedCurator)
+      .maybeSingle()
+    if (!cur || cur.role !== 'curator' || cur.city_id !== session.city) {
+      return NextResponse.json(
+        { ok: false, error: 'Куратор должен быть из вашего города' },
+        { status: 403 },
+      )
+    }
+  }
 
   // Если профиль уже есть и это ученик — повышаем сразу + ставим город/куратора.
   const profUpdate: Record<string, unknown> = { role: assignRole }

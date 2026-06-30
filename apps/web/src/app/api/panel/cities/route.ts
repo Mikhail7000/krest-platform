@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
+import { isAdminRole } from '@/lib/admin/session'
 import { createServiceSupabase } from '@/lib/supabase-service'
 
 export const dynamic = 'force-dynamic'
@@ -43,7 +44,9 @@ function normStatus(raw: string | null): CityStatus {
 export async function GET(req: NextRequest) {
   const session = getPanelSessionFromReq(req)
   if (!session) return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
-  if (session.role === 'curator') {
+  // Города — только admin/super_admin (как страница /panel/cities и nav). Лидеру города
+  // и куратору агрегаты по всем городам платформы не отдаём.
+  if (!isAdminRole(session.role)) {
     return NextResponse.json({ ok: false, error: 'Недостаточно прав' }, { status: 403 })
   }
 

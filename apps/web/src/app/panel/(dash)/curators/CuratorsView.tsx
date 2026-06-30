@@ -7,21 +7,35 @@ import { RoleModal } from './RoleModal'
 
 const ROLE_BADGE: Record<string, { cls: string; label: string }> = {
   curator: { cls: 'panel-badge panel-badge--acc', label: 'Куратор' },
+  city_leader: { cls: 'panel-badge panel-badge--acc', label: 'Лидер города' },
   admin: { cls: 'panel-badge panel-badge--warn', label: 'Админ' },
 }
 
+/** Кого может «открыть» (view-as) текущий зритель по роли цели. */
+function rowCanViewAs(role: string, isOwner: boolean): boolean {
+  if (isOwner) return role === 'curator' || role === 'city_leader' || role === 'admin'
+  // обычный admin (не владелец) — только scoped-роли, без админов
+  return role === 'curator' || role === 'city_leader'
+}
+
 /**
- * Таблица кураторов с разворотом списка учеников + добавление куратора.
- * У каждого куратора — кнопка «Привязать учеников» (массовая привязка по никам).
+ * Таблица кураторов с разворотом списка учеников.
+ *  - canManage (admin/super_admin): смена роли, привязка учеников.
+ *  - canViewAs: кнопка «Войти как» (view-as) для подходящих по роли целей.
+ * Добавление куратора доступно и лидеру города (роут сам относит его в город лидера).
  * Имена/города выводятся как React-текст (auto-escape, без innerHTML).
  */
 export function CuratorsView({
   curators,
+  canManage,
   isSuperAdmin,
+  canViewAs = false,
   isOwner = false,
 }: {
   curators: CuratorRow[]
+  canManage: boolean
   isSuperAdmin: boolean
+  canViewAs?: boolean
   isOwner?: boolean
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
@@ -54,8 +68,9 @@ export function CuratorsView({
                     curator={cu}
                     isOpen={isOpen}
                     hasStudents={hasStudents}
-                    canChangeRole={!cu.isProtected && (isSuperAdmin || cu.role !== 'admin')}
-                    canViewAs={isOwner && !cu.isProtected}
+                    canManage={canManage}
+                    canChangeRole={canManage && !cu.isProtected && (isSuperAdmin || cu.role !== 'admin')}
+                    canViewAs={canViewAs && !cu.isProtected && rowCanViewAs(cu.role, isOwner)}
                     onToggle={() => setOpenId(isOpen ? null : cu.id)}
                     onAttach={() => setAttachTarget(cu)}
                     onRole={() => setRoleTarget(cu)}
@@ -156,6 +171,7 @@ function CuratorRowGroup({
   curator,
   isOpen,
   hasStudents,
+  canManage,
   canChangeRole,
   canViewAs,
   onToggle,
@@ -165,6 +181,7 @@ function CuratorRowGroup({
   curator: CuratorRow
   isOpen: boolean
   hasStudents: boolean
+  canManage: boolean
   canChangeRole: boolean
   canViewAs: boolean
   onToggle: () => void
@@ -254,17 +271,19 @@ function CuratorRowGroup({
                 {viewBusy ? '…' : '👁 Войти как'}
               </button>
             ) : null}
-            <button
-              type="button"
-              className="panel-btn"
-              onClick={(e) => {
-                e.stopPropagation()
-                onAttach()
-              }}
-            >
-              Привязать учеников
-            </button>
-            {curator.isProtected ? (
+            {canManage ? (
+              <button
+                type="button"
+                className="panel-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onAttach()
+                }}
+              >
+                Привязать учеников
+              </button>
+            ) : null}
+            {!canManage ? null : curator.isProtected ? (
               <span className="panel-badge" style={{ alignSelf: 'center' }}>🔒 Защищён</span>
             ) : canChangeRole ? (
               <button

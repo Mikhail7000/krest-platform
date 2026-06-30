@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { getPanelSession } from '@/lib/admin/guard'
@@ -8,35 +9,51 @@ import type { CuratorRow, CuratorStudent } from './types'
 export const dynamic = 'force-dynamic'
 
 /**
- * /panel/curators — кураторы и администраторы платформы: роль, город, страна,
- * число учеников, разворот со списком учеников + смена роли (curator↔admin↔student).
+ * /panel/curators — кураторы платформы: роль, город, страна, число учеников, разворот
+ * со списком учеников + (для админов) смена роли / привязка / view-as / перепривязка.
+ *  - admin/super_admin — все кураторы, лидеры городов и админы.
+ *  - city_leader — только кураторы его города + их ученики (read-only обзор + добавление).
+ *  - curator — нет доступа (404).
  * Данные через service-role (сервер админа, обход RLS).
- * Кураторы не имеют доступа к этой странице → 404.
  */
-async function loadCurators(): Promise<{
+async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null }): Promise<{
   curators: CuratorRow[]
   totalCurators: number
+  totalLeaders: number
+  totalAdmins: number
   totalStudents: number
 }> {
   const supabase = createServiceSupabase()
+  const empty = { curators: [], totalCurators: 0, totalLeaders: 0, totalAdmins: 0, totalStudents: 0 }
 
-  const [curatorsRes, studentsRes, citiesRes, countriesRes] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id, full_name, contact_info, city_id, role, is_protected')
-      .in('role', ['curator', 'admin']),
-    supabase
-      .from('profiles')
-      .select('id, full_name, contact_info, curator_id')
-      .eq('role', 'student')
-      .not('curator_id', 'is', null),
+  // Лидер города видит только кураторов своего города; админ — кураторов, лидеров и админов.
+  const wantedRoles = opts.leaderScoped ? ['curator'] : ['curator', 'admin', 'city_leader']
+  let curatorsQuery = supabase
+    .from('profiles')
+    .select('id, full_name, contact_info, city_id, role, is_protected')
+    .in('role', wantedRoles)
+  if (opts.leaderScoped) {
+    if (opts.cityId == null) return empty
+    curatorsQuery = curatorsQuery.eq('city_id', opts.cityId)
+  }
+
+  const [curatorsRes, citiesRes, countriesRes] = await Promise.all([
+    curatorsQuery,
     supabase.from('cities').select('id, name_ru, country_id'),
     supabase.from('countries').select('id, name_ru'),
   ])
+  if (curatorsRes.error || citiesRes.error || countriesRes.error) return empty
 
-  if (curatorsRes.error || studentsRes.error || citiesRes.error || countriesRes.error) {
-    return { curators: [], totalCurators: 0, totalStudents: 0 }
-  }
+  const curatorIds = (curatorsRes.data ?? []).map((c) => c.id)
+  // Ученики, привязанные к этим кураторам (для leader-scope — только город).
+  const { data: studentsData } =
+    curatorIds.length > 0
+      ? await supabase
+          .from('profiles')
+          .select('id, full_name, contact_info, curator_id')
+          .eq('role', 'student')
+          .in('curator_id', curatorIds)
+      : { data: [] as { id: string; full_name: string | null; contact_info: string | null; curator_id: string | null }[] }
 
   const countryById = new Map<number, string>()
   for (const c of countriesRes.data ?? []) countryById.set(c.id, c.name_ru)
@@ -51,7 +68,7 @@ async function loadCurators(): Promise<{
 
   const studentsByCurator = new Map<string, CuratorStudent[]>()
   let totalStudents = 0
-  for (const s of studentsRes.data ?? []) {
+  for (const s of studentsData ?? []) {
     if (!s.curator_id) continue
     const list = studentsByCurator.get(s.curator_id) ?? []
     list.push({ id: s.id, name: s.full_name, nick: s.contact_info })
@@ -75,8 +92,8 @@ async function loadCurators(): Promise<{
     }
   })
 
-  // Кураторы выше админов (страница про кураторов), внутри — по числу учеников.
-  const order = (r: string) => (r === 'curator' ? 0 : 1)
+  // Порядок: кураторы → лидеры городов → админы; внутри — по числу учеников.
+  const order = (r: string) => (r === 'curator' ? 0 : r === 'city_leader' ? 1 : 2)
   curators.sort(
     (a, b) =>
       order(a.role) - order(b.role) ||
@@ -84,47 +101,95 @@ async function loadCurators(): Promise<{
       (a.name ?? '').localeCompare(b.name ?? ''),
   )
 
-  const totalCurators = curators.filter((c) => c.role === 'curator').length
-  return { curators, totalCurators, totalStudents }
+  return {
+    curators,
+    totalCurators: curators.filter((c) => c.role === 'curator').length,
+    totalLeaders: curators.filter((c) => c.role === 'city_leader').length,
+    totalAdmins: curators.filter((c) => c.role === 'admin').length,
+    totalStudents,
+  }
 }
 
 export default async function CuratorsPage() {
-  const [{ curators, totalCurators, totalStudents }, session] = await Promise.all([
-    loadCurators(),
-    getPanelSession(),
-  ])
-  // Фаза 2: страница кураторов — только admin/super_admin. Лидеру города отдельный
-  // экран кураторов его города добавим в Фазе 3 (вместе с добавлением кураторов).
-  if (session?.role !== 'admin' && session?.role !== 'super_admin') notFound()
+  const session = await getPanelSession()
+  const role = session?.role
+  // Доступ: admin/super_admin (все) и city_leader (свой город). Куратор — 404.
+  if (role !== 'admin' && role !== 'super_admin' && role !== 'city_leader') notFound()
 
-  const totalAdmins = curators.filter((c) => c.role === 'admin').length
-  const isSuperAdmin = session?.role === 'super_admin'
-  // View-as доступен ТОЛЬКО владельцу платформы (is_protected = Михаил).
-  const isOwner = session ? await resolveIsOwner(createServiceSupabase(), session.uid) : false
+  const isLeader = role === 'city_leader'
+  const canManage = role === 'admin' || role === 'super_admin'
+  const isSuperAdmin = role === 'super_admin'
+
+  // View-as доступен только реальному админу/владельцу и только когда он НЕ внутри
+  // режима view-as (session.via пуст). Внутри view-as — никакого вложенного входа.
+  const impersonating = !!session?.via
+  const realCanViewAs = !impersonating && canManage
+  const isOwner =
+    realCanViewAs && session ? await resolveIsOwner(createServiceSupabase(), session.uid) : false
+
+  const { curators, totalCurators, totalLeaders, totalAdmins, totalStudents } = await loadCurators({
+    leaderScoped: isLeader,
+    cityId: session?.city ?? null,
+  })
 
   return (
     <div>
-      <h1 className="panel-page__title">Кураторы</h1>
-      <p className="panel-page__subtitle">
-        Кураторы и администраторы платформы, их города и ученики. Здесь же — смена роли.
-      </p>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 12,
+          flexWrap: 'wrap',
+        }}
+      >
+        <div>
+          <h1 className="panel-page__title">Кураторы</h1>
+          <p className="panel-page__subtitle">
+            {isLeader
+              ? 'Кураторы вашего города и их ученики.'
+              : 'Кураторы, лидеры городов и администраторы — города, ученики, смена роли и доступ.'}
+          </p>
+        </div>
+        {canManage ? (
+          <Link href="/panel/curators/reassign" className="panel-btn">
+            ⇄ Перепривязка по городам
+          </Link>
+        ) : null}
+      </div>
 
       <div className="panel-grid">
         <div className="panel-stat">
           <span className="panel-stat__label">Всего кураторов</span>
           <span className="panel-stat__value">{totalCurators}</span>
         </div>
+        {!isLeader ? (
+          <div className="panel-stat">
+            <span className="panel-stat__label">Лидеров городов</span>
+            <span className="panel-stat__value">{totalLeaders}</span>
+          </div>
+        ) : null}
+        {!isLeader ? (
+          <div className="panel-stat">
+            <span className="panel-stat__label">Администраторов</span>
+            <span className="panel-stat__value">{totalAdmins}</span>
+          </div>
+        ) : null}
         <div className="panel-stat">
-          <span className="panel-stat__label">Администраторов</span>
-          <span className="panel-stat__value">{totalAdmins}</span>
-        </div>
-        <div className="panel-stat">
-          <span className="panel-stat__label">Привязанных учеников</span>
+          <span className="panel-stat__label">
+            {isLeader ? 'Учеников у кураторов' : 'Привязанных учеников'}
+          </span>
           <span className="panel-stat__value">{totalStudents}</span>
         </div>
       </div>
 
-      <CuratorsView curators={curators} isSuperAdmin={isSuperAdmin} isOwner={isOwner} />
+      <CuratorsView
+        curators={curators}
+        canManage={canManage}
+        isSuperAdmin={isSuperAdmin}
+        canViewAs={realCanViewAs}
+        isOwner={isOwner}
+      />
     </div>
   )
 }
