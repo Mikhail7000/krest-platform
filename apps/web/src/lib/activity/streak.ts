@@ -1,4 +1,4 @@
-import { addDaysStr, baliToday } from '@/lib/time/bali'
+import { addDaysStr } from '@/lib/time/bali'
 
 // Состояние дня для кубиков прогресса:
 //  green — заходил и что-то сдавал (продуктивный день)
@@ -25,15 +25,18 @@ export interface ActivitySummary {
  * Считает прогресс активности.
  * openedDates — дни заходов; workedDates — дни, когда что-то сдавал (опционально).
  * streak — дней подряд; days — последние windowDays дней (последний = сегодня).
+ * today — ЛОКАЛЬНАЯ дата ученика (пояс города) 'YYYY-MM-DD'. Обязателен: per-student
+ * «сегодня» нельзя брать из UTC/Бали, иначе у учеников из других поясов стрик/календарь
+ * смещаются на день. Получать через studentLocalToday(supabase, userId).
  */
 export function computeActivity(
   openedDates: string[],
-  workedDates: string[] = [],
-  windowDays = 14,
+  workedDates: string[],
+  windowDays: number,
+  today: string,
 ): ActivitySummary {
   const openedSet = new Set(openedDates)
   const workedSet = new Set(workedDates)
-  const today = baliToday()
 
   const days: ActivityDay[] = []
   for (let i = windowDays - 1; i >= 0; i--) {

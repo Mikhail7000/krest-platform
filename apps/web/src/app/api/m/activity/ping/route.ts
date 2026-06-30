@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
-import { baliToday } from '@/lib/time/bali'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +21,9 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceSupabase()
-  const today = baliToday()
+  // Дата захода — по локальному поясу города ученика (не UTC/Бали), иначе у учеников
+  // из других поясов день записи разойдётся с чтением стрика → ложные «пропуски».
+  const today = await studentLocalToday(supabase, auth.userId)
   const nowIso = new Date().toISOString()
 
   // upsert: помечаем день открытым; reminded_* не трогаем (нет в payload)

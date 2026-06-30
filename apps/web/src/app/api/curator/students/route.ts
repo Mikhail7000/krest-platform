@@ -3,6 +3,7 @@ import { requireCuratorViaInitData } from '@/lib/curator-auth'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { computeActivity } from '@/lib/activity/streak'
 import { addDaysStr, baliToday } from '@/lib/time/bali'
+import { localTodayStr, DEFAULT_TZ } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let profilesQuery = (supabase as any)
     .from('profiles')
-    .select('id, full_name, avatar_url')
+    .select('id, full_name, avatar_url, cities(timezone)')
     .eq('role', 'student')
 
   if (role === 'curator') {
@@ -133,7 +134,11 @@ export async function GET(request: NextRequest) {
     // Apply status filter
     if (status && studentStatus !== status) return []
 
-    const act = computeActivity(datesByUser[student.id] ?? [], [], 7)
+    // «Сегодня» — по поясу города КОНКРЕТНОГО ученика (stream из join cities(timezone)).
+    const sc = student.cities
+    const stz =
+      (Array.isArray(sc) ? sc[0]?.timezone : sc?.timezone) || DEFAULT_TZ
+    const act = computeActivity(datesByUser[student.id] ?? [], [], 7, localTodayStr(stz))
     // дней молчания = с последнего захода (по активности, а не по сабмишенам)
     const lastAt = act.lastActive
     const daysSilent = lastAt

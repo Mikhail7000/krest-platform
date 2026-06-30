@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,10 +29,6 @@ interface Params {
 
 function err(message: string, code: string, status: number) {
   return NextResponse.json({ error: { code, message } }, { status })
-}
-
-function todayUTC(): string {
-  return new Date().toISOString().slice(0, 10)
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -60,7 +57,8 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
   const currentOrder = current.order_num as number
 
-  const today = todayUTC()
+  // «Сегодня» — по поясу города ученика (как закрытие дня), не UTC.
+  const today = await studentLocalToday(supabase, auth.userId)
 
   // 2. Параллельно: блоки + отметка тренажёра за сегодня
   const [

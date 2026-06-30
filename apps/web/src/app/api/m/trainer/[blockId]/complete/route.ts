@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,11 +43,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
 
-  // Дневная отметка: одна на user×block×дату (UTC, как daily_cross/daily_prayer).
-  // В ускоренном тест-режиме (profiles.test_daily_accel) штампуем ВИРТУАЛЬНОЙ датой
-  // (якорь 2000-01-01 + кол-во уже существующих отметок тренажёра для user+block),
-  // чтобы тестировщик закрыл много «дней» за один календарный день.
-  let trainedDate = new Date().toISOString().slice(0, 10)
+  // Дневная отметка: одна на user×block×дату (по поясу города ученика, как
+  // daily_cross/daily_prayer). В ускоренном тест-режиме (profiles.test_daily_accel)
+  // штампуем ВИРТУАЛЬНОЙ датой (якорь 2000-01-01 + кол-во уже существующих отметок
+  // тренажёра для user+block), чтобы тестировщик закрыл много «дней» за один день.
+  let trainedDate = await studentLocalToday(supabase, auth.userId)
   const { data: accelProfile } = await supabase
     .from('profiles')
     .select('test_daily_accel')

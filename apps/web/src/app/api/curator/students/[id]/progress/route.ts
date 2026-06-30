@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireCuratorViaInitData } from '@/lib/curator-auth'
 import { computeActivity } from '@/lib/activity/streak'
 import { getWorkedDates } from '@/lib/activity/worked'
-import { addDaysStr, baliToday } from '@/lib/time/bali'
+import { addDaysStr } from '@/lib/time/bali'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,8 +69,9 @@ export async function GET(
     passed: !!bp.block_passed_at,
   }))
 
-  // Активность: заходы + дни реальных действий
-  const since = addDaysStr(baliToday(), -30)
+  // Активность: заходы + дни реальных действий. «Сегодня» — по поясу города ученика.
+  const studentToday = await studentLocalToday(supabase, studentId)
+  const since = addDaysStr(studentToday, -30)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: actRows } = await (supabase as any)
     .from('student_daily_activity')
@@ -79,7 +81,7 @@ export async function GET(
     .gte('activity_date', since)
   const opened = ((actRows ?? []) as { activity_date: string }[]).map((r) => r.activity_date)
   const worked = await getWorkedDates(supabase, studentId, since)
-  const activity = computeActivity(opened, worked, 14)
+  const activity = computeActivity(opened, worked, 14, studentToday)
 
   // Эпоха пятницы — впечатления по блокам
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

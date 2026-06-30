@@ -11,7 +11,8 @@ import { resolveUserId } from '@/lib/telegram/resolve-user'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { computeActivity } from '@/lib/activity/streak'
 import { getWorkedDates } from '@/lib/activity/worked'
-import { addDaysStr, baliToday } from '@/lib/time/bali'
+import { addDaysStr } from '@/lib/time/bali'
+import { studentLocalToday } from '@/lib/time/local-day'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceSupabase()
-  const today = baliToday()
+  const today = await studentLocalToday(supabase, auth.userId)
   const since = addDaysStr(today, -60)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
   // дни, когда что-то делал — для «зелёных» кубиков (последняя неделя)
   const worked = await getWorkedDates(supabase, auth.userId, addDaysStr(today, -8))
 
-  const activity = computeActivity(opened, worked, 7)
+  const activity = computeActivity(opened, worked, 7, today)
 
   return NextResponse.json({ ok: true, ...activity })
 }

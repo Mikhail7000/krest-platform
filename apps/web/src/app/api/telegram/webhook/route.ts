@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { computeActivity } from '@/lib/activity/streak'
+import { studentLocalToday } from '@/lib/time/local-day'
 import { createTelegramProfile } from '@/lib/telegram/ensure-profile'
 import { getAdminChatIds } from '@/lib/telegram/admin-recipients'
 import { signLoginToken, type AdminRole } from '@/lib/admin/session'
@@ -1667,10 +1668,12 @@ export async function POST(request: NextRequest) {
     if (passedAllRes.error) console.error('[webhook/progress] passed_blocks_all error', passedAllRes.error)
     const passedRow = (passedAllRes.data ?? []).find((r) => r.user_id === profile.id)
     const passed = passedRow?.blocks_passed ?? 0
+    const localToday = await studentLocalToday(supabase, profile.id)
     const streak = computeActivity(
       ((act ?? []) as { activity_date: string }[]).map((r) => r.activity_date),
       [],
       7,
+      localToday,
     ).streak
     await sendTelegramMessage(
       chatId,
