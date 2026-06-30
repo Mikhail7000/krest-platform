@@ -3,14 +3,15 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Role = 'curator' | 'city_leader'
+type Kind = 'curator' | 'city_leader'
 
 /**
  * Добавление персонала по нику в whitelist прямо со страницы «Кураторы».
- *  - admin/super_admin (canManage): роль на выбор — куратор или лидер города;
- *    город (для лидера обязателен, для куратора — необязателен).
- *  - city_leader (canManage=false): только куратор (роут отнесёт его в город лидера).
- * После /start в боте человек войдёт уже с нужной ролью и городом.
+ * Два РАЗДЕЛЬНЫХ входа, сразу видимых:
+ *  - «Добавить куратора»      — город необязателен (для admin/super_admin);
+ *  - «Добавить лидера города» — город обязателен (только admin/super_admin).
+ * Лидер города (canManage=false) видит лишь добавление куратора — роут сам
+ * относит куратора в город лидера. После /start в боте человек войдёт с ролью.
  */
 export function AddStaffBar({
   canManage,
@@ -19,15 +20,36 @@ export function AddStaffBar({
   canManage: boolean
   cities: { id: number; name: string }[]
 }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+      <AddForm kind="curator" cities={cities} showCity={canManage} cityRequired={false} />
+      {canManage ? (
+        <AddForm kind="city_leader" cities={cities} showCity cityRequired />
+      ) : null}
+    </div>
+  )
+}
+
+function AddForm({
+  kind,
+  cities,
+  showCity,
+  cityRequired,
+}: {
+  kind: Kind
+  cities: { id: number; name: string }[]
+  showCity: boolean
+  cityRequired: boolean
+}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [nick, setNick] = useState('')
-  const [role, setRole] = useState<Role>('curator')
   const [cityId, setCityId] = useState('')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const isLeader = canManage && role === 'city_leader'
+  const roleWord = kind === 'city_leader' ? 'лидера города' : 'куратора'
+  const btnLabel = kind === 'city_leader' ? '👑 Добавить лидера города' : '🧭 Добавить куратора'
 
   const submit = async () => {
     const v = nick.trim().replace(/^@+/, '')
@@ -35,7 +57,7 @@ export function AddStaffBar({
       setNotice('Ник: 4–32 символа, латиница, цифры, _')
       return
     }
-    if (isLeader && !cityId) {
+    if (cityRequired && !cityId) {
       setNotice('Для лидера города выберите город')
       return
     }
@@ -47,14 +69,13 @@ export function AddStaffBar({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: v,
-          role: canManage ? role : 'curator',
-          cityId: canManage && cityId ? Number(cityId) : undefined,
+          role: kind,
+          cityId: showCity && cityId ? Number(cityId) : undefined,
         }),
       })
       const b = await res.json().catch(() => ({}))
       if (res.ok && b.ok) {
-        const word = canManage && role === 'city_leader' ? 'лидер города' : 'куратор'
-        setNotice(`✓ @${v} добавлен как ${word}`)
+        setNotice(`✓ @${v} добавлен как ${roleWord}`)
         setNick('')
         setCityId('')
         setOpen(false)
@@ -70,26 +91,12 @@ export function AddStaffBar({
   }
 
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button type="button" className="panel-btn panel-btn--primary" onClick={() => setOpen((o) => !o)}>
-          {canManage ? '+ Добавить куратора / лидера' : '+ Добавить куратора'}
-        </button>
-        {notice ? <span className="panel-muted">{notice}</span> : null}
-      </div>
+    <div style={{ minWidth: 220 }}>
+      <button type="button" className="panel-btn panel-btn--primary" onClick={() => setOpen((o) => !o)}>
+        + {btnLabel}
+      </button>
       {open ? (
-        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', maxWidth: 640, alignItems: 'center' }}>
-          {canManage ? (
-            <select
-              className="panel-input"
-              value={role}
-              onChange={(e) => setRole(e.target.value as Role)}
-              style={{ maxWidth: 170 }}
-            >
-              <option value="curator">Куратор</option>
-              <option value="city_leader">Лидер города</option>
-            </select>
-          ) : null}
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', maxWidth: 560, alignItems: 'center' }}>
           <input
             className="panel-input"
             placeholder="@ник в Telegram"
@@ -100,14 +107,14 @@ export function AddStaffBar({
             }}
             style={{ flex: 1, minWidth: 180 }}
           />
-          {canManage ? (
+          {showCity ? (
             <select
               className="panel-input"
               value={cityId}
               onChange={(e) => setCityId(e.target.value)}
               style={{ maxWidth: 200 }}
             >
-              <option value="">{isLeader ? 'Город (обязательно)' : 'Город (необязательно)'}</option>
+              <option value="">{cityRequired ? 'Город (обязательно)' : 'Город (необязательно)'}</option>
               {cities.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -118,6 +125,11 @@ export function AddStaffBar({
           <button type="button" className="panel-btn panel-btn--primary" onClick={submit} disabled={busy}>
             {busy ? '…' : 'Добавить'}
           </button>
+        </div>
+      ) : null}
+      {notice ? (
+        <div className="panel-muted" style={{ marginTop: 6 }}>
+          {notice}
         </div>
       ) : null}
     </div>

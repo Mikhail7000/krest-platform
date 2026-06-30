@@ -249,6 +249,72 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
     return
   }
 
+  // ── /addleader: выбран город → запись лидера города в whitelist ──────────
+  // payload = "<nick>:<cityId>" (без '@'); ник нормализован parseHandles.
+  if (action === 'addleader') {
+    const sep = payload.lastIndexOf(':')
+    const nick = sep >= 0 ? payload.slice(0, sep) : ''
+    const cityNum = Number(payload.slice(sep + 1))
+    const cityId = Number.isInteger(cityNum) ? cityNum : null
+    if (!nick || cityId == null) {
+      await answerCallbackQuery(cq.id, 'Неверные данные')
+      return
+    }
+    const adminProf = await getAdminProfile(service, cq.from.id)
+    if (!adminProf) {
+      await answerCallbackQuery(cq.id, 'Команда только для администраторов')
+      return
+    }
+    const handle = `@${nick}`
+    const wl = { assign_role: 'city_leader', assigned_city_id: cityId }
+    const { data: existing } = await service
+      .from('testing_whitelist')
+      .select('id')
+      .ilike('telegram_username', handle)
+      .maybeSingle()
+    if (existing) {
+      await service
+        .from('testing_whitelist')
+        .update({ claimed_chat_id: null, ...wl })
+        .eq('id', (existing as { id: number }).id)
+    } else {
+      await service
+        .from('testing_whitelist')
+        .insert({ telegram_username: handle, added_by: adminProf.id, ...wl })
+    }
+    // Если профиль-ученик с этим ником уже есть — повышаем сразу + ставим город.
+    await service
+      .from('profiles')
+      .update({ role: 'city_leader', city_id: cityId })
+      .ilike('contact_info', handle)
+      .eq('role', 'student')
+
+    const { data: cityRow } = await service
+      .from('cities')
+      .select('name_ru')
+      .eq('id', cityId)
+      .maybeSingle()
+    const cityName = escapeHtmlTg((cityRow as { name_ru: string } | null)?.name_ru ?? `#${cityId}`)
+
+    await answerCallbackQuery(cq.id, 'Лидер назначен')
+    if (cq.message) {
+      await editMessageText(
+        cq.message.chat.id,
+        cq.message.message_id,
+        `👑 ${escapeHtmlTg(handle)} — лидер города <b>${cityName}</b>.\nВойдёт в панель после /start в боте.`,
+      )
+    }
+    const adminChatIds = await getAdminChatIds(service)
+    await Promise.all(
+      adminChatIds
+        .filter((cid) => cid !== cq.from.id)
+        .map((cid) =>
+          sendTelegramMessage(cid, `👑 Назначен лидер города ${escapeHtmlTg(handle)} — ${cityName}`),
+        ),
+    )
+    return
+  }
+
   // ── approve / reject access requests ────────────────────────────────────
   // approve_leader payload = "requestId:cityId"; остальные actions = "requestId".
   let leaderCityId: number | null = null
@@ -1202,6 +1268,56 @@ export async function POST(request: NextRequest) {
     // Ники есть — обрабатываем сразу, сбрасываем возможный pending
     await (supabase as any).from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
     await processAddNicks(supabase, chatId, adminProfile, afterCmd, 'curator')
+    return NextResponse.json({ ok: true })
+  }
+
+  // /addleader @nick — назначить лидера города (assign_role=city_leader + город).
+  // Лидеру город обязателен → показываем города кнопками, запись на выборе города.
+  // ВАЖНО: проверяется ДО /add (иначе /add перехватит «/addleader»). Один ник за раз.
+  if (text.startsWith('/addleader') || text.startsWith('/add_leader')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServiceSupabase() as any
+    const { data: adminProfile } = (await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('telegram_chat_id', chatId)
+      .maybeSingle()) as { data: { id: string; role: string } | null }
+    if (!adminProfile || !['admin', 'super_admin'].includes(adminProfile.role)) {
+      await sendTelegramMessage(chatId, 'Команда доступна только администраторам.')
+      return NextResponse.json({ ok: true })
+    }
+
+    const afterCmd = text.replace(/^\/\S+\s*/, '')
+    const handles = parseHandles(afterCmd)
+    if (handles.length === 0) {
+      await sendTelegramMessage(
+        chatId,
+        'Использование: <code>/addleader @ник</code> — затем выбери город кнопками.',
+      )
+      return NextResponse.json({ ok: true })
+    }
+
+    // Лидер привязан к городу → один ник за раз, берём первый.
+    const handle = handles[0] // уже '@нормализованный' (латиница/цифры/_, ≤32)
+    const nick = handle.slice(1)
+    const { data: cityRows } = await supabase.from('cities').select('id, name_ru').order('name_ru')
+    const cities = (cityRows ?? []) as { id: number; name_ru: string }[]
+    if (cities.length === 0) {
+      await sendTelegramMessage(chatId, 'Городов нет — добавь город в /panel.')
+      return NextResponse.json({ ok: true })
+    }
+    const rows: InlineKeyboardButton[][] = []
+    for (let i = 0; i < cities.length; i += 2) {
+      rows.push(
+        cities.slice(i, i + 2).map((c) => ({
+          text: c.name_ru,
+          callback_data: `addleader:${nick}:${c.id}`,
+        })),
+      )
+    }
+    await sendTelegramMessage(chatId, `👑 Лидер города ${escapeHtmlTg(handle)} — выбери город:`, {
+      inlineKeyboard: rows,
+    })
     return NextResponse.json({ ok: true })
   }
 
