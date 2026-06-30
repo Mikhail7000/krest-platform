@@ -11,7 +11,7 @@ export function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-type InlineKeyboardButton =
+export type InlineKeyboardButton =
   | { text: string; callback_data: string }
   | { text: string; web_app: { url: string } }
   | { text: string; url: string }
@@ -108,5 +108,31 @@ export async function editMessageText(
     }
   } catch (err) {
     console.error('editMessageText error:', err)
+  }
+}
+
+/** Заменить только inline-кнопки уже отправленного сообщения (текст не трогаем). */
+export async function editMessageReplyMarkup(
+  chatId: number,
+  messageId: number,
+  inlineKeyboard: InlineKeyboardButton[][],
+): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  if (!token) return
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/editMessageReplyMarkup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: { inline_keyboard: inlineKeyboard },
+      }),
+    })
+    if (!res.ok) {
+      console.error('editMessageReplyMarkup failed:', res.status, await res.text())
+    }
+  } catch (err) {
+    console.error('editMessageReplyMarkup error:', err)
   }
 }

@@ -9,6 +9,8 @@ import {
   sendTelegramMessage,
   answerCallbackQuery,
   editMessageText,
+  editMessageReplyMarkup,
+  type InlineKeyboardButton,
 } from '@/lib/telegram/send'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://krest-platform-web.vercel.app'
@@ -91,12 +93,13 @@ async function getAdminProfile(
 // ─── Обработчик callback_query ────────────────────────────────────────────
 
 async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
-  const adminChatIds = (process.env.ADMIN_TELEGRAM_CHAT_IDS || '255214568')
-    .split(',')
-    .map((s) => parseInt(s.trim(), 10))
-    .filter((n) => !isNaN(n))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const service = createServiceSupabase() as any
 
-  // Проверяем права
+  // Права на inline-кнопки = админы платформы (super_admin + admin) из БД, с
+  // env-fallback (ADMIN_TELEGRAM_CHAT_IDS). Раньше пускали ТОЛЬКО env-владельца —
+  // из-за чего Эля (admin) видела кнопки заявок, но нажать не могла.
+  const adminChatIds = await getAdminChatIds(service)
   if (!adminChatIds.includes(cq.from.id)) {
     await answerCallbackQuery(cq.id, 'Недостаточно прав')
     return
@@ -111,9 +114,6 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
 
   const action = data.slice(0, colonIdx)
   const payload = data.slice(colonIdx + 1)
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const service = createServiceSupabase() as any
 
   // ── del_cancel ──────────────────────────────────────────────────────────
   if (action === 'del_cancel') {
@@ -203,8 +203,62 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
     return
   }
 
+  // ── Лидер города: шаг 1 — показать города кнопками ──────────────────────
+  if (action === 'leader_pick') {
+    const { data: r } = await service
+      .from('access_requests')
+      .select('id, status')
+      .eq('id', payload)
+      .maybeSingle()
+    if (!r || r.status !== 'pending') {
+      await answerCallbackQuery(cq.id, 'Заявка уже обработана')
+      return
+    }
+    const { data: cityRows } = await service.from('cities').select('id, name_ru').order('name_ru')
+    const cities = (cityRows ?? []) as { id: number; name_ru: string }[]
+    if (cities.length === 0) {
+      await answerCallbackQuery(cq.id, 'Городов нет — добавь город в /panel')
+      return
+    }
+    const rows: InlineKeyboardButton[][] = []
+    for (let i = 0; i < cities.length; i += 2) {
+      rows.push(
+        cities.slice(i, i + 2).map((c) => ({
+          text: c.name_ru,
+          callback_data: `approve_leader:${payload}:${c.id}`,
+        })),
+      )
+    }
+    rows.push([{ text: '← Назад', callback_data: `leader_back:${payload}` }])
+    await answerCallbackQuery(cq.id, 'Выбери город лидера')
+    if (cq.message) await editMessageReplyMarkup(cq.message.chat.id, cq.message.message_id, rows)
+    return
+  }
+
+  // ── Лидер города: назад к исходным кнопкам ──────────────────────────────
+  if (action === 'leader_back') {
+    await answerCallbackQuery(cq.id)
+    if (cq.message) {
+      await editMessageReplyMarkup(cq.message.chat.id, cq.message.message_id, [
+        [{ text: '✅ Впустить учеником', callback_data: `approve_student:${payload}` }],
+        [{ text: '👤 Сделать куратором', callback_data: `approve_curator:${payload}` }],
+        [{ text: '👑 Лидером города', callback_data: `leader_pick:${payload}` }],
+        [{ text: '✖️ Отклонить', callback_data: `reject:${payload}` }],
+      ])
+    }
+    return
+  }
+
   // ── approve / reject access requests ────────────────────────────────────
-  const requestId = payload
+  // approve_leader payload = "requestId:cityId"; остальные actions = "requestId".
+  let leaderCityId: number | null = null
+  let requestId = payload
+  if (action === 'approve_leader') {
+    const sep = payload.lastIndexOf(':')
+    requestId = sep >= 0 ? payload.slice(0, sep) : payload
+    const parsed = Number(payload.slice(sep + 1))
+    leaderCityId = Number.isInteger(parsed) ? parsed : null
+  }
 
   const { data: req, error: fetchErr } = await service
     .from('access_requests')
@@ -226,9 +280,16 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
     [req.first_name, req.last_name].filter(Boolean).join(' ') ||
     (req.username ? `@${req.username}` : `id ${req.telegram_chat_id}`)
 
-  if (action === 'approve_student' || action === 'approve_curator') {
-    const role: 'student' | 'curator' = action === 'approve_student' ? 'student' : 'curator'
-    const roleLabel = role === 'student' ? 'ученик' : 'куратор'
+  if (action === 'approve_student' || action === 'approve_curator' || action === 'approve_leader') {
+    const role: 'student' | 'curator' | 'city_leader' =
+      action === 'approve_student' ? 'student' : action === 'approve_curator' ? 'curator' : 'city_leader'
+    const roleLabel = role === 'student' ? 'ученик' : role === 'curator' ? 'куратор' : 'лидер города'
+    // Лидеру город обязателен (выбран на шаге leader_pick).
+    const cityId = role === 'city_leader' ? leaderCityId : null
+    if (role === 'city_leader' && cityId == null) {
+      await answerCallbackQuery(cq.id, 'Город не выбран')
+      return
+    }
 
     // Создаём профиль
     const result = await createTelegramProfile({
@@ -237,6 +298,7 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
       firstName: req.first_name,
       lastName: req.last_name,
       role,
+      cityId,
     })
 
     if (!result.ok) {
@@ -250,6 +312,7 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
     const { data: flipped } = await service.from('access_requests').update({
       status: 'approved',
       approved_role: role,
+      approved_city_id: cityId,
       decided_by: cq.from.id,
       decided_at: new Date().toISOString(),
     }).eq('id', requestId).eq('status', 'pending').select('id')

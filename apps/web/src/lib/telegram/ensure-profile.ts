@@ -154,6 +154,9 @@ async function notifyAdminsAboutRequest(
     { text: '✅ Впустить учеником', callback_data: `approve_student:${request.id}` },
   ], [
     { text: '👤 Сделать куратором', callback_data: `approve_curator:${request.id}` },
+  ], [
+    { text: '👑 Лидером города',    callback_data: `leader_pick:${request.id}` },
+  ], [
     { text: '✖️ Отклонить',         callback_data: `reject:${request.id}` },
   ]]
 
