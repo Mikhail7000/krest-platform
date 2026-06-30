@@ -1189,6 +1189,8 @@ async function processAddNicks(
   adminProfile: { id: string; role: string; full_name: string | null; contact_info: string | null },
   rawText: string,
   role: 'student' | 'curator',
+  // Город для привязки (лидер города добавляет кураторов сразу в свой город). null — не трогаем.
+  assignedCityId: number | null = null,
 ): Promise<number> {
   const handles = parseHandles(rawText)
   if (handles.length === 0) return 0
@@ -1201,27 +1203,33 @@ async function processAddNicks(
       .ilike('telegram_username', handle)
       .maybeSingle()
 
+    const wl: Record<string, unknown> = { assign_role: role === 'curator' ? 'curator' : null }
+    if (assignedCityId != null) wl.assigned_city_id = assignedCityId
+
     if (existing) {
       await supabase
         .from('testing_whitelist')
-        .update({ claimed_chat_id: null, assign_role: role === 'curator' ? 'curator' : null })
+        .update({ claimed_chat_id: null, ...wl })
         .eq('id', (existing as { id: number }).id)
     } else {
       await supabase
         .from('testing_whitelist')
-        .insert({
-          telegram_username: handle,
-          assign_role: role === 'curator' ? 'curator' : null,
-          added_by: adminProfile.id,
-        })
+        .insert({ telegram_username: handle, added_by: adminProfile.id, ...wl })
     }
 
     if (role === 'curator') {
-      await supabase
-        .from('profiles')
-        .update({ role: 'curator' })
-        .ilike('contact_info', handle)
-        .eq('role', 'student')
+      // Ученик → куратор (+ город лидера, если задан).
+      const up: Record<string, unknown> = { role: 'curator' }
+      if (assignedCityId != null) up.city_id = assignedCityId
+      await supabase.from('profiles').update(up).ilike('contact_info', handle).eq('role', 'student')
+      // Уже существующего куратора лидер переводит в свой город.
+      if (assignedCityId != null) {
+        await supabase
+          .from('profiles')
+          .update({ city_id: assignedCityId })
+          .ilike('contact_info', handle)
+          .eq('role', 'curator')
+      }
     }
 
     added.push(handle)
@@ -1291,20 +1299,33 @@ export async function POST(request: NextRequest) {
   // Нормализуем лишние ведущие слеши: «//attach», «///add» → «/attach», «/add»
   const text = message.text.trim().replace(/^\/+/, '/')
 
-  // /addcurator @nick — добавить кураторов по нику (assign_role=curator). Только admin/super_admin.
+  // /addcurator @nick — добавить кураторов (assign_role=curator). Admin/super_admin —
+  // без города; лидер города — кураторы сразу привязываются к нему (его город).
   // ВАЖНО: проверяется ДО /add (иначе /add перехватит).
   if (text.startsWith('/addcurator') || text.startsWith('/add_curator')) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = createServiceSupabase() as any
     const { data: adminProfile } = (await supabase
       .from('profiles')
-      .select('id, role, full_name, contact_info')
+      .select('id, role, full_name, contact_info, city_id')
       .eq('telegram_chat_id', chatId)
       .maybeSingle()) as {
-      data: { id: string; role: string; full_name: string | null; contact_info: string | null } | null
+      data: {
+        id: string
+        role: string
+        full_name: string | null
+        contact_info: string | null
+        city_id: number | null
+      } | null
     }
-    if (!adminProfile || !['admin', 'super_admin'].includes(adminProfile.role)) {
-      await sendTelegramMessage(chatId, 'Команда доступна только администраторам.')
+    if (!adminProfile || !['admin', 'super_admin', 'city_leader'].includes(adminProfile.role)) {
+      await sendTelegramMessage(chatId, 'Команда доступна администраторам и лидерам городов.')
+      return NextResponse.json({ ok: true })
+    }
+    // Лидер привязывает кураторов к своему городу — без города нельзя.
+    const assignedCityId = adminProfile.role === 'city_leader' ? adminProfile.city_id : null
+    if (adminProfile.role === 'city_leader' && assignedCityId == null) {
+      await sendTelegramMessage(chatId, 'У вас не задан город — обратитесь к администратору.')
       return NextResponse.json({ ok: true })
     }
 
@@ -1325,7 +1346,7 @@ export async function POST(request: NextRequest) {
 
     // Ники есть — обрабатываем сразу, сбрасываем возможный pending
     await (supabase as any).from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
-    await processAddNicks(supabase, chatId, adminProfile, afterCmd, 'curator')
+    await processAddNicks(supabase, chatId, adminProfile, afterCmd, 'curator', assignedCityId)
     return NextResponse.json({ ok: true })
   }
 
@@ -1779,38 +1800,34 @@ export async function POST(request: NextRequest) {
         // Не админ — чистим pending, продолжаем обычным ответом
         await supabase.from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
       } else {
-        // Проверяем, есть ли в тексте хоть один допустимый ник
+        // add (ученики) / addcurator (кураторы). Кураторов может добавлять и лидер города.
         const hasNick = parseHandles(text).length > 0
         if (hasNick) {
-          // Проверяем права отправителя
-          const adminProfile = (await getAdminProfile(supabase, chatId)) as {
-            id: string
-            role: string
-          } | null
+          const { data: actor } = (await supabase
+            .from('profiles')
+            .select('id, role, full_name, contact_info, city_id')
+            .eq('telegram_chat_id', chatId)
+            .maybeSingle()) as {
+            data: {
+              id: string
+              role: string
+              full_name: string | null
+              contact_info: string | null
+              city_id: number | null
+            } | null
+          }
 
-          if (adminProfile) {
-            // Догружаем full_name и contact_info для уведомления
-            const { data: fullAdminData } = (await supabase
-              .from('profiles')
-              .select('id, role, full_name, contact_info')
-              .eq('telegram_chat_id', chatId)
-              .maybeSingle()) as {
-              data: {
-                id: string
-                role: string
-                full_name: string | null
-                contact_info: string | null
-              } | null
-            }
+          const isAdmin = !!actor && ['admin', 'super_admin'].includes(actor.role)
+          const isLeaderAddingCurator =
+            !!actor && actor.role === 'city_leader' && pending.action === 'addcurator' && actor.city_id != null
 
+          if (actor && (isAdmin || isLeaderAddingCurator)) {
             const role: 'student' | 'curator' =
               pending.action === 'addcurator' ? 'curator' : 'student'
+            const assignedCityId = actor.role === 'city_leader' ? actor.city_id : null
 
             await supabase.from('bot_pending_action').delete().eq('telegram_chat_id', chatId)
-
-            if (fullAdminData) {
-              await processAddNicks(supabase, chatId, fullAdminData, text, role)
-            }
+            await processAddNicks(supabase, chatId, actor, text, role, assignedCityId)
             return NextResponse.json({ ok: true })
           }
         }
