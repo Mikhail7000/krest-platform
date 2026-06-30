@@ -38,12 +38,21 @@ async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null
     curatorsQuery = curatorsQuery.eq('city_id', opts.cityId)
   }
 
-  const [curatorsRes, citiesRes, countriesRes] = await Promise.all([
+  const [curatorsRes, citiesRes, countriesRes, leadersRes] = await Promise.all([
     curatorsQuery,
     supabase.from('cities').select('id, name_ru, country_id'),
     supabase.from('countries').select('id, name_ru'),
+    supabase.from('profiles').select('full_name, contact_info, city_id').eq('role', 'city_leader'),
   ])
   if (curatorsRes.error || citiesRes.error || countriesRes.error) return empty
+
+  // Лидер города по городу (если в городе несколько — через запятую).
+  const leaderByCity = new Map<number, string>()
+  for (const l of (leadersRes.data ?? []) as { full_name: string | null; contact_info: string | null; city_id: number | null }[]) {
+    if (l.city_id == null) continue
+    const nm = l.full_name || l.contact_info || 'Лидер'
+    leaderByCity.set(l.city_id, leaderByCity.has(l.city_id) ? `${leaderByCity.get(l.city_id)}, ${nm}` : nm)
+  }
 
   const curatorIds = (curatorsRes.data ?? []).map((c) => c.id)
   // Ученики, привязанные к этим кураторам (для leader-scope — только город).
@@ -89,6 +98,10 @@ async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null
       city: city?.name ?? null,
       cityId: cu.city_id ?? null,
       country: city?.country ?? null,
+      leaderName:
+        (cu as { role: string }).role === 'curator' && cu.city_id != null
+          ? leaderByCity.get(cu.city_id) ?? null
+          : null,
       studentsCount: students.length,
       students,
     }

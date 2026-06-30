@@ -16,6 +16,8 @@ export interface CuratorRow {
   /** id города (для смены роли на лидера города — дефолт селекта). */
   cityId: number | null
   country: string | null
+  /** Лидер города этого куратора (по совпадению города). Для админов — null. */
+  leaderName: string | null
   studentsCount: number
   students: CuratorStudent[]
 }

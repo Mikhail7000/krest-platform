@@ -4,11 +4,13 @@ import { useState } from 'react'
 import { StaffAddForm } from '../curators/StaffAddForm'
 import { RoleModal } from '../curators/RoleModal'
 import type { CuratorRow } from '../curators/types'
-import type { LeaderRow } from './types'
+import { LeaderRow } from './LeaderRow'
+import { CityModal } from './CityModal'
+import type { LeaderRow as LeaderRowType } from './types'
 
 /** LeaderRow → CuratorRow для переиспользования RoleModal (studentsCount=0: лидер
  *  не держит учеников напрямую, ложного предупреждения об отвязке быть не должно). */
-function toCuratorRow(l: LeaderRow): CuratorRow {
+function toCuratorRow(l: LeaderRowType): CuratorRow {
   return {
     id: l.id,
     name: l.name,
@@ -18,6 +20,7 @@ function toCuratorRow(l: LeaderRow): CuratorRow {
     city: l.city,
     cityId: l.cityId,
     country: l.country,
+    leaderName: null,
     studentsCount: 0,
     students: [],
   }
@@ -25,7 +28,7 @@ function toCuratorRow(l: LeaderRow): CuratorRow {
 
 /**
  * Таблица лидеров городов: город, число кураторов (разворот), вход в их панель,
- * смена роли. Добавление нового лидера — через общий StaffAddForm (city_leader).
+ * смена города, смена роли. Добавление нового лидера — StaffAddForm (city_leader).
  */
 export function LeadersView({
   leaders,
@@ -34,14 +37,15 @@ export function LeadersView({
   canViewAs = false,
   isOwner = false,
 }: {
-  leaders: LeaderRow[]
+  leaders: LeaderRowType[]
   cities: { id: number; name: string }[]
   isSuperAdmin: boolean
   canViewAs?: boolean
   isOwner?: boolean
 }) {
   const [openId, setOpenId] = useState<string | null>(null)
-  const [roleTarget, setRoleTarget] = useState<LeaderRow | null>(null)
+  const [roleTarget, setRoleTarget] = useState<LeaderRowType | null>(null)
+  const [cityTarget, setCityTarget] = useState<LeaderRowType | null>(null)
   void isOwner // view-as для лидеров доступен любому реальному админу
 
   return (
@@ -65,12 +69,13 @@ export function LeadersView({
             </thead>
             <tbody>
               {leaders.map((l) => (
-                <LeaderRowGroup
+                <LeaderRow
                   key={l.id}
                   leader={l}
                   isOpen={openId === l.id}
                   canViewAs={canViewAs && !l.isProtected}
                   onToggle={() => setOpenId(openId === l.id ? null : l.id)}
+                  onCity={() => setCityTarget(l)}
                   onRole={() => setRoleTarget(l)}
                 />
               ))}
@@ -79,6 +84,16 @@ export function LeadersView({
         </div>
       )}
 
+      {cityTarget ? (
+        <CityModal
+          userId={cityTarget.id}
+          name={cityTarget.name ?? cityTarget.nick ?? cityTarget.id}
+          currentCityId={cityTarget.cityId}
+          cities={cities}
+          onClose={() => setCityTarget(null)}
+        />
+      ) : null}
+
       {roleTarget ? (
         <RoleModal
           curator={toCuratorRow(roleTarget)}
@@ -86,130 +101,6 @@ export function LeadersView({
           cities={cities}
           onClose={() => setRoleTarget(null)}
         />
-      ) : null}
-    </>
-  )
-}
-
-function LeaderRowGroup({
-  leader,
-  isOpen,
-  canViewAs,
-  onToggle,
-  onRole,
-}: {
-  leader: LeaderRow
-  isOpen: boolean
-  canViewAs: boolean
-  onToggle: () => void
-  onRole: () => void
-}) {
-  const [viewBusy, setViewBusy] = useState(false)
-  const hasCurators = leader.curatorsCount > 0
-
-  const enterViewAs = async () => {
-    setViewBusy(true)
-    try {
-      const res = await fetch('/api/panel/view-as', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: leader.id }),
-      })
-      if (res.ok) {
-        window.location.href = '/panel'
-      } else {
-        setViewBusy(false)
-      }
-    } catch {
-      setViewBusy(false)
-    }
-  }
-
-  const cityLabel = leader.city
-    ? leader.country
-      ? `${leader.city}, ${leader.country}`
-      : leader.city
-    : '—'
-
-  return (
-    <>
-      <tr
-        onClick={hasCurators ? onToggle : undefined}
-        style={{ cursor: hasCurators ? 'pointer' : 'default' }}
-      >
-        <td>
-          <div style={{ fontWeight: 600 }}>{leader.name ?? 'Без имени'}</div>
-          {leader.nick ? <div className="panel-muted">{leader.nick}</div> : null}
-          <span className="panel-badge panel-badge--acc" style={{ marginTop: 4, display: 'inline-block' }}>
-            Лидер города
-          </span>
-        </td>
-        <td>{cityLabel}</td>
-        <td>
-          <span className={hasCurators ? 'panel-badge panel-badge--acc' : 'panel-badge'}>
-            {leader.curatorsCount}
-          </span>
-          {hasCurators ? (
-            <button
-              type="button"
-              className="panel-btn"
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggle()
-              }}
-              style={{ marginLeft: 10 }}
-            >
-              {isOpen ? 'Скрыть' : 'Показать'}
-            </button>
-          ) : null}
-        </td>
-        <td>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-            {canViewAs ? (
-              <button
-                type="button"
-                className="panel-btn"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  enterViewAs()
-                }}
-                disabled={viewBusy}
-                title="Открыть панель этого лидера в режиме просмотра"
-              >
-                {viewBusy ? '…' : '👁 Войти как'}
-              </button>
-            ) : null}
-            {leader.isProtected ? (
-              <span className="panel-badge" style={{ alignSelf: 'center' }}>🔒 Защищён</span>
-            ) : (
-              <button
-                type="button"
-                className="panel-btn"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRole()
-                }}
-              >
-                Сменить роль
-              </button>
-            )}
-          </div>
-        </td>
-      </tr>
-      {isOpen && hasCurators ? (
-        <tr>
-          <td colSpan={4}>
-            <div className="panel-section-title">Кураторы города ({leader.curatorsCount})</div>
-            <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
-              {leader.curators.map((c) => (
-                <li key={c.id} style={{ marginBottom: 4 }}>
-                  {c.name ?? 'Без имени'}
-                  {c.nick ? <span className="panel-muted"> {c.nick}</span> : null}
-                </li>
-              ))}
-            </ul>
-          </td>
-        </tr>
       ) : null}
     </>
   )

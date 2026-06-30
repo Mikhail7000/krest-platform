@@ -75,9 +75,11 @@ export default async function CitiesPage() {
     (a, b) => b.students - a.students || a.name.localeCompare(b.name, 'ru'),
   )
 
+  // «Проходят Крест» = есть хотя бы один ученик. Города/страны по нулям не считаем.
   const totals = {
+    cityWithStudents: cities.filter((c) => c.students > 0).length,
     activeCities: cities.filter((c) => c.status === 'active').length,
-    countries: countries.length,
+    countriesWithStudents: countries.filter((c) => c.students > 0).length,
     students: cities.reduce((s, c) => s + c.students, 0),
     curators: cities.reduce((s, c) => s + c.curators, 0),
   }
@@ -91,14 +93,14 @@ export default async function CitiesPage() {
 
       <div className="panel-grid">
         <div className="panel-stat">
-          <div className="panel-stat__label">Активных городов</div>
-          <div className="panel-stat__value">{totals.activeCities}</div>
-          <div className="panel-stat__hint">из {cities.length} всего</div>
+          <div className="panel-stat__label">Городов проходят Крест</div>
+          <div className="panel-stat__value">{totals.cityWithStudents}</div>
+          <div className="panel-stat__hint">из {totals.activeCities} активных</div>
         </div>
         <div className="panel-stat">
-          <div className="panel-stat__label">Стран</div>
-          <div className="panel-stat__value">{totals.countries}</div>
-          <div className="panel-stat__hint">с городами на платформе</div>
+          <div className="panel-stat__label">Стран проходят Крест</div>
+          <div className="panel-stat__value">{totals.countriesWithStudents}</div>
+          <div className="panel-stat__hint">с учениками на платформе</div>
         </div>
         <div className="panel-stat">
           <div className="panel-stat__label">Всего учеников</div>

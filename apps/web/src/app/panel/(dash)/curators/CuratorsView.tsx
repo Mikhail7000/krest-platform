@@ -169,7 +169,14 @@ function CuratorRowGroup({
             </span>
           ) : null}
         </td>
-        <td>{cityLabel}</td>
+        <td>
+          {cityLabel}
+          {curator.leaderName ? (
+            <div className="panel-muted" style={{ marginTop: 2 }}>
+              👑 Лидер: {curator.leaderName}
+            </div>
+          ) : null}
+        </td>
         <td>
           <span
             className={
