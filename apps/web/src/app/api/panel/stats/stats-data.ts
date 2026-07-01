@@ -48,6 +48,25 @@ export interface StuckRow {
   lastDayAgo: number | null
 }
 
+export interface DayCount {
+  d: string
+  count: number
+}
+
+/** Аналитика запуска (только админ-уровень): динамика по дням + воронка. */
+export interface LaunchStats {
+  newByDay: DayCount[]
+  closedByDay: DayCount[]
+  funnel: {
+    requests: number
+    approved: number
+    students: number
+    started: number
+    day1: number
+    day7: number
+  }
+}
+
 export interface PanelStats {
   totals: StatTotals
   byCity: CityRow[]
@@ -55,6 +74,8 @@ export interface PanelStats {
   progress: ProgressRow[]
   streaks: StreakRow[]
   stuck: StuckRow[]
+  /** null для scoped-ролей (куратор/лидер) — динамика платформы им не видна. */
+  launch: LaunchStats | null
 }
 
 interface ProfileRow {
@@ -65,6 +86,7 @@ interface ProfileRow {
   city_id: number | null
   curator_id: string | null
   course_started_at: string | null
+  created_at: string | null
   hidden_from_tracking: boolean | null
 }
 
@@ -147,7 +169,7 @@ export async function getPanelStats(
   ] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, full_name, contact_info, role, city_id, curator_id, course_started_at, hidden_from_tracking'),
+      .select('id, full_name, contact_info, role, city_id, curator_id, course_started_at, created_at, hidden_from_tracking'),
     supabase.from('cities').select('id, name_ru, country_id'),
     supabase.from('countries').select('id, name_ru'),
     supabase.rpc('passed_blocks_all'),
@@ -307,5 +329,51 @@ export async function getPanelStats(
   })
   const stuck = stuckList.slice(0, 15)
 
-  return { totals, byCity, byCountry, progress, streaks: topStreaks, stuck }
+  // ── launch: динамика 14 дней + воронка (только админ-уровень) ──────────
+  const isAdminView = !isScoped && !scopeCuratorId && scopeCityId == null
+  let launch: LaunchStats | null = null
+  if (isAdminView) {
+    const WINDOW = 14
+    const days: string[] = []
+    for (let i = WINDOW - 1; i >= 0; i--) {
+      days.push(new Date((today - i) * 86_400_000).toISOString().slice(0, 10))
+    }
+    const newMap = new Map<string, number>()
+    for (const s of students) {
+      const d = s.created_at?.slice(0, 10)
+      if (d) newMap.set(d, (newMap.get(d) ?? 0) + 1)
+    }
+    const closedMap = new Map<string, number>()
+    for (const row of closed) {
+      // Только видимые ученики и реальные даты (виртуальные тест-даты 2000-* мимо).
+      if (!studentById.has(row.user_id) || row.d.startsWith('2000-')) continue
+      closedMap.set(row.d, (closedMap.get(row.d) ?? 0) + 1)
+    }
+
+    const { data: reqRaw } = await supabase.from('access_requests').select('status')
+    const reqs = (reqRaw ?? []) as { status: string }[]
+
+    let day1 = 0
+    let day7 = 0
+    for (const s of students) {
+      const n = new Set((datesByUser.get(s.id) ?? []).map(dayIndex)).size
+      if (n >= 1) day1++
+      if (n >= 7) day7++
+    }
+
+    launch = {
+      newByDay: days.map((d) => ({ d, count: newMap.get(d) ?? 0 })),
+      closedByDay: days.map((d) => ({ d, count: closedMap.get(d) ?? 0 })),
+      funnel: {
+        requests: reqs.length,
+        approved: reqs.filter((r) => r.status === 'approved').length,
+        students: students.length,
+        started: students.filter((s) => !!s.course_started_at).length,
+        day1,
+        day7,
+      },
+    }
+  }
+
+  return { totals, byCity, byCountry, progress, streaks: topStreaks, stuck, launch }
 }

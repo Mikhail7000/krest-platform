@@ -38,10 +38,13 @@ export default async function PanelOverviewPage() {
     isAdminLevel ? countPendingRequests(supabase) : Promise.resolve(0),
     isCurator && session ? findSilentStudents(supabase, { curatorId: session.uid }) : Promise.resolve([]),
   ])
-  const { totals, byCity, byCountry, progress, streaks, stuck } = stats
+  const { totals, byCity, byCountry, progress, streaks, stuck, launch } = stats
 
   const maxCountry = Math.max(1, ...byCountry.map((c) => c.count))
   const maxCity = Math.max(1, ...byCity.map((c) => c.count))
+  const maxNew = Math.max(1, ...(launch?.newByDay.map((x) => x.count) ?? [0]))
+  const maxClosed = Math.max(1, ...(launch?.closedByDay.map((x) => x.count) ?? [0]))
+  const dayLabel = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}`
 
   return (
     <div>
@@ -135,6 +138,58 @@ export default async function PanelOverviewPage() {
           <div className="panel-stat__hint">все 10 блоков</div>
         </div>
       </div>
+
+      {/* Запуск: динамика 14 дней + воронка (только админ-уровень) */}
+      {isAdminLevel && launch && (
+        <div className="panel-card" style={{ marginBottom: 24 }}>
+          <div className="panel-section-title">Запуск · последние 14 дней</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            <span className="panel-badge">Заявок: {launch.funnel.requests}</span>
+            <span className="panel-badge">→ одобрено: {launch.funnel.approved}</span>
+            <span className="panel-badge panel-badge--acc">→ учеников: {launch.funnel.students}</span>
+            <span className="panel-badge panel-badge--acc">→ начали курс: {launch.funnel.started}</span>
+            <span className="panel-badge panel-badge--ok">→ закрыли 1-й день: {launch.funnel.day1}</span>
+            <span className="panel-badge panel-badge--ok">→ 7+ дней: {launch.funnel.day7}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+            {(
+              [
+                { title: 'Новые ученики', rows: launch.newByDay, max: maxNew },
+                { title: 'Закрытые дни', rows: launch.closedByDay, max: maxClosed },
+              ] as const
+            ).map((chart) => (
+              <div key={chart.title}>
+                <div className="panel-muted" style={{ fontWeight: 600, marginBottom: 8 }}>{chart.title}</div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 72 }}>
+                  {chart.rows.map((x) => (
+                    <div
+                      key={x.d}
+                      title={`${dayLabel(x.d)}: ${x.count}`}
+                      style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
+                    >
+                      {x.count > 0 && (
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, lineHeight: 1 }}>{x.count}</span>
+                      )}
+                      <div
+                        style={{
+                          width: '100%',
+                          height: Math.max(3, Math.round((x.count / chart.max) * 52)),
+                          borderRadius: 3,
+                          background: x.count > 0 ? 'var(--pl-acc, #7c5cf0)' : 'rgba(0,0,0,0.08)',
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                  <span className="panel-muted" style={{ fontSize: '0.7rem' }}>{dayLabel(chart.rows[0]?.d ?? '')}</span>
+                  <span className="panel-muted" style={{ fontSize: '0.7rem' }}>{dayLabel(chart.rows[chart.rows.length - 1]?.d ?? '')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Распределение по блокам */}
       <div className="panel-card" style={{ marginBottom: 24 }}>

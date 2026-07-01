@@ -60,6 +60,11 @@ export async function POST(req: NextRequest) {
   const courseId = (curBlock as { course_id?: number } | null)?.course_id ?? null
   const currentOrder = (curBlock as { order_num?: number } | null)?.order_num ?? 1
 
+  // Несуществующий блок или блок без курса → ранний выход. Иначе courseId=null
+  // снимал бы фильтр по курсу и в промпт попадали бы блоки ВСЕХ курсов
+  // (латентная утечка перед запуском «10 писем»).
+  if (!curBlock || courseId === null) return err('Block not found', 'BLOCK_NOT_FOUND', 404)
+
   // Все блоки курса по порядку (только основные, order_num >= 1)
   let blocksQuery = supabase
     .from('blocks')
