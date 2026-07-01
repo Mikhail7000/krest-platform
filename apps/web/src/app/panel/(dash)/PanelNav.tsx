@@ -11,6 +11,7 @@ const ALL_LINKS = [
   { href: '/panel/activity', label: 'Активность', icon: '📈', curatorVisible: true, leaderVisible: true },
   { href: '/panel/curators', label: 'Кураторы', icon: '🧭', curatorVisible: false, leaderVisible: true },
   { href: '/panel/leaders', label: 'Лидеры городов', icon: '👑', curatorVisible: false, leaderVisible: false },
+  { href: '/panel/admins', label: 'Администраторы', icon: '🛡️', curatorVisible: false, leaderVisible: false, superOnly: true },
   { href: '/panel/cities', label: 'Города', icon: '🌍', curatorVisible: false, leaderVisible: false },
   { href: '/panel/audit', label: 'Журнал', icon: '📜', curatorVisible: false, leaderVisible: false },
 ]
@@ -38,9 +39,10 @@ export function PanelNav({
   const [open, setOpen] = useState(false)
 
   const isCurator = role === 'curator'
-  const links = ALL_LINKS.filter((l) =>
-    role === 'curator' ? l.curatorVisible : role === 'city_leader' ? l.leaderVisible : true,
-  )
+  const links = ALL_LINKS.filter((l) => {
+    if ('superOnly' in l && l.superOnly && role !== 'super_admin') return false
+    return role === 'curator' ? l.curatorVisible : role === 'city_leader' ? l.leaderVisible : true
+  })
 
   const isActive = (href: string) =>
     href === '/panel' ? pathname === '/panel' : pathname.startsWith(href)
