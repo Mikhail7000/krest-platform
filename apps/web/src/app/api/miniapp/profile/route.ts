@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
-      .select('onboarding_done, country_id, city_id, curator_id, full_name, avatar_path, gender, theme_pref')
+      .select('onboarding_done, role, country_id, city_id, curator_id, full_name, avatar_path, gender, theme_pref')
       .eq('id', auth.userId)
       .maybeSingle()
 
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       onboarding_done: profile.onboarding_done,
+      role: profile.role ?? 'student',
       country_id: profile.country_id,
       city_id: profile.city_id,
       curator_id: profile.curator_id,
