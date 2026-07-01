@@ -41,6 +41,7 @@ export interface StreakRow {
 }
 
 export interface StuckRow {
+  id: string
   name: string
   telegram: string | null
   city: string
@@ -298,6 +299,7 @@ export async function getPanelStats(
       // 0 закрытых дней при заданном старте курса
       if (hasStarted) {
         stuckList.push({
+          id: s.id,
           name: s.full_name ?? 'Без имени',
           telegram: s.contact_info ?? null,
           city: s.city_id != null ? (cityName.get(s.city_id) ?? NO_CITY) : NO_CITY,
@@ -312,6 +314,7 @@ export async function getPanelStats(
     const ago = today - lastIdx
     if (ago > STUCK_DAYS) {
       stuckList.push({
+        id: s.id,
         name: s.full_name ?? 'Без имени',
         telegram: s.contact_info ?? null,
         city: s.city_id != null ? (cityName.get(s.city_id) ?? NO_CITY) : NO_CITY,

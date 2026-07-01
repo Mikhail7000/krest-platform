@@ -36,6 +36,7 @@ export function StudentRowActions({
   const [busy, setBusy] = useState(false)
   const [roleVal, setRoleVal] = useState('student')
   const [curatorVal, setCuratorVal] = useState(student.curatorId ?? '')
+  const [confirmName, setConfirmName] = useState('')
 
   const close = () => {
     if (!busy) setMode(null)
@@ -131,14 +132,31 @@ export function StudentRowActions({
       {mode === 'delete' && (
         <Overlay onClose={close}>
           <div className="panel-section-title">Удалить {name}?</div>
-          <p className="panel-muted" style={{ marginBottom: 16 }}>
+          <p className="panel-muted" style={{ marginBottom: 12 }}>
             Профиль и весь прогресс будут удалены без возможности восстановления.
+            Для подтверждения введи имя ученика:{' '}
+            <strong>{student.fullName || student.contact || ''}</strong>
           </p>
+          <input
+            className="panel-input"
+            placeholder="Имя ученика"
+            value={confirmName}
+            onChange={(e) => setConfirmName(e.target.value)}
+            style={{ width: '100%', marginBottom: 14 }}
+            autoFocus
+          />
           <Actions
             busy={busy}
             danger
             confirmLabel="Удалить навсегда"
-            onCancel={() => setMode('menu')}
+            confirmDisabled={
+              confirmName.trim().toLowerCase() !==
+              (student.fullName || student.contact || '').trim().toLowerCase()
+            }
+            onCancel={() => {
+              setConfirmName('')
+              setMode('menu')
+            }}
             onConfirm={() => post('/api/panel/actions/delete', { userId: student.id }, 'Ученик удалён')}
           />
         </Overlay>
@@ -168,12 +186,14 @@ function Actions({
   busy,
   confirmLabel,
   danger,
+  confirmDisabled,
   onCancel,
   onConfirm,
 }: {
   busy: boolean
   confirmLabel: string
   danger?: boolean
+  confirmDisabled?: boolean
   onCancel: () => void
   onConfirm: () => void
 }) {
@@ -184,7 +204,7 @@ function Actions({
         type="button"
         className={danger ? 'panel-btn panel-btn--danger' : 'panel-btn panel-btn--primary'}
         onClick={onConfirm}
-        disabled={busy}
+        disabled={busy || confirmDisabled}
       >
         {busy ? '…' : confirmLabel}
       </button>

@@ -8,6 +8,7 @@ import { createServiceSupabase } from '@/lib/supabase-service'
 import { findSilentStudents } from '@/lib/activity/silence'
 import { ProgressChart } from './StatsClient'
 import { GenerateReport } from './GenerateReport'
+import { ReminderButton } from './ReminderButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,11 +63,12 @@ export default async function PanelOverviewPage() {
           </div>
           <ul style={{ margin: '2px 0 0', paddingLeft: 18 }}>
             {silent.map((s) => (
-              <li key={s.id} style={{ marginBottom: 4 }}>
+              <li key={s.id} style={{ marginBottom: 6 }}>
                 <span style={{ fontWeight: 600 }}>{s.name}</span>
                 {s.telegram ? <span className="panel-muted"> {s.telegram}</span> : null}
                 {' — '}
-                <span className="panel-badge panel-badge--warn">{s.daysSilent} дн.</span>
+                <span className="panel-badge panel-badge--warn">{s.daysSilent} дн.</span>{' '}
+                <ReminderButton studentId={s.id} />
               </li>
             ))}
           </ul>
@@ -339,11 +341,12 @@ export default async function PanelOverviewPage() {
                   <th>Город</th>
                   <th>Блок</th>
                   <th>Последняя активность</th>
+                  <th style={{ textAlign: 'right' }}></th>
                 </tr>
               </thead>
               <tbody>
-                {stuck.map((s, i) => (
-                  <tr key={`${s.name}-${i}`}>
+                {stuck.map((s) => (
+                  <tr key={s.id}>
                     <td>
                       <div style={{ fontWeight: 600 }}>{s.name}</div>
                       {s.telegram ? (
@@ -364,6 +367,9 @@ export default async function PanelOverviewPage() {
                           {s.lastDayAgo} дн. назад
                         </span>
                       )}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <ReminderButton studentId={s.id} />
                     </td>
                   </tr>
                 ))}

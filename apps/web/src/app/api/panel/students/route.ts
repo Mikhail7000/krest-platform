@@ -32,6 +32,8 @@ export interface PanelStudentRow {
   hidden: boolean
   courseStartedAt: string | null
   createdAt: string | null
+  /** Последний заход в приложение (ISO) за 60 дней; null = не заходил. */
+  lastActiveAt: string | null
 }
 
 interface ProfileRow {
@@ -104,6 +106,20 @@ export async function POST(req: NextRequest) {
     closedById.set(r.user_id, (closedById.get(r.user_id) ?? 0) + 1)
   }
 
+  // 4. Последний заход (окно 60 дней — не тянуть всю историю; старше = «давно»).
+  const sinceIso = new Date(Date.now() - 60 * 86_400_000).toISOString().slice(0, 10)
+  const lastActiveById = new Map<string, string>()
+  const { data: actRaw } = await supabase
+    .from('student_daily_activity')
+    .select('user_id, opened_at')
+    .eq('opened', true)
+    .gte('activity_date', sinceIso)
+  for (const a of (actRaw ?? []) as { user_id: string; opened_at: string | null }[]) {
+    if (!a.opened_at) continue
+    const cur = lastActiveById.get(a.user_id)
+    if (!cur || a.opened_at > cur) lastActiveById.set(a.user_id, a.opened_at)
+  }
+
   const rows: PanelStudentRow[] = profiles
     .filter((p) => p.role === 'student' && studentInScope(p as ProfileRow, scope, cityCurators))
     .map((p) => {
@@ -124,6 +140,7 @@ export async function POST(req: NextRequest) {
         hidden: !!p.hidden_from_tracking,
         courseStartedAt: p.course_started_at,
         createdAt: p.created_at,
+        lastActiveAt: lastActiveById.get(p.id) ?? null,
       }
     })
 

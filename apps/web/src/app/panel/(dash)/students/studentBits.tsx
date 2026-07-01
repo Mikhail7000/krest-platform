@@ -74,6 +74,7 @@ export function StudentRow({
         <span className="panel-muted" style={{ display: 'block', fontSize: '0.78rem' }}>{BLOCK_TITLES[s.currentBlock] ?? ''}</span>
       </td>
       <td>{s.closedDays}</td>
+      <td style={{ whiteSpace: 'nowrap' }}>{activityBadge(s.lastActiveAt)}</td>
       <td className="panel-muted" style={{ whiteSpace: 'nowrap' }}>{fmtDate(s.createdAt)}</td>
       {!isCurator && (
         <td style={{ textAlign: 'right' }}>
@@ -140,6 +141,17 @@ function CuratorPicker({
       ))}
     </select>
   )
+}
+
+/** Бейдж давности последнего захода: сегодня/вчера → ок, 4-7 дн → warn, дольше → err. */
+function activityBadge(iso: string | null) {
+  if (!iso) return <span className="panel-muted">—</span>
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
+  if (days <= 0) return <span className="panel-badge panel-badge--ok">сегодня</span>
+  if (days === 1) return <span className="panel-badge panel-badge--ok">вчера</span>
+  if (days <= 3) return <span className="panel-badge">{days} дн.</span>
+  if (days <= 7) return <span className="panel-badge panel-badge--warn">{days} дн.</span>
+  return <span className="panel-badge panel-badge--err">{days} дн.</span>
 }
 
 export function Avatar({ url, name, size = 34 }: { url: string | null; name: string | null; size?: number }) {
