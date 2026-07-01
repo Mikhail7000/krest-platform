@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { formatRuDate } from '@/lib/time/format'
 import { invalidateBlockStatus } from '@/lib/m/block-status-cache'
+import { compressImage } from '@/lib/m/compress-image'
 import { IconCheck, IconClock, IconLock, IconCamera } from '@/app/m/_components/icons'
 
 type DayState = 'done' | 'today' | 'waiting' | 'future'
@@ -76,10 +77,19 @@ export function CrossPhotoClient({ blockId }: Props) {
   useEffect(() => { load() }, [load])
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const raw = e.target.files?.[0]
+    if (!raw) return
     setUploading(true)
     setUploadError(null)
+    // Сжатие на клиенте: телефонные фото 3–10 МБ упирались в лимит тела Vercel
+    // (~4.5 МБ) и падали с невнятной ошибкой; HEIC на iPhone перекодируется в JPEG.
+    const file = await compressImage(raw)
+    if (file.size > 4_300_000) {
+      setUploadError('Фото слишком большое даже после сжатия — попробуй другое.')
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+      return
+    }
     const fd = new FormData()
     fd.append('initData', getInitData())
     fd.append('block_id', String(blockId))

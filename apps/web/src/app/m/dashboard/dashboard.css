@@ -741,3 +741,113 @@
 [data-theme="stars"] .day-banner__status--done {
   color: #86efac;
 }
+
+/* ── Карточка «Закрой день» (4 практики с прямыми переходами) ───────── */
+.tc-wrap {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.tc-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 22px;
+  padding: 1rem 1.125rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 14px 30px rgba(0, 0, 0, 0.07);
+}
+[data-theme="dark"] .tc-card,
+[data-theme="stars"] .tc-card {
+  background: color-mix(in srgb, var(--accent-solid) 10%, rgba(0, 0, 0, 0.35));
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.tc-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.625rem;
+}
+.tc-title {
+  font-weight: 800;
+  font-size: 1rem;
+}
+.tc-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-solid, #7c5cff);
+}
+.tc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.tc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 14px;
+  text-decoration: none;
+  color: inherit;
+  background: color-mix(in srgb, var(--tg-hint, #9ca3af) 8%, transparent);
+  transition: transform 0.1s;
+}
+.tc-row:active {
+  transform: scale(0.985);
+}
+.tc-row--done {
+  opacity: 0.6;
+}
+.tc-row__icon {
+  flex-shrink: 0;
+  font-size: 1.05rem;
+}
+.tc-row__label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.tc-row--done .tc-row__label {
+  text-decoration: line-through;
+}
+.tc-row__mark {
+  flex-shrink: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #b0b6bf;
+}
+.tc-row__mark--done {
+  color: #16a34a;
+}
+[data-theme="dark"] .tc-row__mark--done,
+[data-theme="stars"] .tc-row__mark--done {
+  color: #86efac;
+}
+/* Состояние «день закрыт» */
+.tc-card--done {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.tc-done-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  background: #16a34a;
+}
+.tc-subtitle {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 2px;
+}
+[data-theme="dark"] .tc-subtitle,
+[data-theme="stars"] .tc-subtitle {
+  color: rgba(255, 255, 255, 0.65);
+}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { DashboardClient } from './DashboardClient'
+import { TodayCard } from './TodayCard'
 import { BlockList } from './BlockList'
 
 /**
@@ -16,6 +17,7 @@ export function DashboardShell() {
   return (
     <>
       <DashboardClient coursePct={coursePct} currentBlockId={currentBlockId} />
+      <TodayCard blockId={currentBlockId} />
       <BlockList
         onProgress={(pct, blockId) => {
           setCoursePct(pct)
