@@ -1874,9 +1874,12 @@ export async function POST(request: NextRequest) {
         `<b>Привет, ${(profile as { full_name: string | null }).full_name || 'ученик'}!</b>\n\nВаш аккаунт подключен. Вы получите уведомление, когда лидер одобрит ваш блок.`,
       )
     } else {
+      // Email-линковка удалена (2026-07-02) — направляем в MiniApp: профиль
+      // создаётся по Telegram-идентичности при первом входе.
       await sendTelegramMessage(
         chatId,
-        `<b>Аккаунт не подключен</b>\n\nОтправьте команду:\n<code>/start ваш@email.com</code>\n\nчтобы связать Telegram с аккаунтом КРЕСТ.`,
+        `<b>Аккаунт не подключен</b>\n\nНажмите кнопку ниже, чтобы открыть приложение КРЕСТ — аккаунт подключится автоматически.`,
+        { withMiniAppButton: true },
       )
     }
   } catch (error) {

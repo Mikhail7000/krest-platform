@@ -39,13 +39,14 @@ export function CrossGallery({ id }: { id: string }) {
 
   if (blocks === null) return null
   const total = blocks.reduce((n, b) => n + b.days.length, 0)
-  const mismatches = blocks.reduce(
-    (n, b) => n + b.days.filter((d) => d.aiMatched === false).length,
-    0,
-  )
+  // «Требует взгляда» = не подтверждено ИИ: false (несовпадение, бэкстоп — сейчас
+  // такие отклоняются 422 до записи) ИЛИ null (принято БЕЗ проверки: сбой ИИ,
+  // старый HEIC, тест-режим) — именно их куратору стоит просмотреть глазами.
+  const needsEye = (d: PanelCrossDay) => d.aiMatched !== true && !d.virtual
+  const mismatches = blocks.reduce((n, b) => n + b.days.filter(needsEye).length, 0)
   const shown = onlyMismatch
     ? blocks
-        .map((b) => ({ ...b, days: b.days.filter((d) => d.aiMatched === false) }))
+        .map((b) => ({ ...b, days: b.days.filter(needsEye) }))
         .filter((b) => b.days.length > 0)
     : blocks
 
@@ -63,7 +64,7 @@ export function CrossGallery({ id }: { id: string }) {
             style={{ fontSize: '0.78rem', padding: '4px 10px' }}
             onClick={() => setOnlyMismatch((v) => !v)}
           >
-            ⚠️ Не совпали с эталоном: {mismatches}
+            ⚠️ Без подтверждения ИИ: {mismatches}
           </button>
         )}
       </div>
@@ -87,7 +88,9 @@ export function CrossGallery({ id }: { id: string }) {
                     border:
                       day.aiMatched === false
                         ? '2px solid #dc2626'
-                        : '1px solid var(--pl-border, rgba(0,0,0,0.1))',
+                        : day.aiMatched == null && !day.virtual
+                          ? '2px dashed #d97706'
+                          : '1px solid var(--pl-border, rgba(0,0,0,0.1))',
                     borderRadius: 10,
                     overflow: 'hidden',
                     background: '#fff',
@@ -97,10 +100,12 @@ export function CrossGallery({ id }: { id: string }) {
                   title={
                     day.aiMatched === false
                       ? `ИИ: не совпало с эталоном${day.aiFeedback ? ` — ${day.aiFeedback}` : ''}`
-                      : fmt(day.date, day.virtual)
+                      : day.aiMatched == null && !day.virtual
+                        ? 'ИИ не проверял это фото'
+                        : fmt(day.date, day.virtual)
                   }
                 >
-                  {day.aiMatched === false && (
+                  {day.aiMatched !== true && !day.virtual && (
                     <span
                       style={{
                         position: 'absolute',
@@ -110,9 +115,9 @@ export function CrossGallery({ id }: { id: string }) {
                         lineHeight: 1,
                         filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.4))',
                       }}
-                      aria-label="Не совпало с эталоном"
+                      aria-label={day.aiMatched === false ? 'Не совпало с эталоном' : 'Без проверки ИИ'}
                     >
-                      ⚠️
+                      {day.aiMatched === false ? '⚠️' : '👁'}
                     </span>
                   )}
                   {day.url ? (
@@ -173,7 +178,13 @@ export function CrossGallery({ id }: { id: string }) {
                 color: '#111',
               }}
             >
-              <strong>{zoom.aiMatched === false ? '⚠️ ИИ: не совпало с эталоном' : '✓ ИИ: крест распознан'}</strong>
+              <strong>
+                {zoom.aiMatched === true
+                  ? '✓ ИИ: крест распознан'
+                  : zoom.aiMatched === false
+                    ? '⚠️ ИИ: не совпало с эталоном'
+                    : '👁 ИИ не проверял это фото — взгляни сам'}
+              </strong>
               {zoom.aiFeedback && <div style={{ marginTop: 4, color: '#4b5563' }}>{zoom.aiFeedback}</div>}
             </div>
           )}

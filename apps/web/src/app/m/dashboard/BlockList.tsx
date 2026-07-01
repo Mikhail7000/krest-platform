@@ -168,12 +168,15 @@ export function BlockList({ onProgress }: BlockListProps) {
     if (!data) return
     const main = data.blocks.filter((b) => (b.order_num ?? 0) >= 1)
     const total = main.length || 10
-    const passed = main.filter((b) => data.progressByBlockId[b.id]?.block_passed_at).length
-    const cur = main.find((b) => !data.progressByBlockId[b.id]?.block_passed_at)?.id ?? null
+    // «Сдан» = ≥7 закрытых дней (канон, как passed_blocks_all). Раньше опирались на
+    // block_passed_at, который в дневной модели НИКТО не пишет → «текущий блок»
+    // навсегда застревал на Блоке 1 даже после его завершения, а TodayCard показывал
+    // ложное «День закрыт» при 0 сданных практик нового блока.
+    const closedOf = (id: number) => data.completionByBlockId[id]?.closedDays ?? 0
+    const passed = main.filter((b) => closedOf(b.id) >= 7).length
+    const cur = main.find((b) => closedOf(b.id) < 7)?.id ?? null
     // % курса = сданные блоки + прогресс ТЕКУЩЕГО блока (закрытыеДни/7, капнуто на 1).
-    // Раньше считались только полностью сданные блоки → пока идёт блок 1 показывалось
-    // демотивирующее 0% даже при 5/7 закрытых днях.
-    const curDays = cur != null ? data.completionByBlockId[cur]?.closedDays ?? 0 : 0
+    const curDays = cur != null ? closedOf(cur) : 0
     const pct = Math.round(((passed + Math.min(curDays / 7, 1)) / total) * 100)
     onProgress?.(pct, cur)
     // onProgress стабилен (сеттер useState) — не включаем в deps

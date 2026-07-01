@@ -30,7 +30,8 @@ export function TodayCard({ blockId }: { blockId: number | null }) {
   if (blockId == null || !status) return null
 
   const done = TASKS.filter((t) => status.today[t.key]).length
-  const dayClosed = done === TASKS.length || !status.canActToday
+  const allDone = done === TASKS.length
+  const dayClosed = allDone || !status.canActToday
 
   if (dayClosed) {
     return (
@@ -42,9 +43,11 @@ export function TodayCard({ blockId }: { blockId: number | null }) {
           <div>
             <div className="tc-title">День закрыт</div>
             <div className="tc-subtitle">
-              {status.nextDayLocked
-                ? 'Новый день откроется в полночь. Отдыхай!'
-                : 'Все практики на сегодня сданы.'}
+              {/* «Все сданы» — только если сегодня реально сданы все 4; иначе день
+                  закрыт гейтом (7-й день закрыт, новый блок) — честная подсказка. */}
+              {allDone
+                ? 'Все практики на сегодня сданы.'
+                : 'Новый день откроется в полночь. Отдыхай!'}
             </div>
           </div>
         </div>

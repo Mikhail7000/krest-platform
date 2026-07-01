@@ -14,6 +14,13 @@ const VISION_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 async function decode(file: File): Promise<ImageBitmap | HTMLImageElement> {
   if (typeof createImageBitmap === 'function') {
     try {
+      // from-image: применить EXIF-ориентацию к пикселям (canvas.toBlob стирает EXIF,
+      // без этого портретное фото на старых движках уехало бы боком).
+      return await createImageBitmap(file, { imageOrientation: 'from-image' })
+    } catch {
+      /* опция не поддержана / HEIC — пробуем без опции, затем через <img> */
+    }
+    try {
       return await createImageBitmap(file)
     } catch {
       /* HEIC и пр. — пробуем через <img> ниже */

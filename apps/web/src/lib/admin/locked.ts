@@ -24,12 +24,14 @@ export async function ownerLockBlocksIds(
   targetIds: string[],
 ): Promise<boolean> {
   if (targetIds.length === 0) return false
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .select('id')
     .in('id', targetIds)
     .eq('owner_locked', true)
     .limit(1)
+  // Fail-closed: сбой БД = «замок есть» — иначе транзиентная ошибка снимала бы защиту.
+  if (error) return true
   if (!data || (data as unknown[]).length === 0) return false
   return !(await resolveIsOwner(supabase, actorUid))
 }
@@ -46,10 +48,12 @@ export async function ownerLockedHandles(
   handles: string[],
 ): Promise<string[]> {
   if (handles.length === 0) return []
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .select('contact_info')
     .eq('owner_locked', true)
+  // Fail-closed: сбой БД = блокируем все ники, а не пропускаем молча.
+  if (error) return handles
   const locked = new Set(
     ((data ?? []) as { contact_info: string | null }[])
       .map((r) => (r.contact_info ?? '').toLowerCase())
