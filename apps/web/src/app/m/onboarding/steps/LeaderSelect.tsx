@@ -103,6 +103,16 @@ export function LeaderSelect({
         >
           Назад
         </motion.button>
+
+        {/* Куратора мог завести админ напрямую, без лидера — тогда шаг пропускается. */}
+        <button
+          type="button"
+          onClick={() => onSelect({ countryId: '', cityId: '' })}
+          disabled={loading}
+          className="mt-4 w-full text-sm text-gray-400 underline underline-offset-4 hover:text-gray-600 disabled:opacity-50 dark:text-white/40 dark:hover:text-white/70"
+        >
+          У меня нет лидера города — пропустить
+        </button>
       </motion.div>
     </div>
   )
