@@ -16,4 +16,6 @@ export interface LeaderRow {
   /** Кураторов в городе лидера. */
   curatorsCount: number
   curators: LeaderCurator[]
+  /** Добавлен в whitelist, но ещё не заходил в приложение (профиля нет). */
+  pending?: boolean
 }

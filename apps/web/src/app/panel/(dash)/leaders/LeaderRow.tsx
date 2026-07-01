@@ -51,6 +51,27 @@ export function LeaderRow({
       : leader.city
     : '—'
 
+  // Ожидает первого входа: профиля ещё нет, действий нет — только пометка.
+  if (leader.pending) {
+    return (
+      <tr>
+        <td>
+          <div style={{ fontWeight: 600 }}>{leader.nick ?? 'Лидер'}</div>
+          <span className="panel-badge panel-badge--warn" style={{ marginTop: 4, display: 'inline-block' }}>
+            ⏳ ждёт первого входа
+          </span>
+        </td>
+        <td>{cityLabel}</td>
+        <td>—</td>
+        <td>
+          <span className="panel-muted" style={{ fontSize: '0.85rem' }}>
+            Появится здесь после /start в боте
+          </span>
+        </td>
+      </tr>
+    )
+  }
+
   return (
     <>
       <tr

@@ -452,4 +452,46 @@
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 12px;
   }
+  /* Таблицы влезают по ширине телефона (без гориз. скролла); действия переносятся. */
+  .panel-table {
+    min-width: 0;
+    font-size: 0.85rem;
+  }
+  .panel-table th,
+  .panel-table td {
+    padding: 10px 10px;
+  }
+  .panel-table td > div[style*='flex-end'] {
+    justify-content: flex-start;
+  }
+  .panel-btn {
+    padding: 7px 11px;
+    font-size: 0.82rem;
+  }
+  .panel-page__title {
+    font-size: 1.4rem;
+  }
+  .panel-page__subtitle {
+    font-size: 0.92rem;
+    margin-bottom: 18px;
+  }
+  .panel-stat {
+    padding: 16px;
+  }
+  .panel-stat__value {
+    font-size: 1.6rem;
+  }
+  .panel-card {
+    padding: 16px;
+  }
+}
+
+/* Совсем узкие экраны — статистика в 2 колонки, крупные модалки на всю ширину. */
+@media (max-width: 480px) {
+  .panel-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .panel-page__title {
+    font-size: 1.25rem;
+  }
 }

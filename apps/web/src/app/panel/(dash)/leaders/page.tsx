@@ -71,6 +71,35 @@ async function loadLeaders(): Promise<{
     (a, b) => b.curatorsCount - a.curatorsCount || (a.name ?? '').localeCompare(b.name ?? ''),
   )
 
+  // Ожидающие входа: добавлены в whitelist как city_leader, но ещё не заходили
+  // (claimed_chat_id пуст) и профиля-лидера с таким ником ещё нет.
+  const activeHandles = new Set(leaders.map((l) => (l.nick ?? '').toLowerCase()))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: pendingWl } = await (supabase as any)
+    .from('testing_whitelist')
+    .select('telegram_username, assigned_city_id')
+    .eq('assign_role', 'city_leader')
+    .is('claimed_chat_id', null)
+  const pending: LeaderRow[] = ((pendingWl ?? []) as { telegram_username: string; assigned_city_id: number | null }[])
+    .filter((w) => !activeHandles.has((w.telegram_username ?? '').toLowerCase()))
+    .map((w) => {
+      const city = w.assigned_city_id != null ? cityById.get(w.assigned_city_id) ?? null : null
+      return {
+        id: `pending:${w.telegram_username}`,
+        name: null,
+        nick: w.telegram_username,
+        isProtected: false,
+        city: city?.name ?? null,
+        cityId: w.assigned_city_id ?? null,
+        country: city?.country ?? null,
+        curatorsCount: 0,
+        curators: [],
+        pending: true,
+      }
+    })
+    .sort((a, b) => (a.nick ?? '').localeCompare(b.nick ?? ''))
+  leaders.push(...pending)
+
   const cities = ((citiesRes.data ?? []) as { id: number; name_ru: string }[]).map((c) => ({
     id: c.id,
     name: c.name_ru,
@@ -116,7 +145,12 @@ export default async function LeadersPage() {
       <div className="panel-grid">
         <div className="panel-stat">
           <span className="panel-stat__label">Лидеров городов</span>
-          <span className="panel-stat__value">{leaders.length}</span>
+          <span className="panel-stat__value">{leaders.filter((l) => !l.pending).length}</span>
+          {leaders.some((l) => l.pending) ? (
+            <span className="panel-stat__hint">
+              +{leaders.filter((l) => l.pending).length} ждут первого входа
+            </span>
+          ) : null}
         </div>
       </div>
 
