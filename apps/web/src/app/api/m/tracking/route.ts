@@ -198,11 +198,8 @@ export async function POST(request: NextRequest) {
     const blocksPassed = passedCountByUser.get(p.id) ?? 0
     const currentBlock = Math.min(blocksPassed + 1, 10)
 
-    // Ачивки
+    // Ачивки-бейджи убраны из карточки — дублировали мета-чипы (блок/стрик/сдано).
     const achievements: string[] = []
-    if (currentStreak >= 3) achievements.push(`🔥 ${currentStreak} дней подряд`)
-    achievements.push(`📘 Блок ${currentBlock}`)
-    if (blocksPassed > 0) achievements.push(`✅ Сдал ${blocksPassed} бл.`)
 
     // Нормализуем cities (Supabase может вернуть объект или массив)
     const c = p.cities

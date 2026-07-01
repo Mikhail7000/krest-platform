@@ -119,24 +119,13 @@ export function LeaderboardCard({ row, index = 0 }: Props) {
         </div>
       </div>
 
-      {/* Мета-чипы */}
+      {/* Мета-чипы: блок · сдано блоков · стрик · закрытых дней (полная сводка) */}
       <div className="lb-card__meta">
         <span className="lb-chip">Блок {row.currentBlock}</span>
         <span className="lb-chip">Сдано {row.blocksPassed}</span>
         <span className="lb-chip">🔥 {row.currentStreak} дн.</span>
         <span className="lb-chip">{row.closedDays} закрыто</span>
       </div>
-
-      {/* Ачивки */}
-      {row.achievements.length > 0 && (
-        <div className="lb-card__achievements">
-          {row.achievements.map((a) => (
-            <span key={a} className="lb-badge">
-              {a}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
