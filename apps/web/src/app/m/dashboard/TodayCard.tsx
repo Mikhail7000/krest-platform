@@ -1,16 +1,23 @@
 'use client'
 
 import Link from 'next/link'
+import type { ComponentType, SVGProps } from 'react'
 import { useBlockStatus, type BlockStatusData } from '@/lib/m/block-status-cache'
+import { IconBook, IconCamera, IconCheck, IconCross, IconMic } from '@/app/m/_components/icons'
 
 type TodayKey = keyof BlockStatusData['today']
 
-/** 4 практики дня в каноническом порядке, с прямыми ссылками на экраны. */
-const TASKS: { key: TodayKey; label: string; icon: string; path: string }[] = [
-  { key: 'cross', label: 'Фото Креста', icon: '✝️', path: 'cross-photo' },
-  { key: 'prayer', label: 'Молитва', icon: '🙏', path: 'prayer' },
-  { key: 'mestopisaniya', label: 'Местописания', icon: '📍', path: 'locations' },
-  { key: 'pereskaz', label: 'Пересказ', icon: '🎙️', path: 'recitation' },
+/** 4 практики дня в каноническом порядке; иконки — те же, что в уроке (Stage4Nav). */
+const TASKS: {
+  key: TodayKey
+  label: string
+  Icon: ComponentType<SVGProps<SVGSVGElement>>
+  path: string
+}[] = [
+  { key: 'cross', label: 'Фото Креста', Icon: IconCamera, path: 'cross-photo' },
+  { key: 'prayer', label: 'Молитва', Icon: IconCross, path: 'prayer' },
+  { key: 'mestopisaniya', label: 'Местописания', Icon: IconBook, path: 'locations' },
+  { key: 'pereskaz', label: 'Пересказ', Icon: IconMic, path: 'recitation' },
 ]
 
 /**
@@ -29,7 +36,9 @@ export function TodayCard({ blockId }: { blockId: number | null }) {
     return (
       <div className="miniapp-container tc-wrap">
         <div className="tc-card tc-card--done">
-          <span className="tc-done-icon">✓</span>
+          <span className="tc-done-icon">
+            <IconCheck className="tc-done-icon__svg" />
+          </span>
           <div>
             <div className="tc-title">День закрыт</div>
             <div className="tc-subtitle">
@@ -59,10 +68,12 @@ export function TodayCard({ blockId }: { blockId: number | null }) {
                 href={`/m/${t.path}/${blockId}`}
                 className={`tc-row${isDone ? ' tc-row--done' : ''}`}
               >
-                <span className="tc-row__icon">{t.icon}</span>
+                <span className="tc-row__icon">
+                  <t.Icon className="tc-row__icon-svg" />
+                </span>
                 <span className="tc-row__label">{t.label}</span>
                 <span className={`tc-row__mark${isDone ? ' tc-row__mark--done' : ''}`}>
-                  {isDone ? '✓' : '›'}
+                  {isDone ? <IconCheck className="tc-row__mark-svg" /> : '›'}
                 </span>
               </Link>
             )
