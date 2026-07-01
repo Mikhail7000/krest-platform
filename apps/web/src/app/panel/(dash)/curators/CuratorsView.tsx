@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CuratorRow, LeaderPick } from './types'
+import { TgLink } from '../TgLink'
 import { RoleModal } from './RoleModal'
 import { AddStaffBar } from './AddStaffBar'
 import { AssignLeaderModal } from './AssignLeaderModal'
@@ -181,7 +182,7 @@ function CuratorRowGroup({
       >
         <td>
           <div style={{ fontWeight: 600 }}>{curator.name ?? 'Без имени'}</div>
-          {curator.nick ? <div className="panel-muted">{curator.nick}</div> : null}
+          {curator.nick ? <div><TgLink nick={curator.nick} /></div> : null}
           {badge ? (
             <span className={badge.cls} style={{ marginTop: 4, display: 'inline-block' }}>
               {badge.label}

@@ -9,6 +9,7 @@ import { findSilentStudents } from '@/lib/activity/silence'
 import { ProgressChart } from './StatsClient'
 import { GenerateReport } from './GenerateReport'
 import { ReminderButton } from './ReminderButton'
+import { TgLink } from './TgLink'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,8 +65,8 @@ export default async function PanelOverviewPage() {
           <ul style={{ margin: '2px 0 0', paddingLeft: 18 }}>
             {silent.map((s) => (
               <li key={s.id} style={{ marginBottom: 6 }}>
-                <span style={{ fontWeight: 600 }}>{s.name}</span>
-                {s.telegram ? <span className="panel-muted"> {s.telegram}</span> : null}
+                <span style={{ fontWeight: 600 }}>{s.name}</span>{' '}
+                <TgLink nick={s.telegram} />
                 {' — '}
                 <span className="panel-badge panel-badge--warn">{s.daysSilent} дн.</span>{' '}
                 <ReminderButton studentId={s.id} />
@@ -349,11 +350,9 @@ export default async function PanelOverviewPage() {
                   <tr key={s.id}>
                     <td>
                       <div style={{ fontWeight: 600 }}>{s.name}</div>
-                      {s.telegram ? (
-                        <div className="panel-muted" style={{ fontSize: '0.82rem' }}>
-                          {s.telegram}
-                        </div>
-                      ) : null}
+                      <div style={{ fontSize: '0.82rem' }}>
+                        <TgLink nick={s.telegram} />
+                      </div>
                     </td>
                     <td>{s.city}</td>
                     <td>

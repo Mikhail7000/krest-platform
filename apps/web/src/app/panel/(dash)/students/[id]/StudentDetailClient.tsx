@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { PanelStudentDetail } from '@/app/api/panel/student/[id]/route'
 import { Avatar, fmtDate, fmtDateTime } from '../studentBits'
+import { TgLink } from '../../TgLink'
 import { CrossGallery } from './CrossGallery'
 import { SubmissionsSection } from './SubmissionsSection'
 
@@ -52,7 +53,7 @@ export function StudentDetailClient({ id }: { id: string }) {
         <div style={{ minWidth: 0 }}>
           <h1 className="panel-page__title" style={{ marginBottom: 2 }}>{s.fullName || 'Без имени'}</h1>
           <div className="panel-muted">
-            {s.contact && <span>{s.contact}</span>}
+            <TgLink nick={s.contact} />
             {s.contact && (s.cityName || s.curatorName) && <span> · </span>}
             {s.cityName && <span>{s.cityName}</span>}
           </div>

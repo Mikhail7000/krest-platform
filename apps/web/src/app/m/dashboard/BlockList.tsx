@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Database } from '../../../../../../packages/supabase/src/types'
 import { IconGraduation, IconStar, IconTrophy } from '@/app/m/_components/icons'
 import {
@@ -24,14 +24,21 @@ function getInitData(): string {
 }
 
 // ── Статус блока (накопительная модель) ──────────────────────────────────────
+// «Сдан» = ≥7 закрытых дней (канон, как passed_blocks_all) ИЛИ явный block_passed_at.
+// На активном блоке показываем прогресс «N/7 дней» прямо на карточке.
 function blockStatusVariant(
   block: Block,
   progress: BlockProgress | undefined,
   unlocked: boolean,
+  closedDays: number,
 ): { label: string; variant: StatusVariant } {
-  if (progress?.block_passed_at) return { label: 'Сдан', variant: 'done' }
+  if (progress?.block_passed_at || closedDays >= 7) return { label: 'Сдан', variant: 'done' }
   if (progress?.status === 'in_progress') return { label: 'Идёт сдача', variant: 'active' }
-  if (unlocked) return { label: 'Доступен', variant: 'default' }
+  if (unlocked) {
+    return closedDays > 0
+      ? { label: `День ${Math.min(closedDays + 1, 7)} из 7 · закрыто ${closedDays}`, variant: 'default' }
+      : { label: 'Доступен', variant: 'default' }
+  }
   return { label: 'Заблокирован', variant: 'locked' }
 }
 
@@ -61,7 +68,8 @@ interface BlockCardProps {
 
 function BlockCard({ block, progress, blocks, canSkip, completionByBlockId }: BlockCardProps) {
   const unlocked = isBlockUnlockedByCompletion(blocks, block.id, canSkip, completionByBlockId)
-  const { label, variant } = blockStatusVariant(block, progress, unlocked)
+  const closedDays = completionByBlockId[block.id]?.closedDays ?? 0
+  const { label, variant } = blockStatusVariant(block, progress, unlocked, closedDays)
   const isDone = variant === 'done'
   const isLocked = variant === 'locked'
   const orderNum = block.order_num ?? 0
@@ -158,6 +166,9 @@ function fetchDashboard(): Promise<DashboardData | null> {
 
 export function BlockList({ onProgress }: BlockListProps) {
   const [group, setGroup] = useState<'g1' | 'g2'>('g1')
+  // Автовыбор вкладки «Блоки 6-10» для второй половины курса — ровно один раз,
+  // чтобы не перещёлкивать выбор пользователя при фоновом рефетче.
+  const autoTabbed = useRef(false)
   // SWR-кэш: возврат на дашборд открывается мгновенно, фоном обновляется.
   const { data, loading } = useSwrCache<DashboardData>('m:dashboard', fetchDashboard, 120_000)
 
@@ -174,7 +185,12 @@ export function BlockList({ onProgress }: BlockListProps) {
     // ложное «День закрыт» при 0 сданных практик нового блока.
     const closedOf = (id: number) => data.completionByBlockId[id]?.closedDays ?? 0
     const passed = main.filter((b) => closedOf(b.id) >= 7).length
-    const cur = main.find((b) => closedOf(b.id) < 7)?.id ?? null
+    const curBlock = main.find((b) => closedOf(b.id) < 7) ?? null
+    const cur = curBlock?.id ?? null
+    if (!autoTabbed.current && (curBlock?.order_num ?? 0) >= 6) {
+      setGroup('g2')
+      autoTabbed.current = true
+    }
     // % курса = сданные блоки + прогресс ТЕКУЩЕГО блока (закрытыеДни/7, капнуто на 1).
     const curDays = cur != null ? closedOf(cur) : 0
     const pct = Math.round(((passed + Math.min(curDays / 7, 1)) / total) * 100)
