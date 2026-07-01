@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { ownerLockBlocksIds, OWNER_LOCKED_ERROR } from '@/lib/admin/locked'
 import { notifyAdmins } from '@/lib/telegram/admin-recipients'
 import { escapeHtml } from '@/lib/telegram/send'
 
@@ -48,6 +49,9 @@ export async function POST(req: NextRequest) {
       { ok: false, error: 'Этот пользователь защищён от удаления' },
       { status: 403 },
     )
+  }
+  if (await ownerLockBlocksIds(supabase, session.uid, [userId])) {
+    return NextResponse.json({ ok: false, error: OWNER_LOCKED_ERROR }, { status: 403 })
   }
   if (target.role === 'super_admin') {
     return NextResponse.json(

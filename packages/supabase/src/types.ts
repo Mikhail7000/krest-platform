@@ -424,16 +424,19 @@ export type Database = {
         Row: {
           action: string
           created_at: string
+          payload: string | null
           telegram_chat_id: number
         }
         Insert: {
           action: string
           created_at?: string
+          payload?: string | null
           telegram_chat_id: number
         }
         Update: {
           action?: string
           created_at?: string
+          payload?: string | null
           telegram_chat_id?: number
         }
         Relationships: []
@@ -962,6 +965,7 @@ export type Database = {
           location_name: string | null
           longitude: number | null
           onboarding_done: boolean | null
+          owner_locked: boolean
           referral_detail: string | null
           referral_source: string | null
           role: string | null
@@ -994,6 +998,7 @@ export type Database = {
           location_name?: string | null
           longitude?: number | null
           onboarding_done?: boolean | null
+          owner_locked?: boolean
           referral_detail?: string | null
           referral_source?: string | null
           role?: string | null
@@ -1026,6 +1031,7 @@ export type Database = {
           location_name?: string | null
           longitude?: number | null
           onboarding_done?: boolean | null
+          owner_locked?: boolean
           referral_detail?: string | null
           referral_source?: string | null
           role?: string | null
@@ -2282,3 +2288,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

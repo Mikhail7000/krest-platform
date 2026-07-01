@@ -25,12 +25,14 @@ export function StudentRow({
   s,
   curators,
   isCurator = false,
+  viewerIsOwner = false,
   onDone,
   onError,
 }: {
   s: PanelStudentRow
   curators: Curator[]
   isCurator?: boolean
+  viewerIsOwner?: boolean
   onDone: (msg: string) => void
   onError: (msg: string) => void
 }) {
@@ -40,6 +42,10 @@ export function StudentRow({
     s.curatorName ??
     (s.curatorId ? curators.find((c) => c.id === s.curatorId)?.name ?? null : null)
 
+  // Замкнутый владельцем профиль: не-владелец видит строку read-only с замком
+  // (сервер в actions/* всё равно вернёт 403 — это только честный UI).
+  const lockedForViewer = s.locked && !viewerIsOwner
+
   return (
     <tr>
       <td>
@@ -47,13 +53,14 @@ export function StudentRow({
           <Avatar url={s.avatarUrl} name={s.fullName} />
           <span>
             {s.fullName || 'Без имени'}
+            {s.locked && <span title="Под управлением владельца платформы"> 🔒</span>}
             {s.contact && <span className="panel-muted" style={{ display: 'block', fontWeight: 400, fontSize: '0.8rem' }}>{s.contact}</span>}
           </span>
         </Link>
       </td>
       <td>{s.cityName || <span className="panel-muted">—</span>}</td>
       <td>
-        {isCurator ? (
+        {isCurator || lockedForViewer ? (
           <span className="panel-muted" style={{ fontSize: '0.85rem' }}>
             {curatorName ?? '—'}
           </span>
@@ -70,7 +77,11 @@ export function StudentRow({
       <td className="panel-muted" style={{ whiteSpace: 'nowrap' }}>{fmtDate(s.createdAt)}</td>
       {!isCurator && (
         <td style={{ textAlign: 'right' }}>
-          <StudentRowActions student={s} curators={curators} onDone={onDone} onError={onError} />
+          {lockedForViewer ? (
+            <span className="panel-muted" title="Изменять может только владелец платформы">🔒</span>
+          ) : (
+            <StudentRowActions student={s} curators={curators} onDone={onDone} onError={onError} />
+          )}
         </td>
       )}
     </tr>

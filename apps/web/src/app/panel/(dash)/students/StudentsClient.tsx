@@ -36,6 +36,8 @@ export function StudentsClient({
 
   const [students, setStudents] = useState<PanelStudentRow[]>([])
   const [curators, setCurators] = useState<Curator[]>([])
+  // Владелец платформы (is_protected) — только он правит замкнутые (locked) профили.
+  const [isOwner, setIsOwner] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -57,6 +59,7 @@ export function StudentsClient({
       if (!res.ok || !json.ok) throw new Error(json.error || 'Ошибка загрузки')
       setStudents(json.students as PanelStudentRow[])
       setCurators(json.curators as Curator[])
+      setIsOwner(!!json.isOwner)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки')
     } finally {
@@ -266,6 +269,7 @@ export function StudentsClient({
                   s={s}
                   curators={curators}
                   isCurator={readOnlyRows}
+                  viewerIsOwner={isOwner}
                   onDone={(msg) => {
                     flash('ok', msg)
                     void load()

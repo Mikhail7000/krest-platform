@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { ownerLockedHandles, OWNER_LOCKED_ERROR } from '@/lib/admin/locked'
 import { parseHandles, attachStudentsToCurator } from '@/lib/access/attach'
 import { notifyAdmins } from '@/lib/telegram/admin-recipients'
 import { escapeHtml } from '@/lib/telegram/send'
@@ -64,6 +65,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { ok: false, error: 'Не найдено ни одного корректного ника (мин. 4 символа, латиница)' },
       { status: 400 },
+    )
+  }
+
+  const lockedHits = await ownerLockedHandles(supabase, session.uid, handles)
+  if (lockedHits.length > 0) {
+    return NextResponse.json(
+      { ok: false, error: `${OWNER_LOCKED_ERROR}: ${lockedHits.join(', ')}` },
+      { status: 403 },
     )
   }
 

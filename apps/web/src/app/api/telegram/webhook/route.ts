@@ -5,6 +5,7 @@ import { studentLocalToday } from '@/lib/time/local-day'
 import { createTelegramProfile } from '@/lib/telegram/ensure-profile'
 import { getAdminChatIds } from '@/lib/telegram/admin-recipients'
 import { signLoginToken, type AdminRole } from '@/lib/admin/session'
+import { ownerLockedHandles } from '@/lib/admin/locked'
 import { attachStudentsToCurator } from '@/lib/access/attach'
 import {
   sendTelegramMessage,
@@ -137,7 +138,7 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
     const userId = payload
     const { data: target } = (await service
       .from('profiles')
-      .select('id, full_name, contact_info, is_protected')
+      .select('id, full_name, contact_info, is_protected, owner_locked')
       .eq('id', userId)
       .maybeSingle()) as {
       data: {
@@ -145,6 +146,7 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
         full_name: string | null
         contact_info: string | null
         is_protected: boolean | null
+        owner_locked: boolean | null
       } | null
     }
 
@@ -163,6 +165,17 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
           cq.message.chat.id,
           cq.message.message_id,
           '🔒 Защищённого пользователя нельзя удалить.',
+        )
+      }
+      return
+    }
+    if (target.owner_locked && !adminProf.isOwner) {
+      await answerCallbackQuery(cq.id, 'Только владелец платформы')
+      if (cq.message) {
+        await editMessageText(
+          cq.message.chat.id,
+          cq.message.message_id,
+          '🔒 Этого пользователя может изменять только владелец платформы.',
         )
       }
       return
@@ -273,6 +286,18 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
     const handles = parseHandles((pend as { payload: string | null } | null)?.payload ?? '')
     if (handles.length === 0) {
       await answerCallbackQuery(cq.id, 'Список устарел — начни заново: /addleader')
+      return
+    }
+    const lockedLeads = await ownerLockedHandles(service, adminProf.id, handles)
+    if (lockedLeads.length > 0) {
+      await answerCallbackQuery(cq.id, 'Только владелец платформы')
+      if (cq.message) {
+        await editMessageText(
+          cq.message.chat.id,
+          cq.message.message_id,
+          `🔒 Изменять может только владелец платформы: ${lockedLeads.map((h) => escapeHtmlTg(h)).join(', ')}`,
+        )
+      }
       return
     }
 
@@ -794,6 +819,7 @@ async function handleTransfer(
   supabase: any,
   chatId: number,
   args: string,
+  actorIsOwner: boolean,
 ): Promise<void> {
   const parts = args
     .trim()
@@ -814,11 +840,16 @@ async function handleTransfer(
   const [{ data: student }, { data: curator }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, full_name, contact_info')
+      .select('id, full_name, contact_info, owner_locked')
       .eq('role', 'student')
       .ilike('contact_info', `@${studentNick}`)
       .maybeSingle() as Promise<{
-        data: { id: string; full_name: string | null; contact_info: string | null } | null
+        data: {
+          id: string
+          full_name: string | null
+          contact_info: string | null
+          owner_locked: boolean | null
+        } | null
       }>,
     supabase
       .from('profiles')
@@ -848,6 +879,13 @@ async function handleTransfer(
     await sendTelegramMessage(
       chatId,
       `Куратор @${escapeHtmlTg(curatorNick)} не найден (или не является куратором).`,
+    )
+    return
+  }
+  if (student.owner_locked && !actorIsOwner) {
+    await sendTelegramMessage(
+      chatId,
+      '🔒 Этого пользователя может изменять только владелец платформы.',
     )
     return
   }
@@ -1193,8 +1231,20 @@ async function processAddNicks(
   // Город для привязки (лидер города добавляет кураторов сразу в свой город). null — не трогаем.
   assignedCityId: number | null = null,
 ): Promise<number> {
-  const handles = parseHandles(rawText)
+  let handles = parseHandles(rawText)
   if (handles.length === 0) return 0
+
+  // Замкнутые владельцем профили не-владелец через бота не трогает
+  // (whitelist-слот, роль, город) — молча пропускаем с уведомлением.
+  const lockedHits = await ownerLockedHandles(supabase, adminProfile.id, handles)
+  if (lockedHits.length > 0) {
+    handles = handles.filter((h) => !lockedHits.includes(h))
+    await sendTelegramMessage(
+      chatId,
+      `🔒 Пропущены (изменять может только владелец платформы): ${lockedHits.map((h) => escapeHtmlTg(h)).join(', ')}`,
+    )
+    if (handles.length === 0) return 0
+  }
 
   const added: string[] = []
   for (const handle of handles) {
@@ -1441,6 +1491,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
     const [curatorHandle, ...studentHandles] = handles
+    const lockedAttach = await ownerLockedHandles(supabase, adminProf.id, studentHandles)
+    if (lockedAttach.length > 0) {
+      await sendTelegramMessage(
+        chatId,
+        `🔒 Изменять может только владелец платформы: ${lockedAttach.map((h) => escapeHtmlTg(h)).join(', ')}`,
+      )
+      return NextResponse.json({ ok: true })
+    }
     const { data: curator } = await supabase
       .from('profiles')
       .select('id, full_name')
@@ -1611,7 +1669,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true })
     }
     const args = text.slice('/transfer'.length).trim()
-    await handleTransfer(supabase, chatId, args)
+    await handleTransfer(supabase, chatId, args, adminProf.isOwner)
     return NextResponse.json({ ok: true })
   }
 
@@ -1703,7 +1761,7 @@ export async function POST(request: NextRequest) {
 
         const { data: profile, error: findError } = await supabase
           .from('profiles')
-          .select('id, email, telegram_chat_id')
+          .select('id, email, telegram_chat_id, owner_locked')
           .eq('email', emailArg.toLowerCase())
           .single()
 
@@ -1719,6 +1777,16 @@ export async function POST(request: NextRequest) {
           await sendTelegramMessage(
             chatId,
             `<b>Уже подключено!</b>\n\nВаш Telegram уже связан с аккаунтом КРЕСТ.`,
+          )
+          return NextResponse.json({ ok: true })
+        }
+
+        // Замкнутый владельцем аккаунт нельзя перепривязать к чужому Telegram
+        // (легаси-путь по email не знает актора — отказываем всегда).
+        if (profile.owner_locked) {
+          await sendTelegramMessage(
+            chatId,
+            `<b>Аккаунт защищён</b>\n\nЭтот аккаунт находится под личным управлением владельца платформы.`,
           )
           return NextResponse.json({ ok: true })
         }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { ownerLockBlocksIds, OWNER_LOCKED_ERROR } from '@/lib/admin/locked'
 import { notifyAdmins } from '@/lib/telegram/admin-recipients'
 import { escapeHtml } from '@/lib/telegram/send'
 
@@ -43,11 +44,21 @@ export async function POST(req: NextRequest) {
 
   const { data: target } = await supabase
     .from('profiles')
-    .select('id, full_name, contact_info')
+    .select('id, full_name, contact_info, is_protected')
     .eq('id', userId)
     .maybeSingle()
   if (!target) {
     return NextResponse.json({ ok: false, error: 'Ученик не найден' }, { status: 404 })
+  }
+  // Владельца (is_protected) не трогаем, как и в role/city/delete.
+  if (target.is_protected) {
+    return NextResponse.json(
+      { ok: false, error: 'Этот пользователь защищён от изменений' },
+      { status: 403 },
+    )
+  }
+  if (await ownerLockBlocksIds(supabase, session.uid, [userId])) {
+    return NextResponse.json({ ok: false, error: OWNER_LOCKED_ERROR }, { status: 403 })
   }
 
   // Проверяем, что новый куратор существует и имеет подходящую роль.

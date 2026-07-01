@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { resolveIsOwner } from '@/lib/admin/owner'
 import { resolvePanelScope, cityCuratorIds, studentInScope } from '@/lib/admin/scope'
 
 export const dynamic = 'force-dynamic'
@@ -26,6 +27,8 @@ export interface PanelStudentRow {
   currentBlock: number
   closedDays: number
   isProtected: boolean
+  /** Профиль под личным управлением владельца — менять может только он. */
+  locked: boolean
   hidden: boolean
   courseStartedAt: string | null
   createdAt: string | null
@@ -40,6 +43,7 @@ interface ProfileRow {
   curator_id: string | null
   avatar_path: string | null
   is_protected: boolean | null
+  owner_locked: boolean | null
   hidden_from_tracking: boolean | null
   course_started_at: string | null
   created_at: string | null
@@ -69,7 +73,7 @@ export async function POST(req: NextRequest) {
   const { data: profilesRaw, error: profErr } = await supabase
     .from('profiles')
     .select(
-      'id, full_name, contact_info, role, city_id, curator_id, avatar_path, is_protected, hidden_from_tracking, course_started_at, created_at, cities(name_ru)',
+      'id, full_name, contact_info, role, city_id, curator_id, avatar_path, is_protected, owner_locked, hidden_from_tracking, course_started_at, created_at, cities(name_ru)',
     )
     .order('created_at', { ascending: false })
 
@@ -116,6 +120,7 @@ export async function POST(req: NextRequest) {
         currentBlock: Math.min(passed + 1, MAX_BLOCKS),
         closedDays: closedById.get(p.id) ?? 0,
         isProtected: !!p.is_protected,
+        locked: !!p.owner_locked,
         hidden: !!p.hidden_from_tracking,
         courseStartedAt: p.course_started_at,
         createdAt: p.created_at,
@@ -134,5 +139,9 @@ export async function POST(req: NextRequest) {
           .map((p) => ({ id: p.id, name: p.full_name, role: p.role }))
       : []
 
-  return NextResponse.json({ ok: true, students: rows, curators })
+  // Владелец (is_protected) видит и правит замкнутые (owner_locked) профили; остальным UI
+  // показывает замок. Серверные гарды в actions/* не дадут обойти в любом случае.
+  const isOwner = await resolveIsOwner(supabase, session.uid)
+
+  return NextResponse.json({ ok: true, students: rows, curators, isOwner })
 }

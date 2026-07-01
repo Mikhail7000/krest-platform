@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
+import { ownerLockedHandles, OWNER_LOCKED_ERROR } from '@/lib/admin/locked'
 import { notifyAdmins } from '@/lib/telegram/admin-recipients'
 import { escapeHtml } from '@/lib/telegram/send'
 
@@ -81,6 +82,12 @@ export async function POST(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
+
+  // Замкнутый владельцем профиль: ни менять его роль/город/куратора, ни трогать
+  // его whitelist-слот не-владельцу нельзя.
+  if ((await ownerLockedHandles(supabase, session.uid, [handle])).length > 0) {
+    return NextResponse.json({ ok: false, error: OWNER_LOCKED_ERROR }, { status: 403 })
+  }
 
   // Лидер города не может привязать ученика к куратору ЧУЖОГО города (scope-эскалация
   // через прямой API: body.curatorId не ограничен UI). Куратор обязан быть из его города.
