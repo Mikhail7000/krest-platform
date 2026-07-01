@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
  * Синхронизируем testing_whitelist.assigned_city_id (триггер apply_whitelist_role).
  */
 export async function POST(req: NextRequest) {
-  const session = getPanelSessionFromReq(req)
+  const session = await getPanelSessionFromReq(req)
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }

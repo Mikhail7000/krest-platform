@@ -138,13 +138,14 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
     const userId = payload
     const { data: target } = (await service
       .from('profiles')
-      .select('id, full_name, contact_info, is_protected, owner_locked')
+      .select('id, full_name, contact_info, role, is_protected, owner_locked')
       .eq('id', userId)
       .maybeSingle()) as {
       data: {
         id: string
         full_name: string | null
         contact_info: string | null
+        role: string | null
         is_protected: boolean | null
         owner_locked: boolean | null
       } | null
@@ -176,6 +177,18 @@ async function handleCallbackQuery(cq: TelegramCallbackQuery): Promise<void> {
           cq.message.chat.id,
           cq.message.message_id,
           '🔒 Этого пользователя может изменять только владелец платформы.',
+        )
+      }
+      return
+    }
+    // Симметрия с панелью: супер-админа не удалить вовсе, админа — только супер-админ.
+    if (target.role === 'super_admin' || (target.role === 'admin' && adminProf.role !== 'super_admin')) {
+      await answerCallbackQuery(cq.id, 'Недостаточно прав')
+      if (cq.message) {
+        await editMessageText(
+          cq.message.chat.id,
+          cq.message.message_id,
+          '🔒 Удалять администраторов может только супер-админ.',
         )
       }
       return
@@ -1752,78 +1765,19 @@ export async function POST(request: NextRequest) {
       refToken = arg.slice(4)
     }
 
-    const emailArg = arg && arg.includes('@') ? arg : null
+    // ЛЕГАСИ-линковка /start <email> УДАЛЕНА (2026-07-02): позволяла любому, кто знает
+    // email участника, перепривязать его аккаунт к своему Telegram (chat_id — ключ
+    // идентичности для панели и MiniApp). Вход теперь только через Telegram-идентичность.
 
-    if (emailArg) {
-      // /start email@example.com — link account by email
-      try {
-        const supabase = createServiceSupabase()
+    // /start без аргументов или с ref-токеном церкви
+    const welcomeText = refToken
+      ? `<b>Добро пожаловать в КРЕСТ! ✝️</b>\n\nВас пригласила церковь-партнёр.\n\nОткройте приложение и пройдите 10 блоков знакомства с верой — с живым наставником и в кругу таких же ищущих.`
+      : `<b>Добро пожаловать в КРЕСТ! ✝️</b>\n\nПлатформа для изучения Креста.\n\n<b>Что внутри:</b>\n• 10 блоков для изучения\n• Видео-уроки и конспекты\n• Практика по каждому блоку\n\nНажмите кнопку ниже, чтобы открыть приложение.`
 
-        const { data: profile, error: findError } = await supabase
-          .from('profiles')
-          .select('id, email, telegram_chat_id, owner_locked')
-          .eq('email', emailArg.toLowerCase())
-          .single()
-
-        if (findError || !profile) {
-          await sendTelegramMessage(
-            chatId,
-            `<b>Аккаунт не найден</b>\n\nПользователь с email <code>${emailArg}</code> не зарегистрирован на платформе КРЕСТ.\n\nСначала зарегистрируйтесь на сайте, затем вернитесь сюда.`,
-          )
-          return NextResponse.json({ ok: true })
-        }
-
-        if (profile.telegram_chat_id && profile.telegram_chat_id === chatId) {
-          await sendTelegramMessage(
-            chatId,
-            `<b>Уже подключено!</b>\n\nВаш Telegram уже связан с аккаунтом КРЕСТ.`,
-          )
-          return NextResponse.json({ ok: true })
-        }
-
-        // Замкнутый владельцем аккаунт нельзя перепривязать к чужому Telegram
-        // (легаси-путь по email не знает актора — отказываем всегда).
-        if (profile.owner_locked) {
-          await sendTelegramMessage(
-            chatId,
-            `<b>Аккаунт защищён</b>\n\nЭтот аккаунт находится под личным управлением владельца платформы.`,
-          )
-          return NextResponse.json({ ok: true })
-        }
-
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ telegram_chat_id: chatId })
-          .eq('id', profile.id)
-
-        if (updateError) {
-          console.error('Failed to update telegram_chat_id:', updateError)
-          await sendTelegramMessage(
-            chatId,
-            `<b>Ошибка</b>\n\nНе удалось связать аккаунт. Попробуйте позже.`,
-          )
-          return NextResponse.json({ ok: true })
-        }
-
-        await sendTelegramMessage(
-          chatId,
-          `<b>Аккаунт подключен!</b>\n\nВы будете получать уведомления об одобрении блоков лидером.\n\nУдачи в прохождении курса КРЕСТ!`,
-        )
-      } catch (error) {
-        console.error('Error linking Telegram account:', error)
-        await sendTelegramMessage(chatId, `<b>Ошибка</b>\n\nПроизошла ошибка. Попробуйте позже.`)
-      }
-    } else {
-      // /start без аргументов или с ref-токеном церкви
-      const welcomeText = refToken
-        ? `<b>Добро пожаловать в КРЕСТ! ✝️</b>\n\nВас пригласила церковь-партнёр.\n\nОткройте приложение и пройдите 10 блоков знакомства с верой — с живым наставником и в кругу таких же ищущих.`
-        : `<b>Добро пожаловать в КРЕСТ! ✝️</b>\n\nПлатформа для изучения Креста.\n\n<b>Что внутри:</b>\n• 10 блоков для изучения\n• Видео-уроки и конспекты\n• Практика по каждому блоку\n\nНажмите кнопку ниже, чтобы открыть приложение.`
-
-      await sendTelegramMessage(chatId, welcomeText, {
-        withMiniAppButton: true,
-        ...(refToken ? { inlineKeyboard: undefined } : {}),
-      })
-    }
+    await sendTelegramMessage(chatId, welcomeText, {
+      withMiniAppButton: true,
+      ...(refToken ? { inlineKeyboard: undefined } : {}),
+    })
 
     return NextResponse.json({ ok: true })
   }

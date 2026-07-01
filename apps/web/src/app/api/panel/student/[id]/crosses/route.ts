@@ -30,7 +30,7 @@ export interface PanelCrossBlock {
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const session = getPanelSessionFromReq(req)
+  const session = await getPanelSessionFromReq(req)
   if (!session) return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
 
   const { id } = await ctx.params

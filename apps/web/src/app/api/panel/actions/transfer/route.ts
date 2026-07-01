@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
  * Гард: только admin/super_admin, иначе 401.
  */
 export async function POST(req: NextRequest) {
-  const session = getPanelSessionFromReq(req)
+  const session = await getPanelSessionFromReq(req)
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }

@@ -16,7 +16,7 @@ const ACTIONS: DecideAction[] = ['approve_student', 'approve_curator', 'approve_
  * Гард: только admin/super_admin (cookie-сессия панели).
  */
 export async function POST(req: NextRequest) {
-  const session = getPanelSessionFromReq(req)
+  const session = await getPanelSessionFromReq(req)
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }

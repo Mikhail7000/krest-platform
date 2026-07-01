@@ -27,12 +27,22 @@ export async function POST(req: NextRequest) {
   // Реальная сессия (НЕ эффективная) — читаем напрямую из krest_admin.
   const real = verifySession(req.cookies.get(ADMIN_COOKIE)?.value)
   if (!real) return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
-  if (real.role !== 'super_admin' && real.role !== 'admin') {
-    return NextResponse.json({ ok: false, error: 'Только для админа' }, { status: 403 })
-  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
+
+  // Роль актора — из БД, не из cookie: разжалованный admin не должен включать
+  // view-as до истечения cookie (7 дней).
+  const { data: actorRow } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', real.uid)
+    .maybeSingle()
+  const actorRole = (actorRow as { role: string } | null)?.role ?? null
+  if (actorRole !== 'super_admin' && actorRole !== 'admin') {
+    return NextResponse.json({ ok: false, error: 'Только для админа' }, { status: 403 })
+  }
+  real.role = actorRole as AdminRole
 
   const body = (await req.json().catch(() => ({}))) as { userId?: string }
   const userId = (body.userId ?? '').trim()

@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
  * (в свой город; ученик — только к куратору своего города); curator → ученика (к себе).
  */
 export async function POST(req: NextRequest) {
-  const session = getPanelSessionFromReq(req)
+  const session = await getPanelSessionFromReq(req)
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }

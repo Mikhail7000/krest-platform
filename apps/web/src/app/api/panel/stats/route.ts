@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
  * Владелец (is_protected) видит всех учеников включая скрытых.
  */
 async function handle(req: NextRequest) {
-  const session = getPanelSessionFromReq(req)
+  const session = await getPanelSessionFromReq(req)
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }

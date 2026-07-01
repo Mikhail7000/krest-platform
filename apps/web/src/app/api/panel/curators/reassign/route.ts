@@ -28,7 +28,7 @@ export interface ReassignPayload {
 }
 
 export async function GET(req: NextRequest) {
-  const session = getPanelSessionFromReq(req)
+  const session = await getPanelSessionFromReq(req)
   if (!session) return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   if (session.role !== 'admin' && session.role !== 'super_admin') {
     return NextResponse.json({ ok: false, error: 'Недостаточно прав' }, { status: 403 })

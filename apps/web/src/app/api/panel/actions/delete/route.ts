@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
  * Гард: только admin/super_admin, иначе 401.
  */
 export async function POST(req: NextRequest) {
-  const session = getPanelSessionFromReq(req)
+  const session = await getPanelSessionFromReq(req)
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Не авторизован' }, { status: 401 })
   }
@@ -56,6 +56,14 @@ export async function POST(req: NextRequest) {
   if (target.role === 'super_admin') {
     return NextResponse.json(
       { ok: false, error: 'Нельзя удалить супер-админа здесь' },
+      { status: 403 },
+    )
+  }
+  // Симметрия с actions/role: админ-уровнем управляет только супер-админ.
+  // Иначе admin не может разжаловать другого admin, но мог бы удалить его насовсем.
+  if (target.role === 'admin' && session.role !== 'super_admin') {
+    return NextResponse.json(
+      { ok: false, error: 'Только супер-админ может удалять администраторов' },
       { status: 403 },
     )
   }

@@ -13,7 +13,7 @@ import { getPanelSessionFromReq } from '@/lib/admin/guard'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const session = getPanelSessionFromReq(req)
+  const session = await getPanelSessionFromReq(req)
   const key = req.nextUrl.searchParams.get('key')
   const cronSecret = process.env.CRON_SECRET
   const authorized = session?.role === 'super_admin' || (!!cronSecret && key === cronSecret)

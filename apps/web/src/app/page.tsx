@@ -26,12 +26,6 @@ export default function Home() {
           >
             ✈️ Начать в Telegram
           </a>
-          <Link
-            href="/register-church"
-            className="bg-gradient-to-br from-[#C9A961] to-[#B89548] text-[#0A0E1A] font-bold px-8 py-4 rounded-xl text-lg hover:opacity-90 transition-opacity"
-          >
-            Стать партнёром церкви
-          </Link>
         </div>
       </section>
 
@@ -89,12 +83,14 @@ export default function Home() {
               <span className="text-sm text-gray-300">Telegram Mini App — нет барьера установки приложения</span>
             </li>
           </ul>
-          <Link
-            href="/register-church"
+          <a
+            href="https://t.me/cross_notify_bot"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-block bg-gradient-to-br from-[#C9A961] to-[#B89548] text-[#0A0E1A] font-bold px-6 py-3 rounded-xl"
           >
-            Зарегистрировать церковь
-          </Link>
+            Написать нам в Telegram
+          </a>
         </div>
       </section>
 
