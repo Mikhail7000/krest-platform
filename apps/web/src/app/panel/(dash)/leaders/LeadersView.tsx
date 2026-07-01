@@ -25,6 +25,9 @@ function toCuratorRow(l: LeaderRowType): CuratorRow {
     leaderName: null,
     studentsCount: 0,
     students: [],
+    activeToday: 0,
+    closed7: 0,
+    stuck: 0,
   }
 }
 

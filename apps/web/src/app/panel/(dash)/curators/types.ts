@@ -28,4 +28,10 @@ export interface CuratorRow {
   leaderName: string | null
   studentsCount: number
   students: CuratorStudent[]
+  /** Метрики группы: заходили сегодня (локальный день ученика). */
+  activeToday: number
+  /** Закрытых дней группы за последние 7 суток. */
+  closed7: number
+  /** Застряли: >3 дней без закрытого дня (или ни одного при начатом курсе). */
+  stuck: number
 }

@@ -1,0 +1,27 @@
+# Ежечасный вызов cron-роута вечерних напоминаний.
+#
+# Зачем: Vercel-план даёт только суточные cron-задания (vercel.json: 12:00 UTC),
+# а роут /api/cron/daily-reminder шлёт напоминание тем, у кого СЕЙЧАС 20:00 по
+# их поясу. Суточный запуск в 12:00 UTC попадает в 20:00 только для Бали (UTC+8) —
+# Москва (UTC+3) и Уфа (UTC+5) оставались без напоминаний. Роут идемпотентен
+# (раз в локальный день на ученика), так что ежечасные вызовы безопасны и
+# дублирование с Vercel-кроном не страшно.
+#
+# Требуется секрет репозитория CRON_SECRET (Settings → Secrets and variables →
+# Actions) — то же значение, что в Vercel env. Без него роут ответит 401.
+name: hourly-reminders
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call daily-reminder
+        run: |
+          curl -fsS --max-time 60 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://krest-platform-web.vercel.app/api/cron/daily-reminder"

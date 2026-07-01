@@ -39,11 +39,12 @@ async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null
     curatorsQuery = curatorsQuery.eq('city_id', opts.cityId)
   }
 
-  const [curatorsRes, citiesRes, countriesRes, leadersRes] = await Promise.all([
+  const [curatorsRes, citiesRes, countriesRes, leadersRes, closedRes] = await Promise.all([
     curatorsQuery,
-    supabase.from('cities').select('id, name_ru, country_id'),
+    supabase.from('cities').select('id, name_ru, country_id, timezone'),
     supabase.from('countries').select('id, name_ru'),
     supabase.from('profiles').select('id, full_name, contact_info, city_id').eq('role', 'city_leader'),
+    supabase.rpc('closed_dates_all'),
   ])
   if (curatorsRes.error || citiesRes.error || countriesRes.error) return empty
 
@@ -68,23 +69,75 @@ async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null
     curatorIds.length > 0
       ? await supabase
           .from('profiles')
-          .select('id, full_name, contact_info, curator_id')
+          .select('id, full_name, contact_info, curator_id, city_id, course_started_at')
           .eq('role', 'student')
           .in('curator_id', curatorIds)
-      : { data: [] as { id: string; full_name: string | null; contact_info: string | null; curator_id: string | null }[] }
+      : {
+          data: [] as {
+            id: string
+            full_name: string | null
+            contact_info: string | null
+            curator_id: string | null
+            city_id: number | null
+            course_started_at: string | null
+          }[],
+        }
+
+  // Активность за сегодня (по локальному дню ученика — activity_date уже локальная).
+  const studentIds = (studentsData ?? []).map((s) => s.id)
+  const { data: actData } =
+    studentIds.length > 0
+      ? await supabase
+          .from('student_daily_activity')
+          .select('user_id, activity_date')
+          .eq('opened', true)
+          .gte('activity_date', new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10))
+          .in('user_id', studentIds)
+      : { data: [] as { user_id: string; activity_date: string }[] }
 
   const countryById = new Map<number, string>()
   for (const c of countriesRes.data ?? []) countryById.set(c.id, c.name_ru)
 
-  const cityById = new Map<number, { name: string; country: string | null }>()
+  const cityById = new Map<number, { name: string; country: string | null; tz: string | null }>()
   for (const c of citiesRes.data ?? []) {
     cityById.set(c.id, {
       name: c.name_ru,
       country: c.country_id != null ? countryById.get(c.country_id) ?? null : null,
+      tz: (c as { timezone?: string | null }).timezone ?? null,
     })
   }
 
+  // ── Метрики групп: активны сегодня / закрытые дни за 7 суток / застряли ──
+  const DEFAULT_TZ = 'Asia/Makassar'
+  const todayByTz = new Map<string, string>()
+  const localToday = (tz: string) => {
+    let d = todayByTz.get(tz)
+    if (!d) {
+      d = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+      todayByTz.set(tz, d)
+    }
+    return d
+  }
+  const dayIdx = (d: string) => Math.floor(Date.parse(`${d}T00:00:00Z`) / 86_400_000)
+  const todayIdx = Math.floor(Date.now() / 86_400_000)
+  const weekAgo = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
+
+  const closedByUser = new Map<string, string[]>()
+  for (const r of (closedRes.data ?? []) as { user_id: string; d: string }[]) {
+    if (r.d.startsWith('2000-')) continue // виртуальные тест-даты accel-режима
+    const arr = closedByUser.get(r.user_id) ?? []
+    arr.push(r.d)
+    closedByUser.set(r.user_id, arr)
+  }
+  const actByUser = new Map<string, Set<string>>()
+  for (const a of (actData ?? []) as { user_id: string; activity_date: string }[]) {
+    const set = actByUser.get(a.user_id) ?? new Set<string>()
+    set.add(a.activity_date)
+    actByUser.set(a.user_id, set)
+  }
+
   const studentsByCurator = new Map<string, CuratorStudent[]>()
+  const metrics = new Map<string, { activeToday: number; closed7: number; stuck: number }>()
   let totalStudents = 0
   for (const s of studentsData ?? []) {
     if (!s.curator_id) continue
@@ -92,12 +145,25 @@ async function loadCurators(opts: { leaderScoped: boolean; cityId: number | null
     list.push({ id: s.id, name: s.full_name, nick: s.contact_info })
     studentsByCurator.set(s.curator_id, list)
     totalStudents += 1
+
+    const m = metrics.get(s.curator_id) ?? { activeToday: 0, closed7: 0, stuck: 0 }
+    const tz = (s.city_id != null ? cityById.get(s.city_id)?.tz : null) ?? DEFAULT_TZ
+    if (actByUser.get(s.id)?.has(localToday(tz))) m.activeToday++
+    const dates = closedByUser.get(s.id) ?? []
+    m.closed7 += dates.filter((d) => d >= weekAgo).length
+    const lastIdx = dates.length > 0 ? Math.max(...dates.map(dayIdx)) : null
+    if (lastIdx === null ? !!s.course_started_at : todayIdx - lastIdx > 3) m.stuck++
+    metrics.set(s.curator_id, m)
   }
 
   const curators: CuratorRow[] = (curatorsRes.data ?? []).map((cu) => {
     const city = cu.city_id != null ? cityById.get(cu.city_id) ?? null : null
     const students = studentsByCurator.get(cu.id) ?? []
+    const m = metrics.get(cu.id) ?? { activeToday: 0, closed7: 0, stuck: 0 }
     return {
+      activeToday: m.activeToday,
+      closed7: m.closed7,
+      stuck: m.stuck,
       id: cu.id,
       name: cu.full_name,
       nick: cu.contact_info,

@@ -217,6 +217,12 @@ function CuratorRowGroup({
               {isOpen ? 'Скрыть' : 'Показать'}
             </button>
           ) : null}
+          {hasStudents && curator.role === 'curator' ? (
+            <div className="panel-muted" style={{ marginTop: 4, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+              🟢 {curator.activeToday} сегодня · 🔥 {curator.closed7} дн/нед
+              {curator.stuck > 0 ? <span style={{ color: 'var(--pl-err, #ef4444)' }}> · ⚠️ {curator.stuck} застряло</span> : null}
+            </div>
+          ) : null}
         </td>
         <td>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>

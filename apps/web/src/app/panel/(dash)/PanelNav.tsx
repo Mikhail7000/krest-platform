@@ -12,6 +12,7 @@ const ALL_LINKS = [
   { href: '/panel/curators', label: 'Кураторы', icon: '🧭', curatorVisible: false, leaderVisible: true },
   { href: '/panel/leaders', label: 'Лидеры городов', icon: '👑', curatorVisible: false, leaderVisible: false },
   { href: '/panel/cities', label: 'Города', icon: '🌍', curatorVisible: false, leaderVisible: false },
+  { href: '/panel/audit', label: 'Журнал', icon: '📜', curatorVisible: false, leaderVisible: false },
 ]
 
 function roleLabel(role: string, cityName?: string | null): string {
