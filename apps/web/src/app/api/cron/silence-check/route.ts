@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceSupabase } from '@/lib/supabase-service'
 import { sendTelegramMessage, escapeHtml } from '@/lib/telegram/send'
 import { findSilentStudents, SILENCE_DAYS } from '@/lib/activity/silence'
+import { sendCuratorDigests } from '@/lib/curator/daily-digest'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,8 +24,14 @@ export async function GET(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceSupabase() as any
 
+  // Дневная сводка куратору (в этом же cron-слоте: лимит Vercel — 2 крона).
+  const digests = await sendCuratorDigests(supabase).catch((e) => {
+    console.error('[cron/silence-check] digests', e)
+    return 0
+  })
+
   const silent = await findSilentStudents(supabase, { minDays: SILENCE_DAYS })
-  if (silent.length === 0) return NextResponse.json({ ok: true, silent: 0, sent: 0 })
+  if (silent.length === 0) return NextResponse.json({ ok: true, silent: 0, sent: 0, digests })
 
   // Telegram-чаты кураторов (по одному запросу).
   const curatorIds = [...new Set(silent.map((s) => s.curatorId))]

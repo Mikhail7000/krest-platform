@@ -119,15 +119,14 @@ function visibleStudents(
     // Scoped роль (куратор/лидер) без разрешённого scope — fail-closed (никого).
     return []
   } else if (scopeCityId != null) {
-    // Лидер города: ученики его города (по city_id ученика ИЛИ по городу его куратора).
+    // Лидер города: ТОЛЬКО ученики кураторов его города (цепочка лидер→куратор→
+    // ученик); city_id самого ученика видимости не даёт (решение Михаила 02.07).
     const cityCur = new Set(
       profiles
         .filter((p) => (p.role === 'curator' || p.role === 'city_leader') && (p as any).city_id === scopeCityId)
         .map((p) => p.id),
     )
-    base = base.filter(
-      (p) => (p as any).city_id === scopeCityId || ((p as any).curator_id && cityCur.has((p as any).curator_id)),
-    )
+    base = base.filter((p) => (p as any).curator_id && cityCur.has((p as any).curator_id))
   }
   return base
 }

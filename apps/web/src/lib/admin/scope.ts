@@ -4,7 +4,8 @@ import type { AdminSession } from './session'
 /**
  * Видимость в /panel по роли:
  *  - curator     → только свои ученики (scopeCuratorId = его uid)
- *  - city_leader → весь свой город (scopeCityId = его city)
+ *  - city_leader → ученики КУРАТОРОВ его города (цепочка лидер→куратор→ученик;
+ *                  city_id самого ученика видимости НЕ даёт — решение Михаила 02.07)
  *  - admin/super_admin → все (isAdmin); владелец (Михаил) дополнительно видит скрытых
  *
  * Использовать в read-роутах вместо разрозненных проверок роли.
@@ -63,7 +64,9 @@ export async function studentCardAllowed(
   if (scope.isAdmin) return true
   if (scope.scopeCuratorId) return profile.curator_id === scope.scopeCuratorId
   if (scope.scopeCityId != null) {
-    if (profile.city_id === scope.scopeCityId) return true
+    // Лидер видит ученика ТОЛЬКО через куратора своего города (цепочка людей),
+    // НЕ по совпадению city_id самого ученика (решение Михаила 02.07: ученик без
+    // куратора — не «ученик лидера», даже если живёт в его городе).
     if (profile.curator_id) {
       const { data: cur } = await supabase
         .from('profiles')
@@ -90,10 +93,9 @@ export function studentInScope(
   if (p.hidden_from_tracking && !scope.isOwner) return false
   if (scope.scopeCuratorId) return p.curator_id === scope.scopeCuratorId
   if (scope.scopeCityId != null) {
-    return (
-      p.city_id === scope.scopeCityId ||
-      (!!p.curator_id && !!cityCurators && cityCurators.has(p.curator_id))
-    )
+    // Только через кураторов города (лидер → куратор → ученик); city_id самого
+    // ученика НЕ даёт видимости (см. studentCardAllowed — решение Михаила 02.07).
+    return !!p.curator_id && !!cityCurators && cityCurators.has(p.curator_id)
   }
   // Сюда доходим только без заданного scope. Для НЕ-админа (scoped роль с
   // неразрешённым scope, напр. city_leader без city) — fail-closed, чтобы не
