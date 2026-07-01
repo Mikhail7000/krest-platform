@@ -53,6 +53,9 @@ export function studentInScope(
   scope: PanelScope,
   cityCurators: Set<string> | null,
 ): boolean {
+  // Скрытых (hidden_from_tracking) видит ТОЛЬКО владелец — в любом scope
+  // (куратор/лидер города/админ). Иначе скрытый ученик «утекал» лидеру города.
+  if (p.hidden_from_tracking && !scope.isOwner) return false
   if (scope.scopeCuratorId) return p.curator_id === scope.scopeCuratorId
   if (scope.scopeCityId != null) {
     return (

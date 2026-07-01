@@ -6,14 +6,24 @@ import { useState } from 'react'
  * Баннер режима view-as: «Вы смотрите как {имя} ({роль}) · Выйти».
  * Виден super_admin'у, когда активна cookie-наложение view-as.
  */
-export function ViewAsBanner({ name, role }: { name: string | null; role: string }) {
+export function ViewAsBanner({
+  name,
+  role,
+  cityName = null,
+}: {
+  name: string | null
+  role: string
+  cityName?: string | null
+}) {
   const [busy, setBusy] = useState(false)
 
   const roleLabel =
     role === 'curator'
       ? 'куратор'
       : role === 'city_leader'
-        ? 'лидер города'
+        ? cityName
+          ? `лидер города ${cityName}`
+          : 'лидер города'
         : role === 'admin'
           ? 'админ'
           : role

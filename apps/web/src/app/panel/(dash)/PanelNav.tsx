@@ -14,9 +14,9 @@ const ALL_LINKS = [
   { href: '/panel/cities', label: 'Города', icon: '🌍', curatorVisible: false, leaderVisible: false },
 ]
 
-function roleLabel(role: string): string {
+function roleLabel(role: string, cityName?: string | null): string {
   if (role === 'super_admin') return 'Супер-админ'
-  if (role === 'city_leader') return 'Лидер города'
+  if (role === 'city_leader') return cityName ? `Лидер города ${cityName}` : 'Лидер города'
   if (role === 'curator') return 'Куратор'
   return 'Админ'
 }
@@ -24,10 +24,12 @@ function roleLabel(role: string): string {
 export function PanelNav({
   name,
   role,
+  cityName = null,
   pendingCount = 0,
 }: {
   name: string | null
   role: string
+  cityName?: string | null
   pendingCount?: number
 }) {
   const pathname = usePathname()
@@ -88,7 +90,7 @@ export function PanelNav({
         <div className="panel-sidebar__foot">
           <div className="panel-sidebar__user">
             <span className="panel-sidebar__name">{name ?? 'Админ'}</span>
-            <span className="panel-sidebar__role">{roleLabel(role)}</span>
+            <span className="panel-sidebar__role">{roleLabel(role, cityName)}</span>
           </div>
           <button type="button" className="panel-sidebar__logout" onClick={logout}>
             Выйти
