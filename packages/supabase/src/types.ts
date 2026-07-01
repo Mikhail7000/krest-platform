@@ -1066,7 +1066,7 @@ export type Database = {
       }
       role_change_log: {
         Row: {
-          changed_by: string
+          changed_by: string | null
           changed_user_id: string
           created_at: string
           id: string
@@ -1075,7 +1075,7 @@ export type Database = {
           reason: string | null
         }
         Insert: {
-          changed_by: string
+          changed_by?: string | null
           changed_user_id: string
           created_at?: string
           id?: string
@@ -1084,7 +1084,7 @@ export type Database = {
           reason?: string | null
         }
         Update: {
-          changed_by?: string
+          changed_by?: string | null
           changed_user_id?: string
           created_at?: string
           id?: string
@@ -1111,6 +1111,8 @@ export type Database = {
       }
       student_block_daily_cross: {
         Row: {
+          ai_feedback: string | null
+          ai_matched: boolean | null
           block_id: number
           created_at: string
           id: string
@@ -1119,6 +1121,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_feedback?: string | null
+          ai_matched?: boolean | null
           block_id: number
           created_at?: string
           id?: string
@@ -1127,6 +1131,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_feedback?: string | null
+          ai_matched?: boolean | null
           block_id?: number
           created_at?: string
           id?: string
@@ -2288,4 +2294,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

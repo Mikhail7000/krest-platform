@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { PanelStudentDetail } from '@/app/api/panel/student/[id]/route'
 import { Avatar, fmtDate, fmtDateTime } from '../studentBits'
 import { CrossGallery } from './CrossGallery'
+import { SubmissionsSection } from './SubmissionsSection'
 
 const REQUIRED_DAYS = 7
 
@@ -87,7 +88,6 @@ export function StudentDetailClient({ id }: { id: string }) {
             <tr>
               <th>Блок</th>
               <th>Закрыто дней</th>
-              <th>Квиз</th>
               <th>Статус</th>
             </tr>
           </thead>
@@ -109,16 +109,9 @@ export function StudentDetailClient({ id }: { id: string }) {
                     </div>
                   </td>
                   <td>
-                    {b.quizPassedAt ? (
-                      <span className="panel-badge panel-badge--ok">сдан</span>
-                    ) : (
-                      <span className="panel-badge">—</span>
-                    )}
-                  </td>
-                  <td>
                     {b.done ? (
                       <span className="panel-badge panel-badge--ok">Сдан</span>
-                    ) : b.closedDays > 0 || b.quizPassedAt ? (
+                    ) : b.closedDays > 0 ? (
                       <span className="panel-badge panel-badge--warn">В работе</span>
                     ) : (
                       <span className="panel-badge">Не начат</span>
@@ -131,8 +124,11 @@ export function StudentDetailClient({ id }: { id: string }) {
         </table>
       </div>
 
-      {/* Галерея загруженных фото крестов по дням */}
+      {/* Галерея загруженных фото крестов по дням (с AI-вердиктами) */}
       <CrossGallery id={id} />
+
+      {/* Медиа-сдачи: пересказы, местописания, эмоции */}
+      <SubmissionsSection id={id} />
     </>
   )
 }

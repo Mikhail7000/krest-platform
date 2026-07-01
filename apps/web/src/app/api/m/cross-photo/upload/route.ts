@@ -61,6 +61,8 @@ interface DailyCrossInsert {
   block_id: number
   submitted_date: string
   storage_path: string
+  ai_matched: boolean | null
+  ai_feedback: string | null
 }
 
 // Эталон «креста блока» лежит в block-resources/cross-reference/{order}.jpg.
@@ -251,12 +253,15 @@ export async function POST(req: NextRequest) {
     return err('Failed to upload photo', 'STORAGE_ERROR', 500)
   }
 
-  // 5. INSERT student_block_daily_cross — UPSERT по UNIQUE (user, block, date)
+  // 5. INSERT student_block_daily_cross — UPSERT по UNIQUE (user, block, date).
+  // Вердикт ИИ персистим: куратор видит его в галерее панели (NULL = не проверялся).
   const insertRow: DailyCrossInsert = {
     user_id: userId,
     block_id: blockId,
     submitted_date: dateStr,
     storage_path: storagePath,
+    ai_matched: aiMatched,
+    ai_feedback: aiFeedback,
   }
 
   // cast через unknown — таблица не в сгенерированных типах

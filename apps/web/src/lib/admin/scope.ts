@@ -45,6 +45,38 @@ export function cityCuratorIds(
 }
 
 /**
+ * Доступ к КАРТОЧКЕ одного ученика (и её под-ресурсам: фото, сдачи) по scope.
+ * Скрытых видит только владелец; лидер города — по city_id ученика ИЛИ по городу
+ * его куратора (один доп. запрос). Использовать во всех /api/panel/student/[id]/*.
+ */
+export async function studentCardAllowed(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  scope: PanelScope,
+  profile: {
+    curator_id?: string | null
+    city_id?: number | null
+    hidden_from_tracking?: boolean | null
+  },
+): Promise<boolean> {
+  if (profile.hidden_from_tracking && !scope.isOwner) return false
+  if (scope.isAdmin) return true
+  if (scope.scopeCuratorId) return profile.curator_id === scope.scopeCuratorId
+  if (scope.scopeCityId != null) {
+    if (profile.city_id === scope.scopeCityId) return true
+    if (profile.curator_id) {
+      const { data: cur } = await supabase
+        .from('profiles')
+        .select('city_id')
+        .eq('id', profile.curator_id)
+        .maybeSingle()
+      return (cur as { city_id: number | null } | null)?.city_id === scope.scopeCityId
+    }
+  }
+  return false
+}
+
+/**
  * Виден ли этот ученик/профиль в текущем scope.
  * cityCurators — id кураторов города (нужно только для city-scope; иначе null).
  */

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPanelSessionFromReq } from '@/lib/admin/guard'
 import { createServiceSupabase } from '@/lib/supabase-service'
-import { resolvePanelScope } from '@/lib/admin/scope'
+import { resolvePanelScope, studentCardAllowed } from '@/lib/admin/scope'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +19,6 @@ export interface PanelBlockProgress {
   orderNum: number
   title: string
   closedDays: number
-  quizPassedAt: string | null
   done: boolean
 }
 
@@ -77,27 +76,10 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   }
 
   // Доступ к карточке по роли: куратор — только свои; лидер города — только свой город
-  // (по city_id ученика или по городу его куратора); админ — все (не-владелец без скрытых).
+  // (по city_id ученика или по городу его куратора); скрытых видит только владелец.
   // 404 (не 403), чтобы не раскрывать существование ученика чужого scope.
   const scope = await resolvePanelScope(supabase, session)
-  let allowed = false
-  if (scope.isAdmin) {
-    allowed = scope.isOwner || !profile.hidden_from_tracking
-  } else if (scope.scopeCuratorId) {
-    allowed = profile.curator_id === scope.scopeCuratorId
-  } else if (scope.scopeCityId != null) {
-    if (profile.city_id === scope.scopeCityId) {
-      allowed = true
-    } else if (profile.curator_id) {
-      const { data: cur } = await supabase
-        .from('profiles')
-        .select('city_id')
-        .eq('id', profile.curator_id)
-        .maybeSingle()
-      allowed = cur?.city_id === scope.scopeCityId
-    }
-  }
-  if (!allowed) {
+  if (!(await studentCardAllowed(supabase, scope, profile))) {
     return NextResponse.json({ ok: false, error: 'Ученик не найден' }, { status: 404 })
   }
 
@@ -131,32 +113,26 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     daysByBlock.set(r.block_id, Number(r.days) || 0)
   }
 
-  // Квизы по блокам.
-  const quizByBlock = new Map<number, string | null>()
+  // Последняя активность (квизов в модели НЕТ — блок сдан по 7 закрытым дням,
+  // как в passed_blocks_all; раньше done требовал quiz_passed_at и блоки с 7/7
+  // висели «В работе» вразрез со сводкой «Сдано блоков»).
   let lastActivity: string | null = null
   const { data: sbpRaw } = await supabase
     .from('student_block_progress')
-    .select('block_id, quiz_passed_at, updated_at')
+    .select('block_id, updated_at')
     .eq('user_id', id)
-  for (const r of (sbpRaw ?? []) as {
-    block_id: number
-    quiz_passed_at: string | null
-    updated_at: string | null
-  }[]) {
-    quizByBlock.set(r.block_id, r.quiz_passed_at ?? null)
+  for (const r of (sbpRaw ?? []) as { block_id: number; updated_at: string | null }[]) {
     if (r.updated_at && (!lastActivity || r.updated_at > lastActivity)) lastActivity = r.updated_at
   }
 
   const blocks: PanelBlockProgress[] = blocksMeta.map((b) => {
     const closedDays = daysByBlock.get(b.id) ?? 0
-    const quizPassedAt = quizByBlock.get(b.id) ?? null
     return {
       blockId: b.id,
       orderNum: b.order_num,
       title: b.title_ru,
       closedDays,
-      quizPassedAt,
-      done: closedDays >= REQUIRED_DAYS && !!quizPassedAt,
+      done: closedDays >= REQUIRED_DAYS,
     }
   })
 
